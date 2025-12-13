@@ -11,7 +11,7 @@ const packageName = 'com.wrteam.flutterquiz';
 /// Add your panel url here
 // NOTE: make sure to not add '/' at the end of url
 // NOTE: make sure to check if admin panel is http or https
-const panelUrl = 'https://elitequiz.wrteam.me';
+const panelUrl = 'https://app.mquiz.uk/';
 
 /// === Branding ===
 ///
@@ -20,7 +20,7 @@ const panelUrl = 'https://elitequiz.wrteam.me';
 const Brightness defaultTheme = Brightness.light;
 
 // Phone Login, default country code AND max length of phone number allowed
-const defaultCountryCodeForPhoneLogin = 'IN';
+const defaultCountryCodeForPhoneLogin = 'NG';
 const maxPhoneNumberLength = 16;
 
 final TextStyle kFonts = GoogleFonts.nunito();
@@ -61,12 +61,12 @@ const predefinedMessages = [
 
 // Exam Rules are shown before starting any exam
 const examRules = [
-  'I will not copy and give this exam with honesty',
-  'If you lock your phone then exam will complete automatically',
-  "If you minimize application or open other application and don't come back to application with in 5 seconds then exam will complete automatically",
-  'Screen recording is prohibited',
-  'In Android screenshot capturing is prohibited',
-  'In ios, if you take screenshot then rules will violate and it will inform to examiner',
+  'I will not copy; I will take this exam honestly.',
+  'If you lock your phone, the exam will end automatically.',
+  "If you minimize the app or open another app and don't return within 5 seconds, the exam will end automatically.",
+  'Screen recording is prohibited.',
+  'On Android, taking screenshots is prohibited.',
+  'On iOS, if you take a screenshot, you will violate the rules and the examiner will be notified.',
 ];
 
 // Wallet - shown in wallet screen, before redeeming coins
@@ -119,26 +119,26 @@ const payoutMethods = [
     ],
   ),
 
-  /// Example: Bank Transfer
-  // PayoutMethod(
-  //   inputs: [
-  //     (
-  //       name: 'Enter Bank Name',
-  //       isNumber: false,
-  //       maxLength: 0,
-  //     ),
-  //     (
-  //       name: 'Enter Account Number',
-  //       isNumber: false,
-  //       maxLength: 0,
-  //     ),
-  //     (
-  //       name: 'Enter IFSC Code',
-  //       isNumber: false,
-  //       maxLength: 0,
-  //     ),
-  //   ],
-  //   image: '$_paymentImgsPath/paytm.svg',
-  //   type: 'Bank Transfer',
-  // ),
+  // Example: Bank Transfer
+  PayoutMethod(
+    inputs: [
+      (
+        name: 'Enter Bank Name',
+        isNumber: false,
+        maxLength: 0,
+      ),
+      (
+        name: 'Enter Account Number',
+        isNumber: false,
+        maxLength: 0,
+      ),
+      (
+        name: 'Enter IFSC Code',
+        isNumber: false,
+        maxLength: 0,
+      ),
+    ],
+    image: '$_paymentImgsPath/paytm.svg',
+    type: 'Bank Transfer',
+  ),
 ];
