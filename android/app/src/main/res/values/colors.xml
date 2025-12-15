@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Change this to your desired splash screen background color -->
+    <!-- Examples: #FFFFFF (white), #1E88E5 (blue), #4CAF50 (green), #000000 (black) -->
+    <color name="splash_background">#FFFFFF</color>
+</resources>
