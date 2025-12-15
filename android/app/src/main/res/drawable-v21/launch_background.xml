@@ -5,9 +5,11 @@
     <item android:drawable="@color/splash_background" />
 
     <!-- You can insert your own image assets here -->
+    <!-- Uncomment to add a splash image. Place your image at: android/app/src/main/res/drawable/splash_image.png
     <item>
         <bitmap
             android:gravity="center"
             android:src="@drawable/splash_image" />
     </item>
+    -->
 </layer-list>
