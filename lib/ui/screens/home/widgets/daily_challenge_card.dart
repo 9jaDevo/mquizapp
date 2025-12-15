@@ -112,7 +112,7 @@ class _DailyChallengeCardState extends State<DailyChallengeCard> {
 
     final theme = Theme.of(context);
     final sysConfig = context.read<SystemConfigCubit>();
-    final bonusCoins = sysConfig.rewardAdsCoin;
+    final bonusCoins = sysConfig.rewardAdsCoins;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -181,7 +181,7 @@ class _DailyChallengeCardState extends State<DailyChallengeCard> {
                 if (bonusCoins > 0 && !_completedToday) ...[
                   const SizedBox(height: 4),
                   Text(
-                    '+$bonusCoins ${context.tr('coinsLbl') ?? 'coins'} bonus',
+                    '+$bonusCoins coins bonus',
                     style: TextStyle(
                       fontSize: 12,
                       color: theme.primaryColor,

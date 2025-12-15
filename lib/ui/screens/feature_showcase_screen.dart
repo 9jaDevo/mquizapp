@@ -60,7 +60,7 @@ class FeatureShowcaseScreen extends StatelessWidget {
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.all(16),
         child: ElevatedButton(
-          onPressed: () => context.pushReplacementNamed(Routes.home),
+          onPressed: () => Navigator.of(context).pushReplacementNamed(Routes.home),
           child: const Text('Get Started'),
         ),
       ),
