@@ -4,7 +4,7 @@ import Firebase
 import Photos
 import CallKit
 
-@UIApplicationMain
+@main
 @objc class AppDelegate: FlutterAppDelegate {
     
     var callObserver: CXCallObserver!
