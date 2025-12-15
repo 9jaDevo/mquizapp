@@ -41,6 +41,7 @@ ios/Pods/
 ios/build/
 
 # But allow APKs
+!build/
 !build/app/
 !build/app/outputs/
 !build/app/outputs/flutter-apk/
