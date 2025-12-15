@@ -133,12 +133,12 @@ const payoutMethods = [
         maxLength: 0,
       ),
       (
-        name: 'Enter IFSC Code',
+        name: 'Enter Account Name',
         isNumber: false,
         maxLength: 0,
       ),
     ],
-    image: '$_paymentImgsPath/paytm.svg',
+    image: '$_paymentImgsPath/bank.svg',
     type: 'Bank Transfer',
   ),
 ];
