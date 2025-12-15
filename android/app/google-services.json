@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "850520168460-45lb22k9v1uuetv80h4ej300t2obdrjr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.togafrica.mquiz",
+            "certificate_hash": "22fd05d5e0b09a3bdf7f1ff309500f2b4d85dd98"
+          }
+        },
+        {
           "client_id": "850520168460-6knk95e3735kctih2kgu2v2vqcg93qo6.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
