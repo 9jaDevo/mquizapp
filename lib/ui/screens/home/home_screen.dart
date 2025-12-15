@@ -27,9 +27,11 @@ import 'package:flutterquiz/features/quiz/models/quiz_type.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/ui/screens/battle/create_or_join_screen.dart';
 import 'package:flutterquiz/ui/screens/home/widgets/all.dart';
+import 'package:flutterquiz/ui/screens/home/widgets/daily_challenge_card.dart';
 import 'package:flutterquiz/ui/screens/profile/create_or_edit_profile_screen.dart';
 import 'package:flutterquiz/ui/screens/quiz/category_screen.dart';
 import 'package:flutterquiz/ui/widgets/all.dart';
+import 'package:flutterquiz/ui/widgets/skill_tier_badge.dart';
 import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -1009,6 +1011,8 @@ class HomeScreenState extends State<HomeScreen>
                             userScore: _userScore,
                           ),
                           const SizedBox(height: 16),
+                          const DailyChallengeCard(),
+                          const SizedBox(height: 8),
                           if (!_isGuest &&
                               _sysConfigCubit.isAdsEnable &&
                               _sysConfigCubit.isDailyAdsEnabled) ...[
@@ -1124,16 +1128,8 @@ class HomeScreenState extends State<HomeScreen>
                           fontWeight: .bold,
                         ),
                       ),
-                      Text(
-                        context.tr(letsPlay)!,
-                        textAlign: .start,
-                        maxLines: 1,
-                        overflow: .ellipsis,
-                        style: TextStyle(
-                          color: context.primaryTextColor.withValues(alpha: .3),
-                          fontSize: 12,
-                        ),
-                      ),
+                      const SizedBox(height: 4),
+                      const SkillTierBadge(),
                     ],
                   ),
                 ),

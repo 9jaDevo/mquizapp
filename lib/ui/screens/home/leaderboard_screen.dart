@@ -13,6 +13,7 @@ import 'package:flutterquiz/ui/widgets/already_logged_in_dialog.dart';
 import 'package:flutterquiz/ui/widgets/circular_progress_container.dart';
 import 'package:flutterquiz/ui/widgets/custom_appbar.dart';
 import 'package:flutterquiz/ui/widgets/error_container.dart';
+import 'package:flutterquiz/ui/widgets/skill_tier_badge.dart';
 import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 
@@ -756,10 +757,18 @@ class LeaderBoardScreenState extends State<LeaderBoardScreen>
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              context.tr(myRankKey)!,
-              overflow: TextOverflow.ellipsis,
-              style: textStyle,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  context.tr(myRankKey)!,
+                  overflow: TextOverflow.ellipsis,
+                  style: textStyle,
+                ),
+                const SizedBox(height: 4),
+                const SkillTierBadge(),
+              ],
             ),
           ),
           Text(

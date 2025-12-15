@@ -21,6 +21,7 @@ import 'package:flutterquiz/ui/screens/exam/exam_screen.dart';
 import 'package:flutterquiz/ui/screens/exam/exams_screen.dart';
 import 'package:flutterquiz/ui/screens/inapp_coin_store_screen.dart';
 import 'package:flutterquiz/ui/screens/initial_language_selection_screen.dart';
+import 'package:flutterquiz/ui/screens/feature_showcase_screen.dart';
 import 'package:flutterquiz/ui/screens/notifications_screen.dart';
 import 'package:flutterquiz/ui/screens/onboarding_screen.dart';
 import 'package:flutterquiz/ui/screens/profile/create_or_edit_profile_screen.dart';
@@ -56,6 +57,7 @@ class Routes {
   static const splash = 'splash';
   static const signUp = 'signUp';
   static const introSlider = 'introSlider';
+  static const featureShowcase = 'featureShowcase';
   static const selectProfile = 'selectProfile';
   static const quiz = '/quiz';
   static const multiMatchQuiz = '/multiMatchQuiz';
@@ -124,6 +126,8 @@ class Routes {
         return DashboardScreen.route();
       case introSlider:
         return IntroSliderScreen.route();
+      case featureShowcase:
+        return FeatureShowcaseScreen.route();
       case login:
         return SignInScreen.route();
       case signUp:

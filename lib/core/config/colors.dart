@@ -8,9 +8,9 @@ const klPrimaryColor = Color(0xFF1F4ED8); // Logo Blue
 const klPrimaryTextColor = Color(0xFF1E293B); // Dark readable text
 
 /// Dark Theme
-const kdBackgroundColor = Color(0xFF0F172A); // Deep navy
+const kdBackgroundColor = Color(0xFF151922); // Deep navy
 const kdCanvasColor = Color(0xFFFFFFFF);
-const kdPageBackgroundColor = Color(0xFF132B63);
+const kdPageBackgroundColor = Color(0xFF0F1115);
 const kdPrimaryColor = Color(0xFF3B82F6); // Lighter brand blue
 const kdPrimaryTextColor = Color(0xFFF8FAFC);
 

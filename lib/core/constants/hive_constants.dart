@@ -34,3 +34,11 @@ const fontSizeKey = 'fontSize';
 const rewardEarnedKey = 'rewardEarned';
 const fcmTokenBoxKey = 'fcmToken';
 const settingsThemeKey = 'theme';
+
+/// Custom additions (client-side features)
+/// Cached user skill tier value (e.g., Bronze/Silver/Gold/Platinum)
+const skillTierKey = 'skillTier';
+/// Daily challenge cache: stores a JSON with selected category/subcategory and date
+const dailyChallengeCacheKey = 'dailyChallengeCache';
+/// Last date (yyyy-MM-dd) when user completed the daily challenge
+const dailyChallengeCompletedOnKey = 'dailyChallengeCompletedOn';

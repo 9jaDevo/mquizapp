@@ -15,6 +15,7 @@ import 'package:flutterquiz/ui/screens/menu/widgets/quiz_language_selector_sheet
 import 'package:flutterquiz/ui/screens/menu/widgets/theme_selector_sheet.dart';
 import 'package:flutterquiz/ui/screens/profile/create_or_edit_profile_screen.dart';
 import 'package:flutterquiz/ui/widgets/all.dart';
+import 'package:flutterquiz/ui/widgets/skill_tier_badge.dart';
 import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/gdpr_helper.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
@@ -430,6 +431,8 @@ final class ProfileTabScreenState extends State<ProfileTabScreen>
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
+                                        const SizedBox(height: 6),
+                                        if (!_isGuest) const SkillTierBadge(),
                                         const SizedBox(height: 4),
                                         Text(
                                           profileDesc,

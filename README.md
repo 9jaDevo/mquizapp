@@ -6,6 +6,35 @@ please be sure to check the [documentation](https://wrteamdev.github.io/Elite_Qu
 #### IGNORE THE .githooks folder and setup-hooks.sh file, it is only for our development process.
 #### it doesn't affect the app code in any way.
 
+## 📋 Important: Custom Features & Vendor Updates
+
+This app includes **custom differentiation features** to meet App Store guideline 4.3(a) requirements. These features are designed to work seamlessly with vendor script updates.
+
+### Custom Features Added
+- **Skill Tier System**: Automatically calculated from user statistics (Bronze → Platinum)
+- **Daily Challenge**: Rotating category-based challenge with completion tracking
+- **Feature Showcase**: Enhanced onboarding highlighting unique value propositions
+
+### Managing Vendor Updates
+
+When you receive updates from your script provider, follow the **Git branching strategy** to preserve custom features:
+
+**📖 See [GIT_BRANCHING_STRATEGY.md](GIT_BRANCHING_STRATEGY.md) for detailed merge workflow**
+
+**Quick Summary:**
+1. Merge vendor updates into `main` branch
+2. Update feature branches: `feature/skill-tiers`, `feature/daily-challenges`, `feature/enhanced-onboarding`
+3. Rebuild `custom-build` branch for production
+4. Test thoroughly before App Store submission
+
+**Key Files Modified:**
+- `lib/core/routes/routes.dart` - Added feature showcase route
+- `lib/ui/screens/home/home_screen.dart` - Added tier badge & daily challenge card
+- `lib/core/constants/hive_constants.dart` - Added custom Hive keys (at end)
+- New isolated modules in `lib/features/skill_tier/` and custom widgets
+
+All custom code is **client-side only** with **no backend/API changes required**.
+
 ## How to run the app in Android (real or emulator)
 ### Android
 1. Get the packages

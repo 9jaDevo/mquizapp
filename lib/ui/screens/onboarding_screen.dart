@@ -228,7 +228,7 @@ class _GettingStartedScreenState extends State<IntroSliderScreen>
                     child: InkWell(
                       onTap: () {
                         context.read<SettingsCubit>().changeShowIntroSlider();
-                        context.pushReplacementNamed(Routes.home);
+                        context.pushReplacementNamed(Routes.featureShowcase);
                       },
                       child: Text(
                         context.tr('skip')!,
@@ -248,7 +248,7 @@ class _GettingStartedScreenState extends State<IntroSliderScreen>
               child: GestureDetector(
                 onTap: () {
                   context.read<SettingsCubit>().changeShowIntroSlider();
-                  context.pushReplacementNamed(Routes.home);
+                  context.pushReplacementNamed(Routes.featureShowcase);
                 },
                 child: Container(
                   margin: EdgeInsets.only(bottom: context.height * 0.10),
