@@ -40,6 +40,17 @@ ios/.symlinks/
 ios/Pods/
 ios/build/
 
+# But allow APKs
+!build/app/
+!build/app/outputs/
+!build/app/outputs/flutter-apk/
+!build/app/outputs/flutter-apk/*.apk
+
+# Allow AABs
+!build/app/outputs/bundle/
+!build/app/outputs/bundle/release/
+!build/app/outputs/bundle/release/*.aab
+
 # Symbolication related
 app.*.symbols
 
