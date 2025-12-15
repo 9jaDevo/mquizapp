@@ -1,4 +1,4 @@
-package com.wrteam.flutterquiz
+package com.togafrica.mquiz
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -6,7 +6,7 @@ export 'colors.dart';
 
 /// === Config ===
 const appName = 'Elite Quiz';
-const packageName = 'com.wrteam.flutterquiz';
+const packageName = 'com.togafrica.mquiz';
 
 /// Add your panel url here
 // NOTE: make sure to not add '/' at the end of url
@@ -138,7 +138,7 @@ const payoutMethods = [
         maxLength: 0,
       ),
     ],
-    image: '$_paymentImgsPath/bank.svg',
+    image: '$_paymentPath/bank.svg',
     type: 'Bank Transfer',
   ),
 ];
