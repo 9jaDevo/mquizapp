@@ -16,16 +16,43 @@ Future<void> showLoginDialog(
       );
       final contentTextStyle = TextStyle(
         color: context.primaryTextColor,
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: FontWeights.regular,
+      );
+      final titleTextStyle = TextStyle(
+        color: context.primaryTextColor,
+        fontSize: 18,
+        fontWeight: FontWeights.bold,
       );
 
       return AlertDialog(
-        content: Text(context.tr('guestMode')!, style: contentTextStyle),
+        title: Text(
+          'Sign In to Get Coins',
+          style: titleTextStyle,
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Purchase coins and unlock exclusive rewards:',
+              style: contentTextStyle,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '• Save your progress\n• Compete on leaderboards\n• Earn badges\n• Challenge friends',
+              style: TextStyle(
+                color: context.primaryTextColor.withOpacity(0.7),
+                fontSize: 14,
+                fontWeight: FontWeights.regular,
+              ),
+            ),
+          ],
+        ),
         actions: [
           CupertinoButton(
             onPressed: dialogCtx.shouldPop,
-            child: Text(context.tr('cancel')!, style: buttonTextStyle),
+            child: Text(context.tr('maybeLater')!, style: buttonTextStyle),
           ),
           CupertinoButton(
             onPressed: () {
