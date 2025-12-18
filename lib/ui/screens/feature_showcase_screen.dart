@@ -59,9 +59,27 @@ class FeatureShowcaseScreen extends StatelessWidget {
       ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.all(16),
-        child: ElevatedButton(
-          onPressed: () => Navigator.of(context).pushReplacementNamed(Routes.home),
-          child: const Text('Get Started'),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Primary CTA: Continue as Guest
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(context).pushReplacementNamed(Routes.home),
+                child: const Text('Continue as Guest'),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Secondary CTA: Sign In
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => Navigator.of(context).pushReplacementNamed(Routes.login),
+                child: const Text('Sign In for More Features'),
+              ),
+            ),
+          ],
         ),
       ),
     );
