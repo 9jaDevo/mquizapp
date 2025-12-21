@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/core/routes/routes.dart';
+import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/utils/extensions.dart';
 
 class FeatureShowcaseScreen extends StatelessWidget {
@@ -12,9 +14,24 @@ class FeatureShowcaseScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sys = context.read<SystemConfigCubit>();
+    final contestEnabled = sys.isContestEnabled;
+    final battlesEnabled = sys.isOneVsOneBattleEnabled ||
+        sys.isGroupBattleEnabled ||
+        sys.isRandomBattleEnabled;
+
     final items = <({String title, String desc})>[
-      (title: '13 Quiz Types', desc: 'Play classic, audio, math, contest and more.'),
-      (title: 'Real-time Battles', desc: '1v1 and group play with friends.'),
+      (
+        title: 'Quiz Variety',
+        desc: 'Play classic, audio, math' +
+            (contestEnabled ? ', contest' : '') +
+            ' and more.',
+      ),
+      if (battlesEnabled)
+        (
+          title: 'Real-time Battles',
+          desc: '1v1 and group play with friends.',
+        ),
       (title: 'Skill-Based Tiers', desc: 'Earn your tier with better accuracy.'),
       (title: 'Daily Challenge', desc: 'A fresh category to master daily.'),
     ];

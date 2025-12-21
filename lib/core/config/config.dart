@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 export 'colors.dart';
 
 /// === Config ===
-const appName = 'Elite Quiz';
+const appName = 'mQuiz';
 const packageName = 'com.togafrica.mquiz';
 
 /// Add your panel url here
