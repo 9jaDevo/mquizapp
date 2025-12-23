@@ -78,6 +78,17 @@ class _ContestScreen extends State<ContestScreen>
               ),
               leading: const CustomBackButton(),
               centerTitle: true,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.info_outline),
+                  onPressed: () {
+                    Navigator.of(context).pushNamed(
+                      Routes.contestRules,
+                    );
+                  },
+                  tooltip: 'Contest Rules',
+                ),
+              ],
               bottom: PreferredSize(
                 preferredSize: const Size.fromHeight(50),
                 child: Container(
