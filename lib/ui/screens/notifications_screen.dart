@@ -3,7 +3,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/core/core.dart';
-import 'package:flutterquiz/features/ads/blocs/interstitial_ad_cubit.dart';
 import 'package:flutterquiz/features/notification/cubit/notification_cubit.dart';
 import 'package:flutterquiz/features/quiz/models/quiz_type.dart';
 import 'package:flutterquiz/ui/widgets/already_logged_in_dialog.dart';
@@ -40,7 +39,6 @@ class _NotificationScreen extends State<NotificationScreen> {
 
     controller.addListener(scrollListener);
     context.read<NotificationCubit>().fetchNotifications();
-    context.read<InterstitialAdCubit>().showAd(context);
   }
 
   void scrollListener() {

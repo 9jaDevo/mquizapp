@@ -8,8 +8,10 @@ import 'package:flutterquiz/core/core.dart';
 import 'package:flutterquiz/features/profile_management/cubits/user_details_cubit.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/features/system_config/model/ad_type.dart';
+import 'package:flutterquiz/ui/widgets/ad_consent_dialog.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:ironsource_mediation/ironsource_mediation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unity_ads_plugin/unity_ads_plugin.dart';
 
 sealed class RewardedAdState {
@@ -30,6 +32,61 @@ final class RewardedAdLoadInProgress extends RewardedAdState {
 
 final class RewardedAdFailure extends RewardedAdState {
   const RewardedAdFailure();
+}
+
+/// Tracks user consent/rejection for rewarded ads (AdMob compliance)
+class AdConsentTracker {
+  static const String _adConsentKey = 'rewarded_ad_consent_';
+  static const String _adRejectionKey = 'rewarded_ad_rejection_';
+
+  /// Record that user consented to watch ad
+  static Future<void> recordConsent(String placementId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = '$_adConsentKey$placementId';
+      final currentCount = prefs.getInt(key) ?? 0;
+      await prefs.setInt(key, currentCount + 1);
+      log(
+        'Ad consent recorded for $placementId (total: ${currentCount + 1})',
+        name: 'AdConsent',
+      );
+    } catch (e) {
+      log('Error recording consent: $e', name: 'AdConsent', error: e);
+    }
+  }
+
+  /// Record that user rejected/skipped ad
+  static Future<void> recordRejection(String placementId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = '$_adRejectionKey$placementId';
+      final currentCount = prefs.getInt(key) ?? 0;
+      await prefs.setInt(key, currentCount + 1);
+      log(
+        'Ad rejection recorded for $placementId (total: ${currentCount + 1})',
+        name: 'AdConsent',
+      );
+    } catch (e) {
+      log('Error recording rejection: $e', name: 'AdConsent', error: e);
+    }
+  }
+
+  /// Get consent statistics for a placement
+  static Future<Map<String, int>> getStats(String placementId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final consentCount = prefs.getInt('$_adConsentKey$placementId') ?? 0;
+      final rejectionCount = prefs.getInt('$_adRejectionKey$placementId') ?? 0;
+      return {
+        'consent': consentCount,
+        'rejection': rejectionCount,
+        'total': consentCount + rejectionCount,
+      };
+    } catch (e) {
+      log('Error getting stats: $e', name: 'AdConsent', error: e);
+      return {'consent': 0, 'rejection': 0, 'total': 0};
+    }
+  }
 }
 
 class RewardedAdCubit extends Cubit<RewardedAdState>
@@ -128,6 +185,18 @@ class RewardedAdCubit extends Cubit<RewardedAdState>
     final userDetails = context.read<UserDetailsCubit>();
 
     if (sysConfigCubit.isAdsEnable && state is RewardedAdLoaded) {
+      // Show consent dialog with reward details (AdMob compliance)
+      final userConsented = await _showConsentDialog(
+        context,
+        sysConfigCubit.coinsPerDailyAdView,
+        'coins',
+      );
+
+      if (!userConsented) {
+        log('User skipped daily reward ad', name: 'RewardedAd');
+        return; // User declined, don't show ad
+      }
+
       ///
       if (sysConfigCubit.adsType == AdType.admob) {
         _rewardedAd?.fullScreenContentCallback = FullScreenContentCallback(
@@ -231,12 +300,26 @@ class RewardedAdCubit extends Cubit<RewardedAdState>
   Future<void> showAd({
     required VoidCallback onAdDismissedCallback,
     required BuildContext context,
+    int rewardAmount = 3,
+    String rewardCurrencyLabel = 'coins',
   }) async {
     //if ads is enable
     final sysConfigCubit = context.read<SystemConfigCubit>();
     if (sysConfigCubit.isAdsEnable &&
         !context.read<UserDetailsCubit>().removeAds()) {
       if (state is RewardedAdLoaded) {
+        // Show consent dialog with reward details (AdMob compliance)
+        final userConsented = await _showConsentDialog(
+          context,
+          rewardAmount,
+          rewardCurrencyLabel,
+        );
+
+        if (!userConsented) {
+          log('User skipped rewarded ad', name: 'RewardedAd');
+          return; // User declined, don't show ad
+        }
+
         //if google ad is enable
         if (sysConfigCubit.adsType == AdType.admob) {
           _rewardedAd?.fullScreenContentCallback = FullScreenContentCallback(
@@ -281,6 +364,34 @@ class RewardedAdCubit extends Cubit<RewardedAdState>
         createRewardedAd(context);
       }
     }
+  }
+
+  /// Show consent dialog before displaying rewarded ad (AdMob policy compliance)
+  Future<bool> _showConsentDialog(
+    BuildContext context,
+    int rewardAmount,
+    String rewardCurrencyLabel,
+  ) async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false, // Force explicit choice
+      builder: (dialogContext) => AdConsentDialog(
+        rewardAmount: rewardAmount,
+        rewardCurrencyLabel: rewardCurrencyLabel,
+        onWatchAdTap: () {
+          // Record user consent
+          AdConsentTracker.recordConsent('rewarded_standard');
+          Navigator.of(dialogContext).pop(true); // User consented
+        },
+        onSkipTap: () {
+          // Record user rejection
+          AdConsentTracker.recordRejection('rewarded_standard');
+          Navigator.of(dialogContext).pop(false); // User declined
+        },
+      ),
+    );
+
+    return result ?? false;
   }
 
   @override

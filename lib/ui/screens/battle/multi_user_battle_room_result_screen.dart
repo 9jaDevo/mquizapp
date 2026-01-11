@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/commons/widgets/custom_image.dart';
 import 'package:flutterquiz/core/core.dart';
-import 'package:flutterquiz/features/ads/blocs/interstitial_ad_cubit.dart';
 import 'package:flutterquiz/features/battle_room/cubits/multi_user_battle_room_cubit.dart';
 import 'package:flutterquiz/features/battle_room/models/battle_room.dart';
 import 'package:flutterquiz/features/profile_management/cubits/user_details_cubit.dart';
@@ -61,9 +60,6 @@ class _MultiUserBattleRoomResultScreenState
   @override
   void initState() {
     super.initState();
-    Future.delayed(Duration.zero, () {
-      context.read<InterstitialAdCubit>().showAd(context);
-    });
     _updateResult();
   }
 

@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/core/core.dart';
-import 'package:flutterquiz/features/ads/blocs/interstitial_ad_cubit.dart';
 import 'package:flutterquiz/features/badges/blocs/badges_cubit.dart';
 import 'package:flutterquiz/features/badges/models/badge.dart';
 import 'package:flutterquiz/features/settings/settings_cubit.dart';
@@ -38,7 +37,6 @@ class _BadgesScreenState extends State<BadgesScreen> {
       context.read<BadgesCubit>().getBadges();
       UiUtils.updateBadgesLocally(context);
       context.read<StatisticCubit>().getStatistic();
-      context.read<InterstitialAdCubit>().showAd(context);
     });
   }
 

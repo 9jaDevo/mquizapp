@@ -5,7 +5,6 @@ import 'package:flutter_svg/svg.dart';
 import 'package:flutterquiz/commons/bottom_nav/models/nav_tab_type_enum.dart';
 import 'package:flutterquiz/commons/screens/dashboard_screen.dart';
 import 'package:flutterquiz/core/core.dart';
-import 'package:flutterquiz/features/ads/blocs/interstitial_ad_cubit.dart';
 import 'package:flutterquiz/features/badges/blocs/badges_cubit.dart';
 import 'package:flutterquiz/features/statistic/cubits/statistics_cubit.dart';
 import 'package:flutterquiz/features/statistic/statistic_repository.dart';
@@ -58,10 +57,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     super.initState();
     Future.delayed(Duration.zero, () {
       context.read<StatisticCubit>().getStatisticWithBattle();
-    });
-
-    Future.delayed(Duration.zero, () {
-      context.read<InterstitialAdCubit>().showAd(context);
     });
   }
 

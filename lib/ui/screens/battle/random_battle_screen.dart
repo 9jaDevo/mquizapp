@@ -16,7 +16,6 @@ import 'package:flutterquiz/ui/screens/battle/create_or_join_screen.dart';
 import 'package:flutterquiz/ui/screens/battle/widgets/top_curve_clipper.dart';
 import 'package:flutterquiz/ui/widgets/already_logged_in_dialog.dart';
 import 'package:flutterquiz/ui/widgets/custom_rounded_button.dart';
-import 'package:flutterquiz/ui/widgets/watch_reward_ad_dialog.dart';
 import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 
@@ -423,14 +422,12 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
             return;
           }
 
-          showWatchAdDialog(
-            context,
-            onConfirm: () {
-              context.read<RewardedAdCubit>().showAd(
-                context: context,
-                onAdDismissedCallback: _addCoinsAfterRewardAd,
-              );
-            },
+          // Show rewarded ad with built-in consent dialog
+          context.read<RewardedAdCubit>().showAd(
+            context: context,
+            rewardAmount: context.read<SystemConfigCubit>().rewardAdsCoins,
+            rewardCurrencyLabel: 'coins',
+            onAdDismissedCallback: _addCoinsAfterRewardAd,
           );
           return;
         }

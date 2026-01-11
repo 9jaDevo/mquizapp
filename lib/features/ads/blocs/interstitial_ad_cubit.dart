@@ -9,6 +9,7 @@ import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.da
 import 'package:flutterquiz/features/system_config/model/ad_type.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:ironsource_mediation/ironsource_mediation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unity_ads_plugin/unity_ads_plugin.dart';
 
 sealed class InterstitialAdState {
@@ -29,6 +30,101 @@ final class InterstitialAdLoadInProgress extends InterstitialAdState {
 
 final class InterstitialAdFailToLoad extends InterstitialAdState {
   const InterstitialAdFailToLoad();
+}
+
+/// Manages interstitial ad frequency capping to prevent ad stacking violations
+class AdFrequencyManager {
+  static const String _lastAdShowTimeKey = 'last_interstitial_show_time';
+  static const String _dailyAdCountKey = 'daily_interstitial_count';
+  static const String _dailyAdCountDateKey = 'daily_interstitial_count_date';
+
+  // Minimum gap between interstitials in milliseconds (120 seconds)
+  static const int _minGapBetweenAds = 120000;
+
+  // Maximum interstitials per day
+  static const int _maxAdsPerDay = 3;
+
+  /// Check if enough time has passed since last ad and daily limit not exceeded
+  static Future<bool> canShowAd() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final now = DateTime.now();
+
+      // Check time gap (minimum 120 seconds between ads)
+      final lastShowTime = prefs.getInt(_lastAdShowTimeKey) ?? 0;
+      final timeSinceLastAd = now.millisecondsSinceEpoch - lastShowTime;
+      if (timeSinceLastAd < _minGapBetweenAds) {
+        log(
+          'Ad blocked: Only ${timeSinceLastAd ~/ 1000}s since last ad (need ${_minGapBetweenAds ~/ 1000}s)',
+          name: 'AdFrequency',
+        );
+        return false;
+      }
+
+      // Check daily limit
+      final lastCountDate = prefs.getString(_dailyAdCountDateKey) ?? '';
+      final todayDate = '${now.year}-${now.month}-${now.day}';
+
+      int dailyCount = 0;
+      if (lastCountDate == todayDate) {
+        dailyCount = prefs.getInt(_dailyAdCountKey) ?? 0;
+      }
+
+      if (dailyCount >= _maxAdsPerDay) {
+        log(
+          'Ad blocked: Daily limit reached ($dailyCount/$_maxAdsPerDay)',
+          name: 'AdFrequency',
+        );
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      log('Error in canShowAd: $e', name: 'AdFrequency', error: e);
+      return true; // Allow ad on error to avoid breaking functionality
+    }
+  }
+
+  /// Record that an ad was shown
+  static Future<void> recordAdShown() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final now = DateTime.now();
+
+      // Update last show time
+      await prefs.setInt(_lastAdShowTimeKey, now.millisecondsSinceEpoch);
+
+      // Update daily count
+      final todayDate = '${now.year}-${now.month}-${now.day}';
+      final lastCountDate = prefs.getString(_dailyAdCountDateKey) ?? '';
+
+      int dailyCount = 0;
+      if (lastCountDate == todayDate) {
+        dailyCount = prefs.getInt(_dailyAdCountKey) ?? 0;
+      }
+
+      await prefs.setInt(_dailyAdCountKey, dailyCount + 1);
+      await prefs.setString(_dailyAdCountDateKey, todayDate);
+
+      log(
+        'Ad recorded: ${dailyCount + 1}/$_maxAdsPerDay for today',
+        name: 'AdFrequency',
+      );
+    } catch (e) {
+      log('Error in recordAdShown: $e', name: 'AdFrequency', error: e);
+    }
+  }
+
+  /// Reset daily count (for testing - remove in production if needed)
+  static Future<void> resetDailyCount() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_dailyAdCountKey);
+      await prefs.remove(_dailyAdCountDateKey);
+    } catch (e) {
+      log('Error in resetDailyCount: $e', name: 'AdFrequency', error: e);
+    }
+  }
 }
 
 class InterstitialAdCubit extends Cubit<InterstitialAdState>
@@ -101,6 +197,13 @@ class InterstitialAdCubit extends Cubit<InterstitialAdState>
   }
 
   Future<void> showAd(BuildContext context) async {
+    // Check frequency capping first (AdMob compliance)
+    final canShowAd = await AdFrequencyManager.canShowAd();
+    if (!canShowAd) {
+      log('Ad not shown due to frequency cap', name: 'InterstitialAd');
+      return;
+    }
+
     //if ad is enable
     final sysConfigCubit = context.read<SystemConfigCubit>();
     if (sysConfigCubit.isAdsEnable &&
@@ -110,7 +213,10 @@ class InterstitialAdCubit extends Cubit<InterstitialAdState>
         //show google interstitial ad
         if (sysConfigCubit.adsType == AdType.admob) {
           interstitialAd?.fullScreenContentCallback = FullScreenContentCallback(
-            onAdShowedFullScreenContent: (InterstitialAd ad) {},
+            onAdShowedFullScreenContent: (InterstitialAd ad) {
+              // Record ad as shown for frequency tracking
+              AdFrequencyManager.recordAdShown();
+            },
             onAdDismissedFullScreenContent: (InterstitialAd ad) {
               ad.dispose();
               createInterstitialAd(context);
@@ -126,15 +232,21 @@ class InterstitialAdCubit extends Cubit<InterstitialAdState>
           //show Unity interstitial ad
           UnityAds.showVideoAd(
             placementId: unityPlacementName,
+            onStart: (placementId) {
+              // Record ad as shown for frequency tracking
+              AdFrequencyManager.recordAdShown();
+              log('Video Ad $placementId started');
+            },
             onComplete: (placementId) => createInterstitialAd(context),
             onFailed: (placementId, error, message) =>
                 log('Video Ad $placementId failed: $error $message'),
-            onStart: (placementId) => log('Video Ad $placementId started'),
             onClick: (placementId) => log('Video Ad $placementId click'),
             onSkipped: (placementId) => createInterstitialAd(context),
           );
         } else if (sysConfigCubit.adsType == AdType.ironSource) {
           if (await _ironSourceAd.isAdReady()) {
+            // Record ad as shown for frequency tracking
+            await AdFrequencyManager.recordAdShown();
             await _ironSourceAd.showAd().then((_) {
               createInterstitialAd(context);
             });

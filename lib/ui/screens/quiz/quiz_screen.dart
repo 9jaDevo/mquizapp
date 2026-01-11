@@ -25,7 +25,6 @@ import 'package:flutterquiz/ui/widgets/custom_rounded_button.dart';
 import 'package:flutterquiz/ui/widgets/error_container.dart';
 import 'package:flutterquiz/ui/widgets/questions_container.dart';
 import 'package:flutterquiz/ui/widgets/text_circular_timer.dart';
-import 'package:flutterquiz/ui/widgets/watch_reward_ad_dialog.dart';
 import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 
@@ -518,29 +517,22 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
 
     if (context.read<RewardedAdCubit>().state is! RewardedAdLoaded) {
       context.showSnack(
-        context.tr(convertErrorCodeToLanguageKey(errorCodeNotEnoughCoins))!,
+        context.tr('watchAdToEarnCoins')!,
       );
       return;
     }
     //stop timer
     timerAnimationController.stop();
-    showWatchAdDialog(
-      context,
-      onConfirm: () {
-        context.read<RewardedAdCubit>().showAd(
-          context: context,
-          onAdDismissedCallback: _addCoinsAfterRewardAd,
-        );
-      },
-      onCancel: () {
-        //pass true to start timer
-        context.shouldPop(true);
-      },
-    ).then((startTimer) {
-      //if user do not want to see ad
-      if (startTimer != null && startTimer) {
-        timerAnimationController.forward(from: timerAnimationController.value);
-      }
+    
+    // Show rewarded ad with built-in consent dialog
+    context.read<RewardedAdCubit>().showAd(
+      context: context,
+      rewardAmount: context.read<SystemConfigCubit>().rewardAdsCoins,
+      rewardCurrencyLabel: 'coins',
+      onAdDismissedCallback: _addCoinsAfterRewardAd,
+    ).then((_) {
+      // Resume timer whether user watched ad or skipped it
+      timerAnimationController.forward(from: timerAnimationController.value);
     });
   }
 
