@@ -1,18 +1,16 @@
 import 'dart:developer';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutterquiz/commons/widgets/custom_snackbar.dart';
 import 'package:flutterquiz/features/ads/utils/ad_consent_tracker.dart';
 import 'package:flutterquiz/features/ads/utils/ad_impression_quality_tracker.dart';
 import 'package:flutterquiz/features/ads/utils/ad_analytics_collector.dart';
-import 'package:flutterquiz/features/profile_management/cubits/update_coins_cubit.dart';
 import 'package:flutterquiz/features/profile_management/cubits/user_details_cubit.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/features/system_config/model/ad_type.dart';
 import 'package:flutterquiz/ui/widgets/ad_consent_dialog.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 enum RewardedInterstitialAdState { initial, loading, loaded, failure }
 
@@ -202,15 +200,16 @@ class RewardedInterstitialAdCubit extends Cubit<RewardedInterstitialAdState> {
 
         // Reward user if they watched to completion
         if (rewardEarned && context.mounted) {
-          context.read<UpdateCoinsCubit>().updateCoins(
-            coins: rewardAmount,
-            addCoin: true,
-            title: 'watchedRewardedInterstitialAdKey',
-          );
-          context.read<UserDetailsCubit>().updateCoins(
+          final userDetails = context.read<UserDetailsCubit>();
+
+          // Update user coins
+          userDetails.updateCoins(
             addCoin: true,
             coins: rewardAmount,
           );
+
+          // Refresh user details
+          await userDetails.fetchUserDetails();
 
           // Track conversion
           await AdAnalyticsCollector.recordConversionMetric(
@@ -218,12 +217,8 @@ class RewardedInterstitialAdCubit extends Cubit<RewardedInterstitialAdState> {
           );
 
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('+$rewardAmount $rewardCurrencyLabel earned!'),
-                backgroundColor: Colors.green,
-                duration: const Duration(seconds: 2),
-              ),
+            context.showSnack(
+              '+$rewardAmount coins earned!',
             );
           }
         }
@@ -242,14 +237,6 @@ class RewardedInterstitialAdCubit extends Cubit<RewardedInterstitialAdState> {
         );
       },
     );
-
-    _rewardedInterstitialAd!.setOnPaidEventCallback((ad, reward) {
-      log(
-        'Rewarded interstitial earned: ${reward.amount} ${reward.type}',
-        name: 'RewardedInterstitialAd',
-      );
-      rewardEarned = true;
-    });
 
     await _rewardedInterstitialAd!.show(
       onUserEarnedReward: (ad, reward) {
