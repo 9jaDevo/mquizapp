@@ -1,6 +1,7 @@
 import 'dart:developer';
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/commons/widgets/custom_snackbar.dart';
@@ -188,7 +189,7 @@ class RewardedAdCubit extends Cubit<RewardedAdState>
       // Show consent dialog with reward details (AdMob compliance)
       final userConsented = await _showConsentDialog(
         context,
-        sysConfigCubit.coinsPerDailyAdView,
+        int.parse(sysConfigCubit.coinsPerDailyAdView),
         'coins',
       );
 
