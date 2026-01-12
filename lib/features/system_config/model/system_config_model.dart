@@ -86,6 +86,10 @@ final class SystemConfigModel {
     required this.multiMatchMode,
     required this.multiMatchDuration,
     required this.guessTheWordHintDeductCoins,
+    required this.appOpenIdAndroid,
+    required this.appOpenIdIos,
+    required this.rewardedInterstitialIdAndroid,
+    required this.rewardedInterstitialIdIos,
     required this.bannerIdAndroidIronSource,
     required this.bannerIdIosIronSource,
     required this.interstitialIdAndroidIronSource,
@@ -238,7 +242,13 @@ final class SystemConfigModel {
           json['rewarded_id_ios_iron_source'] as String? ?? '',
       appKeyIosIronSource = json['app_key_ios_iron_source'] as String? ?? '',
       appKeyAndroidIronSource =
-          json['app_key_android_iron_source'] as String? ?? '';
+          json['app_key_android_iron_source'] as String? ?? '',
+      appOpenIdAndroid = json['app_open_id_android'] as String? ?? '',
+      appOpenIdIos = json['app_open_id_ios'] as String? ?? '',
+      rewardedInterstitialIdAndroid =
+          json['rewarded_interstitial_id_android'] as String? ?? '',
+      rewardedInterstitialIdIos =
+          json['rewarded_interstitial_id_ios'] as String? ?? '';
 
   /// to Check if Ads are enabled in whole App or not.
   final bool adsEnabled;
@@ -247,6 +257,10 @@ final class SystemConfigModel {
   final String androidGameID;
   final String androidInterstitialId;
   final String androidRewardedId;
+  final String appOpenIdAndroid;
+  final String appOpenIdIos;
+  final String rewardedInterstitialIdAndroid;
+  final String rewardedInterstitialIdIos;
   final AnswerMode answerMode;
   final String appLink;
   final bool appMaintenance;

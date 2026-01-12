@@ -117,6 +117,8 @@ class MyApp extends StatelessWidget {
         ),
         BlocProvider<InterstitialAdCubit>(create: (_) => InterstitialAdCubit()),
         BlocProvider<RewardedAdCubit>(create: (_) => RewardedAdCubit()),
+        BlocProvider<AppOpenAdCubit>(create: (_) => AppOpenAdCubit()),
+        BlocProvider<RewardedInterstitialAdCubit>(create: (_) => RewardedInterstitialAdCubit()),
         BlocProvider<ExamCubit>(create: (_) => ExamCubit(ExamRepository())),
         BlocProvider<ComprehensionCubit>(
           create: (_) => ComprehensionCubit(QuizRepository()),

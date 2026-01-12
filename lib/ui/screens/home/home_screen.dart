@@ -110,6 +110,12 @@ class HomeScreenState extends State<HomeScreen>
     Future.delayed(Duration.zero, () async {
       await context.read<RewardedAdCubit>().createDailyRewardAd(context);
       context.read<InterstitialAdCubit>().createInterstitialAd(context);
+      
+      // Create app open ad
+      await context.read<AppOpenAdCubit>().loadAppOpenAd(context);
+      
+      // Create rewarded interstitial ad
+      await context.read<RewardedInterstitialAdCubit>().createRewardedInterstitialAd(context);
     });
 
     WidgetsBinding.instance.addObserver(this);
@@ -393,6 +399,9 @@ class HomeScreenState extends State<HomeScreen>
     //show you left the game
     if (state == AppLifecycleState.resumed) {
       UiUtils.needToUpdateCoinsLocally(context);
+      
+      // Show app open ad when user resumes app
+      context.read<AppOpenAdCubit>().showAppOpenAdIfAvailable();
     } else {
       ProfileManagementLocalDataSource().updateReversedCoins(0);
     }

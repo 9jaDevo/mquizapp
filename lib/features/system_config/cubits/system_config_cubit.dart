@@ -162,6 +162,14 @@ final class SystemConfigCubit extends Cubit<SystemConfigState> {
       ? systemConfigModel?.iosRewardedId ?? ''
       : systemConfigModel?.androidRewardedId ?? '';
 
+  String get appOpenAdId => Platform.isIOS
+      ? systemConfigModel?.appOpenIdIos ?? ''
+      : systemConfigModel?.appOpenIdAndroid ?? '';
+
+  String get rewardedInterstitialAdId => Platform.isIOS
+      ? systemConfigModel?.rewardedInterstitialIdIos ?? ''
+      : systemConfigModel?.rewardedInterstitialIdAndroid ?? '';
+
   bool get isForceUpdateEnable => systemConfigModel?.forceUpdate ?? false;
 
   bool get isAppUnderMaintenance => systemConfigModel?.appMaintenance ?? false;
