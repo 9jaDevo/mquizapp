@@ -8,6 +8,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutterquiz/commons/commons.dart';
 import 'package:flutterquiz/core/core.dart';
 import 'package:flutterquiz/features/ads/blocs/interstitial_ad_cubit.dart';
+import 'package:flutterquiz/features/ads/blocs/rewarded_interstitial_ad_cubit.dart';
 import 'package:flutterquiz/features/battle_room/cubits/battle_room_cubit.dart';
 import 'package:flutterquiz/features/battle_room/models/battle_room.dart';
 import 'package:flutterquiz/features/exam/models/exam.dart';
@@ -146,6 +147,9 @@ class _ResultScreenState extends State<ResultScreen> {
 
   bool _displayedAlreadyLoggedInDialog = false;
 
+  // Track quiz completions for rewarded interstitial
+  static int _quizCompletionCount = 0;
+
   late final UserProfile userProfile = context
       .read<UserDetailsCubit>()
       .getUserProfile();
@@ -193,8 +197,28 @@ class _ResultScreenState extends State<ResultScreen> {
     super.initState();
 
     SchedulerBinding.instance.addPostFrameCallback((_) async {
+      // Increment quiz completion counter
+      _quizCompletionCount++;
+
       if (!widget.isPremiumCategory) {
-        context.read<InterstitialAdCubit>().showAd(context);
+        // Show rewarded interstitial every 2 quizzes (giving 3 coins)
+        if (_quizCompletionCount % 2 == 0 &&
+            context.read<SystemConfigCubit>().isAdsEnable &&
+            !context.read<UserDetailsCubit>().removeAds()) {
+          final rewardCoins = context.read<SystemConfigCubit>().rewardAdsCoins;
+
+          await context.read<RewardedInterstitialAdCubit>().showAd(
+            context: context,
+            rewardAmount: rewardCoins,
+            rewardCurrencyLabel: 'coins',
+            onAdDismissedCallback: () {
+              // Continue with regular flow
+            },
+          );
+        } else {
+          // Show regular interstitial ad
+          context.read<InterstitialAdCubit>().showAd(context);
+        }
       }
 
       if (widget.quizType == QuizTypes.selfChallenge) {
