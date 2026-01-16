@@ -70,13 +70,16 @@ class Sponsors extends CI_Controller
     /**
      * View single banner details & analytics
      */
-    public function view()
+    public function view($id = null)
     {
         if (!has_permissions('read', 'sponsor_banners')) {
             show_404();
         }
 
-        $id = $this->input->get('id');
+        if (!$id) {
+            $id = $this->input->get('id');
+        }
+        
         $banner = $this->Sponsor_model->get_banner($id);
 
         if (!$banner) {

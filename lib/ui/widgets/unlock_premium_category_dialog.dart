@@ -168,9 +168,9 @@ class _UnlockPremiumAlertDialogState extends State<_UnlockPremiumAlertDialog> {
       child: BlocBuilder<MonetizationCubit, MonetizationState>(
         builder: (context, monetizationState) {
           // Step 9: Show watch unlock option if enabled
-          final showWatchOption = monetizationState is WatchUnlockConfigFetched &&
-              monetizationState.config.enabled;
-          final adsRequired = showWatchOption ? monetizationState.config.adCountRequired : 0;
+          final showWatchOption = monetizationState.watchUnlockConfig != null &&
+              monetizationState.watchUnlockConfig!.enabled;
+          final adsRequired = showWatchOption ? monetizationState.watchUnlockConfig!.adCountRequired : 0;
           final canUnlockByWatching = _adsWatched >= adsRequired && showWatchOption;
 
           return BlocConsumer<UnlockPremiumCategoryCubit, UnlockPremiumCategoryState>(

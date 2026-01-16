@@ -6,19 +6,19 @@ import 'package:equatable/equatable.dart';
 part 'monetization_state.dart';
 
 class MonetizationCubit extends Cubit<MonetizationState> {
-  MonetizationCubit(this._monetizationRemoteDataSource) : super(const MonetizationInitial());
+  MonetizationCubit(this._monetizationRemoteDataSource) : super(const MonetizationState());
 
   final MonetizationRemoteDataSource _monetizationRemoteDataSource;
 
   // Daily Streak
   Future<void> checkDailyStreak() async {
-    emit(const CheckingDailyStreakInProgress());
+    emit(state.copyWith(isLoadingStreak: true, clearError: true));
     try {
       final data = await _monetizationRemoteDataSource.checkDailyStreak();
       final streak = DailyStreak.fromJson(data);
-      emit(DailyStreakChecked(streak: streak));
+      emit(state.copyWith(streak: streak, isLoadingStreak: false));
     } catch (e) {
-      emit(MonetizationError(error: e.toString()));
+      emit(state.copyWith(isLoadingStreak: false, error: e.toString()));
     }
   }
 
@@ -28,7 +28,7 @@ class MonetizationCubit extends Cubit<MonetizationState> {
     required String deviceType,
     String? deviceName,
   }) async {
-    emit(const RegisteringDeviceInProgress());
+    emit(state.copyWith(isLoadingDevice: true, clearError: true));
     try {
       final data = await _monetizationRemoteDataSource.registerDevice(
         deviceId: deviceId,
@@ -36,9 +36,9 @@ class MonetizationCubit extends Cubit<MonetizationState> {
         deviceName: deviceName,
       );
       final registration = DeviceRegistration.fromJson(data);
-      emit(DeviceRegistered(registration: registration));
+      emit(state.copyWith(deviceRegistration: registration, isLoadingDevice: false));
     } catch (e) {
-      emit(MonetizationError(error: e.toString()));
+      emit(state.copyWith(isLoadingDevice: false, error: e.toString()));
     }
   }
 
@@ -47,44 +47,44 @@ class MonetizationCubit extends Cubit<MonetizationState> {
     required String actionType,
     Map<String, dynamic>? metadata,
   }) async {
-    emit(const EvaluatingUserRiskInProgress());
+    emit(state.copyWith(isLoadingFraud: true, clearError: true));
     try {
       final data = await _monetizationRemoteDataSource.evaluateUserRisk(
         actionType: actionType,
         metadata: metadata,
       );
       final fraud = FraudDetection.fromJson(data);
-      emit(UserRiskEvaluated(fraud: fraud));
+      emit(state.copyWith(fraud: fraud, isLoadingFraud: false));
     } catch (e) {
-      emit(MonetizationError(error: e.toString()));
+      emit(state.copyWith(isLoadingFraud: false, error: e.toString()));
     }
   }
 
   // Payout Eligibility Check
   Future<void> checkPayoutEligibility() async {
-    emit(const CheckingPayoutEligibilityInProgress());
+    emit(state.copyWith(isLoadingPayout: true, clearError: true));
     try {
       final data = await _monetizationRemoteDataSource.checkPayoutEligibility();
       final eligibility = PayoutEligibility.fromJson(data);
-      emit(PayoutEligibilityChecked(eligibility: eligibility));
+      emit(state.copyWith(payoutEligibility: eligibility, isLoadingPayout: false));
     } catch (e) {
-      emit(MonetizationError(error: e.toString()));
+      emit(state.copyWith(isLoadingPayout: false, error: e.toString()));
     }
   }
 
   // Get Sponsor Banner
   Future<void> getSponsorBanner() async {
-    emit(const FetchingSponsorBannerInProgress());
+    emit(state.copyWith(isLoadingBanner: true, clearError: true));
     try {
       final data = await _monetizationRemoteDataSource.getSponsorBanner();
       if (data != null) {
         final banner = SponsorBanner.fromJson(data);
-        emit(SponsorBannerFetched(banner: banner));
+        emit(state.copyWith(banner: banner, isLoadingBanner: false));
       } else {
-        emit(const SponsorBannerNotAvailable());
+        emit(state.copyWith(isLoadingBanner: false));
       }
     } catch (e) {
-      emit(MonetizationError(error: e.toString()));
+      emit(state.copyWith(isLoadingBanner: false, error: e.toString()));
     }
   }
 
@@ -93,42 +93,43 @@ class MonetizationCubit extends Cubit<MonetizationState> {
     try {
       await _monetizationRemoteDataSource.recordSponsorBannerClick(bannerId: bannerId);
     } catch (e) {
-      emit(MonetizationError(error: e.toString()));
+      emit(state.copyWith(error: e.toString()));
     }
   }
 
   // Offer Boost Earnings
   Future<void> offerBoostEarnings({required String coinsEarned}) async {
-    emit(const OfferingBoostEarningsInProgress());
+    emit(state.copyWith(isLoadingBoost: true, clearError: true));
     try {
       final data = await _monetizationRemoteDataSource.offerBoostEarnings(coinsEarned: coinsEarned);
       final boost = BoostEarnings.fromJson(data);
-      emit(BoostEarningsOffered(boost: boost));
+      emit(state.copyWith(boostEarnings: boost, isLoadingBoost: false));
     } catch (e) {
-      emit(MonetizationError(error: e.toString()));
+      emit(state.copyWith(isLoadingBoost: false, error: e.toString()));
     }
   }
 
   // Apply Boost Earnings
-  Future<void> applyBoostEarnings({required String boostedCoins}) async {
-    emit(const ApplyingBoostEarningsInProgress());
+  Future<void> applyBoostEarnings({required String coinsEarned}) async {
+    emit(state.copyWith(isLoadingBoost: true, clearError: true));
     try {
-      final data = await _monetizationRemoteDataSource.applyBoostEarnings(boostedCoins: boostedCoins);
-      emit(BoostEarningsApplied(data: data));
+      final data = await _monetizationRemoteDataSource.applyBoostEarnings(boostedCoins: coinsEarned);
+      emit(state.copyWith(isLoadingBoost: false));
+      // Optionally handle success data
     } catch (e) {
-      emit(MonetizationError(error: e.toString()));
+      emit(state.copyWith(isLoadingBoost: false, error: e.toString()));
     }
   }
 
   // Get Watch Unlock Config
   Future<void> getWatchUnlockConfig() async {
-    emit(const FetchingWatchUnlockConfigInProgress());
+    emit(state.copyWith(isLoadingWatchUnlock: true, clearError: true));
     try {
       final data = await _monetizationRemoteDataSource.getWatchUnlockConfig();
       final config = WatchUnlockConfig.fromJson(data);
-      emit(WatchUnlockConfigFetched(config: config));
+      emit(state.copyWith(watchUnlockConfig: config, isLoadingWatchUnlock: false));
     } catch (e) {
-      emit(MonetizationError(error: e.toString()));
+      emit(state.copyWith(isLoadingWatchUnlock: false, error: e.toString()));
     }
   }
 }

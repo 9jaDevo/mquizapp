@@ -120,6 +120,7 @@ define('APP_LANGUAGE_FILE_PATH', 'upload/languages/app/');
 define('WEB_LANGUAGE_FILE_PATH', 'upload/languages/web/');
 define('LANGUAGE_FILE_ALLOWED_TYPES', 'json|JSON');
 define('COIN_STORE_IMG_PATH', 'images/coin-store/');
+define('SPONSOR_BANNER_IMG_PATH', 'images/sponsor_banners/');
 define('LANGUAGE_PATH', 'application/language/');
 define('LANGUAGE_ALLOWED_TYPES', 'PHP|php');
 define('MULTIMATCH_QUESTION_IMG_PATH', 'images/multimatch-questions/');

@@ -166,10 +166,10 @@ class HomeScreenState extends State<HomeScreen>
   Widget _buildDailyStreakWidget() {
     return BlocBuilder<MonetizationCubit, MonetizationState>(
       builder: (context, state) {
-        if (state is DailyStreakChecked) {
+        if (state.streak != null && state.streak!.coinsEarned > 0) {
           return Padding(
             padding: EdgeInsets.symmetric(horizontal: hzMargin),
-            child: DailyStreakWidget(streak: state.streak),
+            child: DailyStreakWidget(streak: state.streak!),
           );
         }
         return const SizedBox.shrink();
@@ -188,14 +188,14 @@ class HomeScreenState extends State<HomeScreen>
 
     return BlocBuilder<MonetizationCubit, MonetizationState>(
       builder: (context, state) {
-        if (state is SponsorBannerFetched) {
+        if (state.banner != null) {
           return Padding(
             padding: EdgeInsets.symmetric(horizontal: hzMargin),
             child: SponsorBannerWidget(
-              banner: state.banner,
+              banner: state.banner!,
               onBannerTap: () {
                 context.read<MonetizationCubit>().recordBannerClick(
-                  bannerId: state.banner.bannerId,
+                  bannerId: state.banner!.bannerId,
                 );
               },
             ),

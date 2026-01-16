@@ -316,10 +316,11 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
           barrierDismissible: false,
           builder: (dialogContext) => BlocConsumer<MonetizationCubit, MonetizationState>(
             listener: (context, state) {
-              if (state is BoostEarningsApplied) {
+              // Check if boost earnings were applied (isLoadingBoost goes from true to false with boostEarnings set)
+              if (!state.isLoadingBoost && state.boostEarnings != null) {
                 Navigator.of(dialogContext).pop();
                 // Update user coins with boosted amount
-                final boostedCoins = state.data['boostedCoins'] as int? ?? 0;
+                final boostedCoins = state.boostEarnings!.boostedCoins;
                 context.read<UpdateCoinsCubit>().updateCoins(
                   addCoin: true,
                   coins: boostedCoins,
@@ -328,12 +329,12 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
               }
             },
             builder: (context, state) {
-              if (state is BoostEarningsOffered) {
+              if (state.boostEarnings != null) {
                 return BoostEarningsDialog(
-                  boost: state.boost,
+                  boost: state.boostEarnings!,
                   onClaimPressed: () {
                     context.read<MonetizationCubit>().applyBoostEarnings(
-                      boostedCoins: state.boost.boostedCoins.toString(),
+                      coinsEarned: state.boostEarnings!.boostedCoins.toString(),
                     );
                   },
                   onSkipPressed: () {
@@ -341,7 +342,7 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
                     // Give original coins
                     context.read<UpdateCoinsCubit>().updateCoins(
                       addCoin: true,
-                      coins: state.boost.originalCoins,
+                      coins: state.boostEarnings!.originalCoins,
                       title: 'Quiz Completed',
                     );
                   },

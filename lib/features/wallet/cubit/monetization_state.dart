@@ -1,137 +1,93 @@
 part of 'monetization_cubit.dart';
 
-abstract class MonetizationState extends Equatable {
-  const MonetizationState();
+class MonetizationState extends Equatable {
+  final DailyStreak? streak;
+  final SponsorBanner? banner;
+  final DeviceRegistration? deviceRegistration;
+  final FraudDetection? fraud;
+  final PayoutEligibility? payoutEligibility;
+  final BoostEarnings? boostEarnings;
+  final WatchUnlockConfig? watchUnlockConfig;
+  final bool isLoadingStreak;
+  final bool isLoadingBanner;
+  final bool isLoadingDevice;
+  final bool isLoadingFraud;
+  final bool isLoadingPayout;
+  final bool isLoadingBoost;
+  final bool isLoadingWatchUnlock;
+  final String? error;
+
+  const MonetizationState({
+    this.streak,
+    this.banner,
+    this.deviceRegistration,
+    this.fraud,
+    this.payoutEligibility,
+    this.boostEarnings,
+    this.watchUnlockConfig,
+    this.isLoadingStreak = false,
+    this.isLoadingBanner = false,
+    this.isLoadingDevice = false,
+    this.isLoadingFraud = false,
+    this.isLoadingPayout = false,
+    this.isLoadingBoost = false,
+    this.isLoadingWatchUnlock = false,
+    this.error,
+  });
+
+  MonetizationState copyWith({
+    DailyStreak? streak,
+    SponsorBanner? banner,
+    DeviceRegistration? deviceRegistration,
+    FraudDetection? fraud,
+    PayoutEligibility? payoutEligibility,
+    BoostEarnings? boostEarnings,
+    WatchUnlockConfig? watchUnlockConfig,
+    bool? isLoadingStreak,
+    bool? isLoadingBanner,
+    bool? isLoadingDevice,
+    bool? isLoadingFraud,
+    bool? isLoadingPayout,
+    bool? isLoadingBoost,
+    bool? isLoadingWatchUnlock,
+    String? error,
+    bool clearError = false,
+  }) {
+    return MonetizationState(
+      streak: streak ?? this.streak,
+      banner: banner ?? this.banner,
+      deviceRegistration: deviceRegistration ?? this.deviceRegistration,
+      fraud: fraud ?? this.fraud,
+      payoutEligibility: payoutEligibility ?? this.payoutEligibility,
+      boostEarnings: boostEarnings ?? this.boostEarnings,
+      watchUnlockConfig: watchUnlockConfig ?? this.watchUnlockConfig,
+      isLoadingStreak: isLoadingStreak ?? this.isLoadingStreak,
+      isLoadingBanner: isLoadingBanner ?? this.isLoadingBanner,
+      isLoadingDevice: isLoadingDevice ?? this.isLoadingDevice,
+      isLoadingFraud: isLoadingFraud ?? this.isLoadingFraud,
+      isLoadingPayout: isLoadingPayout ?? this.isLoadingPayout,
+      isLoadingBoost: isLoadingBoost ?? this.isLoadingBoost,
+      isLoadingWatchUnlock: isLoadingWatchUnlock ?? this.isLoadingWatchUnlock,
+      error: clearError ? null : (error ?? this.error),
+    );
+  }
 
   @override
-  List<Object> get props => [];
-}
-
-class MonetizationInitial extends MonetizationState {
-  const MonetizationInitial();
-}
-
-// Daily Streak States
-class CheckingDailyStreakInProgress extends MonetizationState {
-  const CheckingDailyStreakInProgress();
-}
-
-class DailyStreakChecked extends MonetizationState {
-  final DailyStreak streak;
-
-  const DailyStreakChecked({required this.streak});
-
-  @override
-  List<Object> get props => [streak];
-}
-
-// Device Registration States
-class RegisteringDeviceInProgress extends MonetizationState {
-  const RegisteringDeviceInProgress();
-}
-
-class DeviceRegistered extends MonetizationState {
-  final DeviceRegistration registration;
-
-  const DeviceRegistered({required this.registration});
-
-  @override
-  List<Object> get props => [registration];
-}
-
-// Fraud Evaluation States
-class EvaluatingUserRiskInProgress extends MonetizationState {
-  const EvaluatingUserRiskInProgress();
-}
-
-class UserRiskEvaluated extends MonetizationState {
-  final FraudDetection fraud;
-
-  const UserRiskEvaluated({required this.fraud});
-
-  @override
-  List<Object> get props => [fraud];
-}
-
-// Payout Eligibility States
-class CheckingPayoutEligibilityInProgress extends MonetizationState {
-  const CheckingPayoutEligibilityInProgress();
-}
-
-class PayoutEligibilityChecked extends MonetizationState {
-  final PayoutEligibility eligibility;
-
-  const PayoutEligibilityChecked({required this.eligibility});
-
-  @override
-  List<Object> get props => [eligibility];
-}
-
-// Sponsor Banner States
-class FetchingSponsorBannerInProgress extends MonetizationState {
-  const FetchingSponsorBannerInProgress();
-}
-
-class SponsorBannerFetched extends MonetizationState {
-  final SponsorBanner banner;
-
-  const SponsorBannerFetched({required this.banner});
-
-  @override
-  List<Object> get props => [banner];
-}
-
-class SponsorBannerNotAvailable extends MonetizationState {
-  const SponsorBannerNotAvailable();
-}
-
-// Boost Earnings States
-class OfferingBoostEarningsInProgress extends MonetizationState {
-  const OfferingBoostEarningsInProgress();
-}
-
-class BoostEarningsOffered extends MonetizationState {
-  final BoostEarnings boost;
-
-  const BoostEarningsOffered({required this.boost});
-
-  @override
-  List<Object> get props => [boost];
-}
-
-class ApplyingBoostEarningsInProgress extends MonetizationState {
-  const ApplyingBoostEarningsInProgress();
-}
-
-class BoostEarningsApplied extends MonetizationState {
-  final Map<String, dynamic> data;
-
-  const BoostEarningsApplied({required this.data});
-
-  @override
-  List<Object> get props => [data];
-}
-
-// Watch Unlock Config States
-class FetchingWatchUnlockConfigInProgress extends MonetizationState {
-  const FetchingWatchUnlockConfigInProgress();
-}
-
-class WatchUnlockConfigFetched extends MonetizationState {
-  final WatchUnlockConfig config;
-
-  const WatchUnlockConfigFetched({required this.config});
-
-  @override
-  List<Object> get props => [config];
-}
-
-// Error State
-class MonetizationError extends MonetizationState {
-  final String error;
-
-  const MonetizationError({required this.error});
-
-  @override
-  List<Object> get props => [error];
+  List<Object?> get props => [
+    streak,
+    banner,
+    deviceRegistration,
+    fraud,
+    payoutEligibility,
+    boostEarnings,
+    watchUnlockConfig,
+    isLoadingStreak,
+    isLoadingBanner,
+    isLoadingDevice,
+    isLoadingFraud,
+    isLoadingPayout,
+    isLoadingBoost,
+    isLoadingWatchUnlock,
+    error,
+  ];
 }

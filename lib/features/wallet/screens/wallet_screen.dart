@@ -213,10 +213,10 @@ class _WalletScreenState extends State<WalletScreen>
           // Step 8: Payout Eligibility Widget
           BlocBuilder<MonetizationCubit, MonetizationState>(
             builder: (context, state) {
-              if (state is PayoutEligibilityChecked) {
+              if (state.payoutEligibility != null) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 16),
-                  child: PayoutEligibilityWidget(eligibility: state.eligibility),
+                  child: PayoutEligibilityWidget(eligibility: state.payoutEligibility!),
                 );
               }
               return const SizedBox.shrink();

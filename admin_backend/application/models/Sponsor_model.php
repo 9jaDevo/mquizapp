@@ -9,12 +9,26 @@ defined('BASEPATH') or exit('No direct script access allowed');
  */
 class Sponsor_model extends CI_Model
 {
-    private $upload_path = 'admin_backend/images/sponsor_banners/';
-
     public function __construct()
     {
         parent::__construct();
         $this->load->helper('settings');
+        
+        // Ensure directory exists using absolute path
+        $full_path = FCPATH . SPONSOR_BANNER_IMG_PATH;
+        error_log('Checking sponsor banner path: ' . $full_path);
+        
+        if (!is_dir($full_path)) {
+            error_log('Creating directory: ' . $full_path);
+            $result = mkdir($full_path, 0755, true);
+            error_log('Directory creation result: ' . ($result ? 'SUCCESS' : 'FAILED'));
+            
+            if (!$result) {
+                error_log('Failed to create directory. FCPATH: ' . FCPATH);
+            }
+        } else {
+            error_log('Directory already exists');
+        }
     }
 
     /**
@@ -81,7 +95,7 @@ class Sponsor_model extends CI_Model
             'sponsor_name' => $this->input->post('sponsor_name'),
             'title' => $this->input->post('title'),
             'image_url' => $image_url,
-            'image_path' => $this->upload_path . basename($image_url),
+            'image_path' => SPONSOR_BANNER_IMG_PATH . basename($image_url),
             'redirect_url' => $this->input->post('redirect_url'),
             'redirect_type' => $this->input->post('redirect_type') ?? 'url',
             'impression_limit' => $this->input->post('impression_limit') ?? 0,
@@ -302,8 +316,8 @@ class Sponsor_model extends CI_Model
 
         foreach ($banners as $banner) {
             $analytics[] = array_merge(
-                $banner,
-                $this->get_banner_analytics($banner['id'])
+                (array)$banner,
+                $this->get_banner_analytics($banner->id)
             );
         }
 
@@ -318,23 +332,19 @@ class Sponsor_model extends CI_Model
      */
     private function handle_image_upload($input_name)
     {
-        // Ensure upload directory exists
-        if (!is_dir($this->upload_path)) {
-            mkdir($this->upload_path, 0755, true);
-        }
-
         $config = [
-            'upload_path' => $this->upload_path,
+            'upload_path' => FCPATH . SPONSOR_BANNER_IMG_PATH,
             'allowed_types' => 'gif|jpg|jpeg|png|webp',
             'max_size' => 5000,  // 5MB
             'file_name' => 'sponsor_' . time(),
             'overwrite' => false
         ];
 
-        $this->load->library('upload', $config);
+        $this->upload->initialize($config);
 
         if ($this->upload->do_upload($input_name)) {
-            return base_url($this->upload_path . $this->upload->data('file_name'));
+            $upload_data = $this->upload->data();
+            return base_url(SPONSOR_BANNER_IMG_PATH . $upload_data['file_name']);
         }
 
         return false;
