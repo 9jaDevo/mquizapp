@@ -308,7 +308,7 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
         final baseCoins = correctAnswers * 10;
         
         // Offer boost
-        context.read<MonetizationCubit>().offerBoostEarnings(baseCoins);
+        context.read<MonetizationCubit>().offerBoostEarnings(coinsEarned: baseCoins.toString());
         
         // Show dialog when state changes
         showDialog<void>(
@@ -318,10 +318,12 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
             listener: (context, state) {
               if (state is BoostEarningsApplied) {
                 Navigator.of(dialogContext).pop();
-                // Update user coins
-                context.read<UserDetailsCubit>().updateCoins(
+                // Update user coins with boosted amount
+                final boostedCoins = state.data['boostedCoins'] as int? ?? 0;
+                context.read<UpdateCoinsCubit>().updateCoins(
                   addCoin: true,
-                  coins: state.boost.boostedCoins,
+                  coins: boostedCoins,
+                  title: 'Boost Earnings',
                 );
               }
             },
@@ -329,15 +331,18 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
               if (state is BoostEarningsOffered) {
                 return BoostEarningsDialog(
                   boost: state.boost,
-                  onClaim: () {
-                    context.read<MonetizationCubit>().applyBoostEarnings();
+                  onClaimPressed: () {
+                    context.read<MonetizationCubit>().applyBoostEarnings(
+                      boostedCoins: state.boost.boostedCoins.toString(),
+                    );
                   },
-                  onSkip: () {
+                  onSkipPressed: () {
                     Navigator.of(dialogContext).pop();
                     // Give original coins
-                    context.read<UserDetailsCubit>().updateCoins(
+                    context.read<UpdateCoinsCubit>().updateCoins(
                       addCoin: true,
                       coins: state.boost.originalCoins,
+                      title: 'Quiz Completed',
                     );
                   },
                 );
