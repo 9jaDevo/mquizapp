@@ -157,11 +157,7 @@ class ReferAndEarnScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-                    ],
-                  ),
                       SizedBox(height: size.height * .01),
-
-                      ///
                       SizedBox(
                         width: size.width * .8,
                         child: Text(
@@ -177,8 +173,6 @@ class ReferAndEarnScreen extends StatelessWidget {
                         ),
                       ),
                       SizedBox(height: size.height * .04),
-
-                      /// your referral code
                       DottedBorder(
                         options: RoundedRectDottedBorderOptions(
                           strokeWidth: 3,

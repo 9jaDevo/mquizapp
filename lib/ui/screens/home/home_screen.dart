@@ -26,7 +26,6 @@ import 'package:flutterquiz/features/quiz/cubits/subcategory_cubit.dart';
 import 'package:flutterquiz/features/quiz/models/quiz_type.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/features/wallet/cubit/monetization_cubit.dart';
-import 'package:flutterquiz/features/wallet/cubit/monetization_state.dart';
 import 'package:flutterquiz/features/wallet/widgets/monetization_widgets.dart';
 import 'package:flutterquiz/ui/screens/battle/create_or_join_screen.dart';
 import 'package:flutterquiz/ui/screens/home/widgets/all.dart';

@@ -18,7 +18,6 @@ import 'package:flutterquiz/features/quiz/models/quiz_type.dart';
 import 'package:flutterquiz/features/quiz/quiz_repository.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/features/wallet/cubit/monetization_cubit.dart';
-import 'package:flutterquiz/features/wallet/cubit/monetization_state.dart';
 import 'package:flutterquiz/features/wallet/widgets/monetization_widgets.dart';
 import 'package:flutterquiz/ui/screens/quiz/widgets/audio_question_container.dart';
 import 'package:flutterquiz/ui/widgets/already_logged_in_dialog.dart';

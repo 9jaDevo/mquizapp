@@ -13,7 +13,6 @@ import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.da
 import 'package:flutterquiz/features/wallet/blocs/payment_request_cubit.dart';
 import 'package:flutterquiz/features/wallet/blocs/transactions_cubit.dart';
 import 'package:flutterquiz/features/wallet/cubit/monetization_cubit.dart';
-import 'package:flutterquiz/features/wallet/cubit/monetization_state.dart';
 import 'package:flutterquiz/features/wallet/models/payment_request.dart';
 import 'package:flutterquiz/features/wallet/repos/wallet_repository.dart';
 import 'package:flutterquiz/features/wallet/widgets/animated_coin_display.dart';

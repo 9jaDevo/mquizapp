@@ -8,7 +8,6 @@ import 'package:flutterquiz/features/profile_management/profile_management_repos
 import 'package:flutterquiz/features/quiz/cubits/quiz_category_cubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/unlock_premium_category_cubit.dart';
 import 'package:flutterquiz/features/wallet/cubit/monetization_cubit.dart';
-import 'package:flutterquiz/features/wallet/cubit/monetization_state.dart';
 import 'package:flutterquiz/features/ads/blocs/rewarded_ad_cubit.dart';
 
 /// [_UnlockPremiumAlertDialog] handles showing the unlock confirmation dialog.
