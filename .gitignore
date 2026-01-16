@@ -59,4 +59,14 @@ app.*.map.json
 
 CLAUDE.md
 
-admin_backend
+# PHP Composer
+vendor/
+composer.phar
+composer.lock
+
+# Admin Backend - Selective Ignores
+admin_backend/vendor/
+admin_backend/application/logs/*
+admin_backend/application/cache/*
+admin_backend/images/
+admin_backend/upload/
