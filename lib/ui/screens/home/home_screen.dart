@@ -25,6 +25,9 @@ import 'package:flutterquiz/features/quiz/cubits/quiz_category_cubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/subcategory_cubit.dart';
 import 'package:flutterquiz/features/quiz/models/quiz_type.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
+import 'package:flutterquiz/features/wallet/cubit/monetization_cubit.dart';
+import 'package:flutterquiz/features/wallet/cubit/monetization_state.dart';
+import 'package:flutterquiz/features/wallet/widgets/monetization_widgets.dart';
 import 'package:flutterquiz/ui/screens/battle/create_or_join_screen.dart';
 import 'package:flutterquiz/ui/screens/home/widgets/all.dart';
 import 'package:flutterquiz/ui/screens/home/widgets/daily_challenge_card.dart';
@@ -127,7 +130,81 @@ class HomeScreenState extends State<HomeScreen>
       fetchUserDetails();
 
       context.read<ContestCubit>().getContest(languageId: _currLangId);
+      
+      // Step 2: Register device after login
+      _registerDevice();
+      
+      // Step 3: Check daily streak with delay
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          context.read<MonetizationCubit>().checkDailyStreak();
+        }
+      });
     }
+  }
+
+  // Step 2: Device registration helper
+  Future<void> _registerDevice() async {
+    try {
+      final authCubit = context.read<AuthCubit>();
+      final deviceId = await authCubit.getDeviceId();
+      final deviceType = authCubit.getDeviceType();
+      final deviceName = await authCubit.getDeviceName();
+      
+      if (mounted) {
+        context.read<MonetizationCubit>().registerDevice(
+          deviceId: deviceId,
+          deviceType: deviceType,
+          deviceName: deviceName,
+        );
+      }
+    } catch (e) {
+      log('Device registration failed: $e');
+    }
+  }
+
+  // Step 5: Daily Streak Widget
+  Widget _buildDailyStreakWidget() {
+    return BlocBuilder<MonetizationCubit, MonetizationState>(
+      builder: (context, state) {
+        if (state is DailyStreakChecked) {
+          return Padding(
+            padding: EdgeInsets.symmetric(horizontal: hzMargin),
+            child: DailyStreakWidget(dailyStreak: state.dailyStreak),
+          );
+        }
+        return const SizedBox.shrink();
+      },
+    );
+  }
+
+  // Step 4: Sponsor Banner Widget
+  Widget _buildSponsorBanner() {
+    // Load sponsor banner when home screen builds
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_isGuest) {
+        context.read<MonetizationCubit>().getSponsorBanner();
+      }
+    });
+
+    return BlocBuilder<MonetizationCubit, MonetizationState>(
+      builder: (context, state) {
+        if (state is SponsorBannerLoaded && state.banner != null) {
+          return Padding(
+            padding: EdgeInsets.symmetric(horizontal: hzMargin),
+            child: SponsorBannerWidget(
+              banner: state.banner!,
+              onBannerClick: () {
+                context.read<MonetizationCubit>().recordBannerClick(
+                  state.banner!.bannerId,
+                );
+              },
+            ),
+          );
+        }
+        return const SizedBox.shrink();
+      },
+    );
   }
 
   void onTapTab() {
@@ -1022,6 +1099,16 @@ class HomeScreenState extends State<HomeScreen>
                           const SizedBox(height: 16),
                           const DailyChallengeCard(),
                           const SizedBox(height: 8),
+                          // Step 5: Daily Streak Widget
+                          if (!_isGuest) ...[
+                            _buildDailyStreakWidget(),
+                            const SizedBox(height: 8),
+                          ],
+                          // Step 4: Sponsor Banner Widget
+                          if (!_isGuest) ...[
+                            _buildSponsorBanner(),
+                            const SizedBox(height: 8),
+                          ],
                           if (!_isGuest &&
                               _sysConfigCubit.isAdsEnable &&
                               _sysConfigCubit.isDailyAdsEnabled) ...[

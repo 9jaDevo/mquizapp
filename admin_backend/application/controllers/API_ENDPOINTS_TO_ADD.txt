@@ -1,0 +1,343 @@
+// =================================================================
+// NEW API ENDPOINTS FOR MONETIZATION FEATURES
+// Add these methods to the Api class in Api.php
+// =================================================================
+
+/**
+ * Check and handle daily login streak
+ * Called on app startup
+ */
+public function check_daily_streak_post()
+{
+    try {
+        $is_user = $this->verify_token();
+        if ($is_user['error']) {
+            $this->response($is_user, REST_Controller::HTTP_OK);
+            return false;
+        }
+
+        $user_id = $is_user['user_id'];
+        $firebase_id = $is_user['firebase_id'];
+
+        $this->load->model('Streak_model');
+        $result = $this->Streak_model->handle_daily_login($user_id, $firebase_id);
+
+        $response['error'] = false;
+        $response['message'] = "Daily streak checked";
+        $response['data'] = $result;
+
+    } catch (Exception $e) {
+        $response['error'] = true;
+        $response['message'] = "122";
+    }
+
+    $this->response($response, REST_Controller::HTTP_OK);
+}
+
+/**
+ * Register or update device mapping
+ * Called on app startup after login
+ */
+public function register_device_post()
+{
+    try {
+        $is_user = $this->verify_token();
+        if ($is_user['error']) {
+            $this->response($is_user, REST_Controller::HTTP_OK);
+            return false;
+        }
+
+        $user_id = $is_user['user_id'];
+        $device_id = $this->post('device_id');
+        $device_type = $this->post('device_type');  // 'android' or 'ios'
+        $device_name = $this->post('device_name') ?? '';
+
+        if (!$device_id || !$device_type) {
+            $response['error'] = true;
+            $response['message'] = "Missing device information";
+            $this->response($response, REST_Controller::HTTP_OK);
+            return;
+        }
+
+        $this->load->model('Device_model');
+        $result = $this->Device_model->register_or_update_device(
+            $user_id,
+            $device_id,
+            $device_type,
+            $device_name
+        );
+
+        $response['error'] = false;
+        $response['message'] = "Device registered";
+        $response['data'] = $result;
+
+    } catch (Exception $e) {
+        $response['error'] = true;
+        $response['message'] = "122";
+    }
+
+    $this->response($response, REST_Controller::HTTP_OK);
+}
+
+/**
+ * Evaluate user activity for fraud indicators
+ * Called after quiz completion, ad watch, or payout request
+ */
+public function evaluate_user_risk_post()
+{
+    try {
+        $is_user = $this->verify_token();
+        if ($is_user['error']) {
+            $this->response($is_user, REST_Controller::HTTP_OK);
+            return false;
+        }
+
+        $user_id = $is_user['user_id'];
+        $action_type = $this->post('action_type');  // 'ad_watch', 'quiz_complete', 'payout_request'
+        $metadata = $this->post('metadata') ?? [];  // JSON array with additional data
+
+        if (!$action_type) {
+            $response['error'] = true;
+            $response['message'] = "Missing action_type";
+            $this->response($response, REST_Controller::HTTP_OK);
+            return;
+        }
+
+        $this->load->model('Fraud_model');
+        $result = $this->Fraud_model->evaluate_user_activity($user_id, $action_type, $metadata);
+
+        // If marked as suspicious, app should handle gracefully
+        $response['error'] = false;
+        $response['message'] = "Risk evaluation complete";
+        $response['data'] = $result;
+
+    } catch (Exception $e) {
+        $response['error'] = true;
+        $response['message'] = "122";
+    }
+
+    $this->response($response, REST_Controller::HTTP_OK);
+}
+
+/**
+ * Check payout eligibility for user
+ * Verifies minimum active days requirement before allowing withdrawal request
+ */
+public function check_payout_eligibility_post()
+{
+    try {
+        $is_user = $this->verify_token();
+        if ($is_user['error']) {
+            $this->response($is_user, REST_Controller::HTTP_OK);
+            return false;
+        }
+
+        $user_id = $is_user['user_id'];
+        $min_days = (int)is_settings('min_active_days_for_payout');
+        $window = (int)is_settings('activity_tracking_window_days');
+
+        $date_from = date('Y-m-d', strtotime("-$window days"));
+
+        // Count unique active days (from daily streak table)
+        $active_days = $this->db->select('COUNT(DISTINCT last_login_date) as days')
+                                ->where('user_id', $user_id)
+                                ->where('last_login_date >=', $date_from)
+                                ->get('tbl_daily_streak')
+                                ->row()
+                                ->days;
+
+        $eligible = (int)$active_days >= $min_days;
+
+        $response['error'] = false;
+        $response['data'] = [
+            'eligible' => $eligible,
+            'active_days' => $active_days,
+            'required_days' => $min_days,
+            'window_days' => $window,
+            'message' => $eligible
+                ? "You're eligible to withdraw"
+                : "You need " . ($min_days - $active_days) . " more active days to be eligible"
+        ];
+
+    } catch (Exception $e) {
+        $response['error'] = true;
+        $response['message'] = "122";
+    }
+
+    $this->response($response, REST_Controller::HTTP_OK);
+}
+
+/**
+ * Get active sponsor banner for display
+ * Tracks impression and handles rotation
+ */
+public function get_sponsor_banner_post()
+{
+    try {
+        $is_user = $this->verify_token();
+        // Allow anonymous users to see banners
+        $user_id = $is_user['error'] ? null : $is_user['user_id'];
+
+        $this->load->model('Sponsor_model');
+        $banner = $this->Sponsor_model->get_active_banner_for_rotation();
+
+        if ($banner) {
+            // Record impression
+            $this->Sponsor_model->record_impression($banner['id'], $user_id, 'showed');
+
+            $response['error'] = false;
+            $response['data'] = $banner;
+        } else {
+            $response['error'] = false;
+            $response['data'] = null;
+            $response['message'] = "No active sponsor banner";
+        }
+
+    } catch (Exception $e) {
+        $response['error'] = true;
+        $response['message'] = "122";
+    }
+
+    $this->response($response, REST_Controller::HTTP_OK);
+}
+
+/**
+ * Record sponsor banner click
+ * Called when user clicks on sponsor banner
+ */
+public function sponsor_banner_click_post()
+{
+    try {
+        $is_user = $this->verify_token();
+        $user_id = $is_user['error'] ? null : $is_user['user_id'];
+
+        $banner_id = $this->post('banner_id');
+
+        if (!$banner_id) {
+            $response['error'] = true;
+            $response['message'] = "Missing banner_id";
+            $this->response($response, REST_Controller::HTTP_OK);
+            return;
+        }
+
+        $this->load->model('Sponsor_model');
+        $this->Sponsor_model->record_impression($banner_id, $user_id, 'clicked');
+
+        $response['error'] = false;
+        $response['message'] = "Click recorded";
+
+    } catch (Exception $e) {
+        $response['error'] = true;
+        $response['message'] = "122";
+    }
+
+    $this->response($response, REST_Controller::HTTP_OK);
+}
+
+/**
+ * Offer boost earnings (double coins)
+ * Called after quiz completion
+ */
+public function offer_boost_earnings_post()
+{
+    try {
+        $is_user = $this->verify_token();
+        if ($is_user['error']) {
+            $this->response($is_user, REST_Controller::HTTP_OK);
+            return false;
+        }
+
+        $quiz_coins = (int)$this->post('coins');
+        $multiplier = (int)is_settings('boost_earnings_coin_multiplier');
+        $requires_ad = (int)is_settings('boost_earnings_watch_ad_required');
+
+        $boosted_coins = $quiz_coins * $multiplier;
+
+        $response['error'] = false;
+        $response['data'] = [
+            'original_coins' => $quiz_coins,
+            'boosted_coins' => $boosted_coins,
+            'multiplier' => $multiplier,
+            'requires_ad_watch' => $requires_ad,
+            'coin_difference' => $boosted_coins - $quiz_coins
+        ];
+
+    } catch (Exception $e) {
+        $response['error'] = true;
+        $response['message'] = "122";
+    }
+
+    $this->response($response, REST_Controller::HTTP_OK);
+}
+
+/**
+ * Apply boost earnings (grant double coins after ad watch)
+ * Called after user watches ad for boost
+ */
+public function apply_boost_earnings_post()
+{
+    try {
+        $is_user = $this->verify_token();
+        if ($is_user['error']) {
+            $this->response($is_user, REST_Controller::HTTP_OK);
+            return false;
+        }
+
+        $user_id = $is_user['user_id'];
+        $firebase_id = $is_user['firebase_id'];
+        $quiz_coins = (int)$this->post('coins');
+        $multiplier = (int)is_settings('boost_earnings_coin_multiplier');
+
+        $boosted_coins = $quiz_coins * $multiplier;
+
+        // Award boosted coins
+        $this->set_coins($user_id, $boosted_coins);
+        $this->set_tracker_data($user_id, $boosted_coins, 'quiz_boost', 1);
+
+        $response['error'] = false;
+        $response['message'] = "111";
+        $response['data'] = [
+            'coins_awarded' => $boosted_coins,
+            'user_coins' => $this->db->select('coins')
+                                     ->where('id', $user_id)
+                                     ->get('tbl_users')
+                                     ->row()
+                                     ->coins
+        ];
+
+    } catch (Exception $e) {
+        $response['error'] = true;
+        $response['message'] = "122";
+    }
+
+    $this->response($response, REST_Controller::HTTP_OK);
+}
+
+/**
+ * Get watch & unlock premium configuration
+ * Returns number of ads needed to unlock instead of coin payment
+ */
+public function get_watch_unlock_config_post()
+{
+    try {
+        $ad_count = (int)is_settings('watch_unlock_ad_count');
+        $enabled = (int)is_settings('watch_unlock_enable');
+
+        $response['error'] = false;
+        $response['data'] = [
+            'enabled' => $enabled,
+            'ad_count_required' => $ad_count,
+            'message' => "Watch $ad_count ads to unlock premium content"
+        ];
+
+    } catch (Exception $e) {
+        $response['error'] = true;
+        $response['message'] = "122";
+    }
+
+    $this->response($response, REST_Controller::HTTP_OK);
+}
+
+// =================================================================
+// END OF NEW API ENDPOINTS
+// =================================================================

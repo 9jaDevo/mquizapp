@@ -12,9 +12,12 @@ import 'package:flutterquiz/features/profile_management/cubits/user_details_cubi
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/features/wallet/blocs/payment_request_cubit.dart';
 import 'package:flutterquiz/features/wallet/blocs/transactions_cubit.dart';
+import 'package:flutterquiz/features/wallet/cubit/monetization_cubit.dart';
+import 'package:flutterquiz/features/wallet/cubit/monetization_state.dart';
 import 'package:flutterquiz/features/wallet/models/payment_request.dart';
 import 'package:flutterquiz/features/wallet/repos/wallet_repository.dart';
 import 'package:flutterquiz/features/wallet/widgets/animated_coin_display.dart';
+import 'package:flutterquiz/features/wallet/widgets/monetization_widgets.dart';
 import 'package:flutterquiz/features/wallet/widgets/cancel_redeem_request_dialog.dart';
 import 'package:flutterquiz/features/wallet/widgets/redeem_amount_request_bottom_sheet_container.dart';
 import 'package:flutterquiz/ui/widgets/all.dart';
@@ -92,6 +95,9 @@ class _WalletScreenState extends State<WalletScreen>
       ..addListener(() => FocusScope.of(context).unfocus());
     Future.delayed(Duration.zero, () {
       fetchTransactions();
+      
+      // Step 8: Check payout eligibility
+      context.read<MonetizationCubit>().checkPayoutEligibility();
 
       final userCoins = double.parse(
         context.read<UserDetailsCubit>().getCoins()!,
@@ -205,6 +211,18 @@ class _WalletScreenState extends State<WalletScreen>
       ),
       child: Column(
         children: [
+          // Step 8: Payout Eligibility Widget
+          BlocBuilder<MonetizationCubit, MonetizationState>(
+            builder: (context, state) {
+              if (state is PayoutEligibilityChecked) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: PayoutEligibilityWidget(eligibility: state.eligibility),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
           Container(
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,

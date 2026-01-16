@@ -98,25 +98,76 @@ class ReferAndEarnScreen extends StatelessWidget {
                             ],
                           ),
                           Text(
-                            context.tr('getFreeCoins')!,
+                            'Instant Reward',
                             style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeights.bold,
-                              color: context.surfaceColor,
+                              fontSize: 12,
+                              fontWeight: FontWeights.semiBold,
+                              color: context.surfaceColor.withValues(alpha: 0.8),
                             ),
                           ),
                         ],
                       ),
+                      SizedBox(height: size.height * .02),
+                      // Bonus Rewards Section
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: context.surfaceColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: context.surfaceColor.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              '✨ BONUS Rewards Available',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeights.bold,
+                                color: Colors.amber,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                Column(
+                                  children: [
+                                    Text(
+                                      '+${sysConfig.referrerEarnCoin}',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeights.bold,
+                                        color: Colors.amber,
+                                      ),
+                                    ),
+                                    Text(
+                                      'After 7 days + 10 quizzes',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: context.surfaceColor.withValues(alpha: 0.7),
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                       SizedBox(height: size.height * .01),
 
                       ///
                       SizedBox(
                         width: size.width * .8,
                         child: Text(
-                          "${context.tr("referFrdLbl")!} ${context.tr(youWillGetKey)!}"
-                          ' ${sysConfig.referrerEarnCoin} ${context.tr(coinsLbl)!.toLowerCase()}.'
-                          '\n${context.tr(theyWillGetKey)!} ${sysConfig.refereeEarnCoin} '
-                          '${context.tr(coinsLbl)!.toLowerCase()}.',
+                          "${context.tr("referFrdLbl")!}\n"
+                          "🎯 ${context.tr(youWillGetKey)!}: ${sysConfig.referrerEarnCoin} coins (instant) + bonus later\n"
+                          "🎯 ${context.tr(theyWillGetKey)!}: ${sysConfig.refereeEarnCoin} coins (instant) + bonus later",
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 14,

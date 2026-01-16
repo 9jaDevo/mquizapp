@@ -34,6 +34,8 @@ import 'package:flutterquiz/features/statistic/cubits/statistics_cubit.dart';
 import 'package:flutterquiz/features/statistic/statistic_repository.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/features/system_config/system_config_repository.dart';
+import 'package:flutterquiz/features/wallet/cubit/monetization_cubit.dart';
+import 'package:flutterquiz/features/wallet/repos/monetization_remote_data_source.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 Future<Widget> initializeApp() async {
@@ -120,6 +122,9 @@ class MyApp extends StatelessWidget {
         BlocProvider<AppOpenAdCubit>(create: (_) => AppOpenAdCubit()),
         BlocProvider<RewardedInterstitialAdCubit>(create: (_) => RewardedInterstitialAdCubit()),
         BlocProvider<ExamCubit>(create: (_) => ExamCubit(ExamRepository())),
+        BlocProvider<MonetizationCubit>(
+          create: (_) => MonetizationCubit(const MonetizationRemoteDataSource()),
+        ),
         BlocProvider<ComprehensionCubit>(
           create: (_) => ComprehensionCubit(QuizRepository()),
         ),

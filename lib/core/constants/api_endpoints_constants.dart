@@ -68,6 +68,17 @@ const getTransactionsUrl = '$_api/get_payment_request';
 const purchaseIAP = '$_api/set_user_in_app';
 const unlockPremiumCategoryUrl = '$_api/unlock_premium_category';
 
+// Monetization & Engagement Features (Phase 3)
+const checkDailyStreakUrl = '$_api/check_daily_streak';
+const registerDeviceUrl = '$_api/register_device';
+const evaluateUserRiskUrl = '$_api/evaluate_user_risk';
+const checkPayoutEligibilityUrl = '$_api/check_payout_eligibility';
+const getSponsorBannerUrl = '$_api/get_sponsor_banner';
+const sponsorBannerClickUrl = '$_api/sponsor_banner_click';
+const offerBoostEarningsUrl = '$_api/offer_boost_earnings';
+const applyBoostEarningsUrl = '$_api/apply_boost_earnings';
+const getWatchUnlockConfigUrl = '$_api/get_watch_unlock_config';
+
 // System & Configuration
 const getAppSettingsUrl = '$_api/get_settings';
 const getSystemConfigUrl = '$_api/get_system_configurations';

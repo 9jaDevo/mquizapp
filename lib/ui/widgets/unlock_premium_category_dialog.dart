@@ -7,6 +7,9 @@ import 'package:flutterquiz/features/profile_management/cubits/user_details_cubi
 import 'package:flutterquiz/features/profile_management/profile_management_repository.dart';
 import 'package:flutterquiz/features/quiz/cubits/quiz_category_cubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/unlock_premium_category_cubit.dart';
+import 'package:flutterquiz/features/wallet/cubit/monetization_cubit.dart';
+import 'package:flutterquiz/features/wallet/cubit/monetization_state.dart';
+import 'package:flutterquiz/features/ads/blocs/rewarded_ad_cubit.dart';
 
 /// [_UnlockPremiumAlertDialog] handles showing the unlock confirmation dialog.
 ///
@@ -83,7 +86,7 @@ Future<bool?> showUnlockPremiumCategoryDialog(
   );
 }
 
-class _UnlockPremiumAlertDialog extends StatelessWidget {
+class _UnlockPremiumAlertDialog extends StatefulWidget {
   const _UnlockPremiumAlertDialog({
     required this.categoryId,
     required this.categoryName,
@@ -96,15 +99,50 @@ class _UnlockPremiumAlertDialog extends StatelessWidget {
   final int requiredCoins;
   final QuizCategoryCubit categoryCubit;
 
+  @override
+  State<_UnlockPremiumAlertDialog> createState() => _UnlockPremiumAlertDialogState();
+}
+
+class _UnlockPremiumAlertDialogState extends State<_UnlockPremiumAlertDialog> {
+  int _adsWatched = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Step 9: Get watch unlock config
+    Future.delayed(Duration.zero, () {
+      if (mounted) {
+        context.read<MonetizationCubit>().getWatchUnlockConfig();
+      }
+    });
+  }
+
   void _onPressedUnlock(BuildContext context) {
     final coins = int.parse(context.read<UserDetailsCubit>().getCoins() ?? '0');
-    if (coins >= requiredCoins) {
+    if (coins >= widget.requiredCoins) {
       context.read<UnlockPremiumCategoryCubit>().unlockPremiumCategory(
-        categoryId: categoryId,
+        categoryId: widget.categoryId,
       );
     } else {
       context.shouldPop();
       showNotEnoughCoinsDialog(context);
+    }
+  }
+
+  // Step 9: Watch ad to unlock
+  Future<void> _onPressedWatchAd(BuildContext context) async {
+    try {
+      // Show rewarded ad
+      await context.read<RewardedAdCubit>().showAd(
+        context: context,
+        onAdDismissedCallback: () {
+          setState(() {
+            _adsWatched++;
+          });
+        },
+      );
+    } catch (e) {
+      // Handle ad error
     }
   }
 
@@ -126,48 +164,69 @@ class _UnlockPremiumAlertDialog extends StatelessWidget {
         BlocProvider<UpdateCoinsCubit>(
           create: (_) => UpdateCoinsCubit(ProfileManagementRepository()),
         ),
-        BlocProvider.value(value: categoryCubit),
+        BlocProvider.value(value: widget.categoryCubit),
       ],
-      child:
-          BlocConsumer<UnlockPremiumCategoryCubit, UnlockPremiumCategoryState>(
+      child: BlocBuilder<MonetizationCubit, MonetizationState>(
+        builder: (context, monetizationState) {
+          // Step 9: Show watch unlock option if enabled
+          final showWatchOption = monetizationState is WatchUnlockConfigLoaded &&
+              monetizationState.config.enabled;
+          final adsRequired = showWatchOption ? monetizationState.config.adCountRequired : 0;
+          final canUnlockByWatching = _adsWatched >= adsRequired && showWatchOption;
+
+          return BlocConsumer<UnlockPremiumCategoryCubit, UnlockPremiumCategoryState>(
             builder: (context, state) {
               return QDialog(
-                title: '$unlockLbl $categoryName',
+                title: '$unlockLbl ${widget.categoryName}',
                 image: Assets.coinsDialogIcon,
                 message: state is UnlockPremiumCategoryFailure
                     ? context.tr('defaultErrorMessage')
-                    : unlockPremiumDescription,
+                    : showWatchOption && !canUnlockByWatching
+                        ? 'Watch ${adsRequired - _adsWatched} ads to unlock OR use ${widget.requiredCoins} coins'
+                        : unlockPremiumDescription,
                 isLoading: state is UnlockPremiumCategoryInProgress,
                 cancelButtonText: context.tr('maybeLater'),
                 confirmButtonText: state is UnlockPremiumCategoryFailure
                     ? null
-                    : '$useLbl $requiredCoins $coinsLbl',
+                    : canUnlockByWatching
+                        ? 'Unlock Now'
+                        : showWatchOption && _adsWatched < adsRequired
+                            ? 'Watch Ad ($_adsWatched/$adsRequired)'
+                            : '$useLbl ${widget.requiredCoins} $coinsLbl',
                 onCancel: () => _closeDialog(context),
                 onConfirm: state is UnlockPremiumCategoryFailure
                     ? null
-                    : () => _onPressedUnlock(context),
+                    : () {
+                        if (canUnlockByWatching) {
+                          _onPressedUnlock(context);
+                        } else if (showWatchOption && _adsWatched < adsRequired) {
+                          _onPressedWatchAd(context);
+                        } else {
+                          _onPressedUnlock(context);
+                        }
+                      },
               );
             },
             listener: (context, state) {
               if (state is UnlockPremiumCategorySuccess) {
                 context.read<QuizCategoryCubit>().unlockPremiumCategory(
-                  id: categoryId,
+                  id: widget.categoryId,
                 );
 
                 // update user coins to remote DS
                 context.read<UpdateCoinsCubit>().updateCoins(
-                  coins: requiredCoins,
+                  coins: widget.requiredCoins,
                   addCoin: false,
-                  title: '$unlockedLbl $categoryName',
+                  title: '$unlockedLbl ${widget.categoryName}',
                 );
                 // update user coins to local DS
                 context.read<UserDetailsCubit>().updateCoins(
                   addCoin: false,
-                  coins: requiredCoins,
+                  coins: widget.requiredCoins,
                 );
 
                 context
-                  ..showSnack('$unlockedLbl $categoryName')
+                  ..showSnack('$unlockedLbl ${widget.categoryName}')
                   ..shouldPop(true);
                 Future.delayed(
                   const Duration(milliseconds: 20),
@@ -175,7 +234,9 @@ class _UnlockPremiumAlertDialog extends StatelessWidget {
                 );
               }
             },
-          ),
+          );
+        },
+      ),
     );
   }
 }

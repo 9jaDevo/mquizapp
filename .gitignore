@@ -70,3 +70,5 @@ admin_backend/application/logs/*
 admin_backend/application/cache/*
 admin_backend/images/
 admin_backend/upload/
+admin_backend/cgi-bin/
+admin_backend/assets/

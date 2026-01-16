@@ -17,6 +17,9 @@ import 'package:flutterquiz/features/quiz/models/comprehension.dart';
 import 'package:flutterquiz/features/quiz/models/quiz_type.dart';
 import 'package:flutterquiz/features/quiz/quiz_repository.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
+import 'package:flutterquiz/features/wallet/cubit/monetization_cubit.dart';
+import 'package:flutterquiz/features/wallet/cubit/monetization_state.dart';
+import 'package:flutterquiz/features/wallet/widgets/monetization_widgets.dart';
 import 'package:flutterquiz/ui/screens/quiz/widgets/audio_question_container.dart';
 import 'package:flutterquiz/ui/widgets/already_logged_in_dialog.dart';
 import 'package:flutterquiz/ui/widgets/circular_progress_container.dart';
@@ -237,6 +240,16 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
       Navigator.of(context).pop();
     }
 
+    // Step 7: Fraud detection after quiz
+    _evaluateFraudRisk();
+
+    // Step 6: Show boost earnings popup after quiz completion
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        _showBoostEarningsPopup();
+      }
+    });
+
     //move to result page
     //to see the what are the keys to pass in arguments for result screen
     //visit static route function in resultScreen.dart
@@ -260,6 +273,84 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
         'isPremiumCategory': widget.isPremiumCategory,
       },
     );
+  }
+
+  // Step 7: Fraud detection helper
+  void _evaluateFraudRisk() {
+    try {
+      final questions = context.read<QuestionsCubit>().questions();
+      final correctAnswers = questions.where((q) => q.attempted && q.attempted == q.correctAnswer).length;
+      final accuracy = questions.isEmpty ? 0.0 : (correctAnswers / questions.length) * 100;
+      
+      final metadata = {
+        'quiz_score': correctAnswers.toString(),
+        'time_taken': totalSecondsToCompleteQuiz.toString(),
+        'accuracy': accuracy.toStringAsFixed(2),
+        'quiz_type': widget.quizType.toString(),
+      };
+
+      context.read<MonetizationCubit>().evaluateUserRisk(
+        actionType: 'quiz_completion',
+        metadata: metadata,
+      );
+    } catch (e) {
+      // Silently fail fraud detection
+    }
+  }
+
+  // Step 6: Boost earnings popup
+  void _showBoostEarningsPopup() {
+    try {
+      final questions = context.read<QuestionsCubit>().questions();
+      final correctAnswers = questions.where((q) => q.attempted && q.attempted == q.correctAnswer).length;
+      
+      if (correctAnswers > 0) {
+        // Calculate coin value (example: 10 coins per correct answer)
+        final baseCoins = correctAnswers * 10;
+        
+        // Offer boost
+        context.read<MonetizationCubit>().offerBoostEarnings(baseCoins);
+        
+        // Show dialog when state changes
+        showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) => BlocConsumer<MonetizationCubit, MonetizationState>(
+            listener: (context, state) {
+              if (state is BoostEarningsApplied) {
+                Navigator.of(dialogContext).pop();
+                // Update user coins
+                context.read<UserDetailsCubit>().updateCoins(
+                  addCoin: true,
+                  coins: state.boost.boostedCoins,
+                );
+              }
+            },
+            builder: (context, state) {
+              if (state is BoostEarningsOffered) {
+                return BoostEarningsDialog(
+                  boost: state.boost,
+                  onClaim: () {
+                    context.read<MonetizationCubit>().applyBoostEarnings();
+                  },
+                  onSkip: () {
+                    Navigator.of(dialogContext).pop();
+                    // Give original coins
+                    context.read<UserDetailsCubit>().updateCoins(
+                      addCoin: true,
+                      coins: state.boost.originalCoins,
+                    );
+                  },
+                );
+              }
+              return const Center(child: CircularProgressIndicator());
+            },
+          ),
+        );
+      }
+    } catch (e) {
+      // Silently fail boost earnings
+    }
   }
 
   void markLifeLineUsed() {

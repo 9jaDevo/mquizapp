@@ -52,3 +52,13 @@ const userId1Key = 'user_id1';
 const userId2Key = 'user_id2';
 const userRankKey = 'user_rank';
 const winnerIdKey = 'winner_id';
+
+// Monetization & Engagement Features
+const actionTypeKey = 'action_type';
+const deviceIdKey = 'device_id';
+const deviceTypeKey = 'device_type';
+const deviceNameKey = 'device_name';
+const metadataKey = 'metadata';
+const bannerIdKey = 'banner_id';
+const isSuspiciousKey = 'is_suspicious';
+const detectionTypeKey = 'detection_type';

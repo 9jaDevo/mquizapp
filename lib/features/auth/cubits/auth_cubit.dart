@@ -2,6 +2,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/features/auth/auth_repository.dart';
 import 'package:flutterquiz/features/auth/models/auth_model.dart';
 import 'package:flutterquiz/features/auth/models/auth_providers_enum.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'dart:io';
 
 sealed class AuthState {
   const AuthState();
@@ -77,6 +79,48 @@ class AuthCubit extends Cubit<AuthState> {
 
   bool get isGuest => state is Unauthenticated;
   bool get isLoggedIn => state is Authenticated;
+
+  // Device registration helpers
+  Future<String> getDeviceId() async {
+    final deviceInfo = DeviceInfoPlugin();
+    try {
+      if (Platform.isAndroid) {
+        final androidInfo = await deviceInfo.androidInfo;
+        return androidInfo.id;
+      } else if (Platform.isIOS) {
+        final iosInfo = await deviceInfo.iosInfo;
+        return iosInfo.identifierForVendor ?? 'unknown';
+      }
+      return 'unknown';
+    } catch (e) {
+      return 'unknown';
+    }
+  }
+
+  String getDeviceType() {
+    if (Platform.isAndroid) {
+      return 'android';
+    } else if (Platform.isIOS) {
+      return 'ios';
+    }
+    return 'unknown';
+  }
+
+  Future<String> getDeviceName() async {
+    final deviceInfo = DeviceInfoPlugin();
+    try {
+      if (Platform.isAndroid) {
+        final androidInfo = await deviceInfo.androidInfo;
+        return '${androidInfo.brand} ${androidInfo.model}';
+      } else if (Platform.isIOS) {
+        final iosInfo = await deviceInfo.iosInfo;
+        return '${iosInfo.name} ${iosInfo.model}';
+      }
+      return 'Unknown Device';
+    } catch (e) {
+      return 'Unknown Device';
+    }
+  }
 
   void logoutOrDeleteAccount() {
     if (state is Authenticated) {
