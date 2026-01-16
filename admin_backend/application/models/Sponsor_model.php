@@ -25,13 +25,21 @@ class Sponsor_model extends CI_Model
      */
     public function get_all_banners($limit = 50)
     {
-        return $this->db->select('*')
-                       ->order_by('is_active', 'DESC')
-                       ->order_by('priority', 'DESC')
-                       ->order_by('start_date', 'DESC')
+        $result = $this->db->select('sb.*, 
+                COUNT(CASE WHEN bi.action = "showed" THEN 1 END) as total_impressions,
+                COUNT(CASE WHEN bi.action = "clicked" THEN 1 END) as total_clicks,
+                COUNT(CASE WHEN bi.action = "showed" AND DATE(bi.recorded_at) = CURDATE() THEN 1 END) as today_impressions')
+                       ->from('tbl_sponsor_banners sb')
+                       ->join('tbl_banner_impressions bi', 'sb.id = bi.banner_id', 'left')
+                       ->group_by('sb.id')
+                       ->order_by('sb.is_active', 'DESC')
+                       ->order_by('sb.priority', 'DESC')
+                       ->order_by('sb.start_date', 'DESC')
                        ->limit($limit)
-                       ->get('tbl_sponsor_banners')
-                       ->result_array();
+                       ->get()
+                       ->result();
+        
+        return $result;
     }
 
     /**
@@ -55,12 +63,19 @@ class Sponsor_model extends CI_Model
      */
     public function add_banner()
     {
+        error_log('Starting add_banner...');
+        error_log('FILES: ' . print_r($_FILES, true));
+        
         // Handle image upload
         $image_url = $this->handle_image_upload('banner_image');
         
         if (!$image_url) {
+            error_log('Image upload failed!');
+            error_log('Upload errors: ' . $this->upload->display_errors());
             return false;
         }
+        
+        error_log('Image uploaded successfully: ' . $image_url);
 
         $data = [
             'sponsor_name' => $this->input->post('sponsor_name'),
@@ -81,10 +96,15 @@ class Sponsor_model extends CI_Model
             'created_at' => date('Y-m-d H:i:s')
         ];
 
+        error_log('Inserting banner data: ' . print_r($data, true));
+        
         if ($this->db->insert('tbl_sponsor_banners', $data)) {
-            return $this->db->insert_id();
+            $insert_id = $this->db->insert_id();
+            error_log('Banner inserted successfully with ID: ' . $insert_id);
+            return $insert_id;
         }
-
+        
+        error_log('Database insert failed: ' . $this->db->error()['message']);
         return false;
     }
 

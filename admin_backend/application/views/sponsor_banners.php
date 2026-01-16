@@ -29,6 +29,22 @@
                         </div>
                     </div>
                     <div class="section-body">
+                        <?php if ($this->session->flashdata('success')): ?>
+                            <div class="alert alert-success alert-dismissible show fade">
+                                <div class="alert-body">
+                                    <button class="close" data-dismiss="alert"><span>×</span></button>
+                                    <?= $this->session->flashdata('success'); ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                        <?php if ($this->session->flashdata('error')): ?>
+                            <div class="alert alert-danger alert-dismissible show fade">
+                                <div class="alert-body">
+                                    <button class="close" data-dismiss="alert"><span>×</span></button>
+                                    <?= $this->session->flashdata('error'); ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
                         <!-- Settings Card -->
                         <div class="row">
                             <div class="col-12">
@@ -154,7 +170,7 @@
     <div class="modal fade" id="bannerModal" tabindex="-1" role="dialog">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
-                <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate="">
+                <form method="post" action="<?= base_url('sponsor-banners'); ?>" enctype="multipart/form-data" class="needs-validation" novalidate="">
                     <div class="modal-header">
                         <h5 class="modal-title">Add/Edit Banner</h5>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -164,6 +180,7 @@
                     <div class="modal-body">
                         <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" value="<?= $this->security->get_csrf_hash(); ?>">
                         <input type="hidden" id="bannerId" name="banner_id" value="">
+                        <input type="hidden" name="btnadd" value="1">
 
                         <div class="form-group">
                             <label class="control-label">Sponsor Name <small class="text-danger">*</small></label>
@@ -234,7 +251,7 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        <button type="submit" name="btnadd" class="btn <?= BUTTON_CLASS ?>">Save Banner</button>
+                        <button type="submit" class="btn <?= BUTTON_CLASS ?>">Save Banner</button>
                     </div>
                 </form>
             </div>
@@ -275,7 +292,31 @@
             $('#endDate').val('');
             $('#impressionLimit').val('0');
             $('#priority').val('1');
-            document.getElementById('bannerImage').removeAttribute('required');
+            $('#bannerModal .modal-title').text('Add Banner');
+            var imageInput = document.getElementById('bannerImage');
+            if (imageInput) {
+                imageInput.setAttribute('required', 'required');
+                imageInput.value = '';
+            }
+        });
+
+        // Debug form submission
+        $('#bannerModal form').on('submit', function(e) {
+            console.log('Form submitting...');
+            
+            // Log all form data
+            var formData = new FormData(this);
+            console.log('Form Data:');
+            for (var pair of formData.entries()) {
+                console.log(pair[0] + ': ' + pair[1]);
+            }
+            
+            // Check if btnadd button exists
+            var btnAdd = $(this).find('button[name="btnadd"]');
+            console.log('btnadd button found:', btnAdd.length);
+            
+            // Allow form to submit normally
+            return true;
         });
 
         $(document).on('click', '.view-banner', function() {

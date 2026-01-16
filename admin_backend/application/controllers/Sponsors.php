@@ -24,11 +24,18 @@ class Sponsors extends CI_Controller
             redirect('/');
         }
 
+        // Debug logging
+        error_log('POST data: ' . print_r($_POST, true));
+        error_log('FILES data: ' . print_r($_FILES, true));
+        error_log('btnadd present: ' . ($this->input->post('btnadd') ? 'YES' : 'NO'));
+
         if ($this->input->post('btnadd')) {
+            error_log('Processing btnadd...');
             if (!has_permissions('create', 'sponsor_banners')) {
                 $this->session->set_flashdata('error', lang('permission_denied'));
             } else {
                 $banner_id = $this->Sponsor_model->add_banner();
+                error_log('Banner ID result: ' . ($banner_id ? $banner_id : 'FALSE'));
                 if ($banner_id) {
                     $this->session->set_flashdata('success', 'Sponsor banner created successfully');
                 } else {
