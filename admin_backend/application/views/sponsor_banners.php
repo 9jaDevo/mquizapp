@@ -44,26 +44,26 @@
                                                 <div class="form-group col-md-3 col-sm-12">
                                                     <label class="control-label">Enable Banners</label><br>
                                                     <input type="checkbox" id="sponsor_banner_enable_btn" data-plugin="switchery" <?php
-                                                                                                                                    if (!empty($sponsor_banner_enable) && $sponsor_banner_enable['message'] == '1') {
+                                                                                                                                    if (!empty($sponsor_banner_enable) && $sponsor_banner_enable == '1') {
                                                                                                                                         echo 'checked';
                                                                                                                                     }
                                                                                                                                     ?>>
 
-                                                    <input type="hidden" id="sponsor_banner_enable" name="sponsor_banner_enable" value="<?= ($sponsor_banner_enable) ? $sponsor_banner_enable['message'] : 0; ?>">
+                                                    <input type="hidden" id="sponsor_banner_enable" name="sponsor_banner_enable" value="<?= ($sponsor_banner_enable) ? $sponsor_banner_enable : 0; ?>">
                                                 </div>
                                                 <div class="form-group col-md-3 col-sm-12">
                                                     <label class="control-label">Rotation Delay (seconds)</label>
-                                                    <input type="number" name="sponsor_banner_rotation_seconds" class="form-control" value="<?= (!empty($sponsor_banner_rotation_seconds)) ? $sponsor_banner_rotation_seconds['message'] : 5; ?>" min="1" max="60">
+                                                    <input type="number" name="sponsor_banner_rotation_seconds" class="form-control" value="<?= (!empty($sponsor_banner_rotation_seconds)) ? $sponsor_banner_rotation_seconds : 5; ?>" min="1" max="60">
                                                 </div>
                                                 <div class="form-group col-md-3 col-sm-12">
                                                     <label class="control-label">Track User ID</label><br>
                                                     <input type="checkbox" id="sponsor_banner_analytics_track_user_btn" data-plugin="switchery" <?php
-                                                                                                                                                if (!empty($sponsor_banner_analytics_track_user) && $sponsor_banner_analytics_track_user['message'] == '1') {
+                                                                                                                                                if (!empty($sponsor_banner_analytics_track_user) && $sponsor_banner_analytics_track_user == '1') {
                                                                                                                                                     echo 'checked';
                                                                                                                                                 }
                                                                                                                                                 ?>>
 
-                                                    <input type="hidden" id="sponsor_banner_analytics_track_user" name="sponsor_banner_analytics_track_user" value="<?= ($sponsor_banner_analytics_track_user) ? $sponsor_banner_analytics_track_user['message'] : 0; ?>">
+                                                    <input type="hidden" id="sponsor_banner_analytics_track_user" name="sponsor_banner_analytics_track_user" value="<?= ($sponsor_banner_analytics_track_user) ? $sponsor_banner_analytics_track_user : 0; ?>">
                                                     <small class="form-text text-muted">For analytics tracking</small>
                                                 </div>
                                             </div>
@@ -177,7 +177,7 @@
 
                         <div class="form-group">
                             <label class="control-label">Image <small class="text-danger">*</small></label>
-                            <input type="file" id="bannerImage" name="image" class="form-control-file" accept="image/*" required>
+                            <input type="file" id="bannerImage" name="banner_image" class="form-control-file" accept="image/*" required>
                             <small class="form-text text-muted">Recommended: 300x150px, JPG/PNG</small>
                         </div>
 
@@ -234,7 +234,7 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        <button type="submit" name="btnsubmit" class="btn <?= BUTTON_CLASS ?>">Save Banner</button>
+                        <button type="submit" name="btnadd" class="btn <?= BUTTON_CLASS ?>">Save Banner</button>
                     </div>
                 </form>
             </div>

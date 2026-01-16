@@ -57,6 +57,10 @@ class Sponsor_model extends CI_Model
     {
         // Handle image upload
         $image_url = $this->handle_image_upload('banner_image');
+        
+        if (!$image_url) {
+            return false;
+        }
 
         $data = [
             'sponsor_name' => $this->input->post('sponsor_name'),
@@ -73,7 +77,7 @@ class Sponsor_model extends CI_Model
             'priority' => $this->input->post('priority') ?? 0,
             'start_date' => $this->input->post('start_date'),
             'end_date' => $this->input->post('end_date'),
-            'created_by' => $this->session->userdata('auth_id'),
+            'created_by' => $this->session->userdata('authId'),
             'created_at' => date('Y-m-d H:i:s')
         ];
 

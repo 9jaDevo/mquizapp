@@ -328,6 +328,8 @@
                         <?php if (has_permissions('read', 'ads_settings')) { ?>
                             <li><a class="nav-link" href="<?= base_url(); ?>ads-settings"><?= lang('ads_settings'); ?></a></li>
                         <?php } ?>
+                        <!-- Sponsor Banners Management -->
+                        <li><a class="nav-link" href="<?= base_url(); ?>sponsor-banners"><em class="fas fa-ad"></em> Sponsor Banners</a></li>
                         <?php if (has_permissions('read', 'badges_settings')) { ?>
                             <li><a class="nav-link" href="<?= base_url(); ?>badges-settings"><?= lang('badges_settings'); ?></a></li>
                         <?php } ?>

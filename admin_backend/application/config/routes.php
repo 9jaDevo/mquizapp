@@ -163,6 +163,7 @@ $route['contact-us'] = 'Settings/contact_us';
 $route['play-store-contact-us'] = 'Settings/play_store_contact_us';
 $route['profile'] = 'Settings/profile';
 $route['firebase-configurations'] = 'Settings/firebase_configurations';
+$route['sponsor-banners'] = 'Sponsors';
 
 $route['web-settings'] = 'Settings/web_settings';
 $route['web-home-settings'] = 'Settings/web_home_settings';

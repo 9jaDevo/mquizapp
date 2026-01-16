@@ -53,7 +53,9 @@ class Sponsors extends CI_Controller
 
         $data['banners'] = $this->Sponsor_model->get_all_banners();
         $data['analytics'] = $this->Sponsor_model->get_all_analytics();
-        $data['banner_enabled'] = is_settings('sponsor_banner_enable');
+        $data['sponsor_banner_enable'] = is_settings('sponsor_banner_enable');
+        $data['sponsor_banner_rotation_seconds'] = is_settings('sponsor_banner_rotation_seconds');
+        $data['sponsor_banner_analytics_track_user'] = is_settings('sponsor_banner_analytics_track_user');
 
         $this->load->view('sponsor_banners', $data);
     }

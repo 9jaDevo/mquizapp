@@ -66,6 +66,16 @@ class Api extends REST_Controller
         $this->minimumQuestionsForBadge = 5;
     }
 
+    /**
+     * Default GET handler to avoid REST_Controller callback errors when hitting /Api without a specific method.
+     */
+    public function index_get()
+    {
+        $response['error'] = true;
+        $response['message'] = 'Invalid endpoint';
+        return $this->response($response, REST_Controller::HTTP_BAD_REQUEST);
+    }
+
     public function user_signup_post()
     {
 
@@ -7050,6 +7060,7 @@ class Api extends REST_Controller
     }
 
     // Link old and new referral systems
+    /**
      * Creates tbl_referrals entry when friends_code is used (for bonus tracking)
      */
     private function link_to_bonus_referral_system($referrer_id, $referee_id, $friends_code, $ip, $device_id)
