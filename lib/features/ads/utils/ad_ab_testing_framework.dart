@@ -28,7 +28,7 @@ enum RewardAmountVariant {
 class AdABTestingFramework {
   static const String _variantKey = 'ab_test_variant_';
   static const String _variantAssignedKey = 'ab_test_assigned_';
-  static const String _variantStartKey = 'ab_test_start_';
+  // Removed unused _variantStartKey
 
   /// Assign or retrieve banner size variant for this user
   /// Returns same variant consistently for the user
@@ -37,7 +37,7 @@ class AdABTestingFramework {
       'banner_size',
       BannerSizeVariant.values,
       BannerSizeVariant.adaptive,
-    ) as FutureOr<BannerSizeVariant>;
+    );
   }
 
   /// Assign or retrieve interstitial placement variant for this user
@@ -46,7 +46,7 @@ class AdABTestingFramework {
       'interstitial_placement',
       InterstitialPlacementVariant.values,
       InterstitialPlacementVariant.afterQuizResult,
-    ) as FutureOr<InterstitialPlacementVariant>;
+    );
   }
 
   /// Assign or retrieve reward amount variant for this user
@@ -55,7 +55,7 @@ class AdABTestingFramework {
       'reward_amount',
       RewardAmountVariant.values,
       RewardAmountVariant.fixed,
-    ) as FutureOr<RewardAmountVariant>;
+    );
   }
 
   /// Get or assign variant, ensuring consistency
@@ -96,8 +96,6 @@ class AdABTestingFramework {
   /// Get all active test variants for this user
   static Future<Map<String, String>> getAllVariants() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-
       final bannerVariant = await getBannerSizeVariant();
       final placementVariant = await getInterstitialPlacementVariant();
       final rewardVariant = await getRewardAmountVariant();

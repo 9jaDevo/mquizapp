@@ -3,8 +3,6 @@
 /// Reference this file to understand where to add the monetization calls in existing screens
 
 import 'dart:io';
-import 'package:flutterquiz/features/wallet/repos/monetization_remote_data_source.dart';
-import 'package:flutterquiz/features/wallet/cubit/monetization_cubit.dart';
 
 /// INTEGRATION POINTS FOR PHASE 3
 /// ==============================

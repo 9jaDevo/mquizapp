@@ -38,13 +38,13 @@ class AdImpressionQualityTracker {
       final currentTime = DateTime.now().millisecondsSinceEpoch;
       
       // Get previous clicks
-      final patternJson = prefs.getString(patternKey) ?? '[]';
+      final patternStr = prefs.getString(patternKey) ?? '';
       final clickTimes = List<int>.from(
-        (patternJson as dynamic)
-            .split(',')
-            .where((e) => e.isNotEmpty)
-            .map((e) => int.tryParse(e) ?? 0)
-            .toList()
+        patternStr
+        .split(',')
+        .where((String e) => e.isNotEmpty)
+        .map((String e) => int.tryParse(e) ?? 0)
+        .toList(),
       );
       
       // Check for suspicious patterns
@@ -113,14 +113,14 @@ class AdImpressionQualityTracker {
     try {
       final prefs = await SharedPreferences.getInstance();
       final patternKey = _clickPatternKey + adId;
-      final patternJson = prefs.getString(patternKey) ?? '[]';
+      final patternStr = prefs.getString(patternKey) ?? '';
       
       final clickTimes = List<int>.from(
-        (patternJson as dynamic)
-            .split(',')
-            .where((e) => e.isNotEmpty)
-            .map((e) => int.tryParse(e) ?? 0)
-            .toList()
+        patternStr
+        .split(',')
+        .where((String e) => e.isNotEmpty)
+        .map((String e) => int.tryParse(e) ?? 0)
+        .toList(),
       );
       
       return clickTimes.length;

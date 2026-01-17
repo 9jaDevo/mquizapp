@@ -72,9 +72,13 @@ class BannerVisibilityTracker {
       final key = _loadTimeKey + bannerId;
       
       // Store as JSON array to track multiple load times
-      final existingJson = prefs.getString(key) ?? '[]';
+      final existingStr = prefs.getString(key) ?? '';
       final times = List<int>.from(
-        (existingJson as dynamic).split(',').where((e) => e.isNotEmpty).map((e) => int.tryParse(e) ?? 0).toList()
+        existingStr
+            .split(',')
+            .where((String e) => e.isNotEmpty)
+            .map((String e) => int.tryParse(e) ?? 0)
+            .toList(),
       );
       times.add(durationMs);
       
@@ -95,10 +99,14 @@ class BannerVisibilityTracker {
     try {
       final prefs = await SharedPreferences.getInstance();
       final key = _loadTimeKey + bannerId;
-      final existingJson = prefs.getString(key) ?? '[]';
+      final existingStr = prefs.getString(key) ?? '';
       
       final times = List<int>.from(
-        (existingJson as dynamic).split(',').where((e) => e.isNotEmpty).map((e) => int.tryParse(e) ?? 0).toList()
+        existingStr
+            .split(',')
+            .where((String e) => e.isNotEmpty)
+            .map((String e) => int.tryParse(e) ?? 0)
+            .toList(),
       );
       
       if (times.isEmpty) return 0.0;

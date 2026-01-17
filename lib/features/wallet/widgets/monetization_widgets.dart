@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutterquiz/features/wallet/cubit/monetization_cubit.dart';
 import 'package:flutterquiz/features/wallet/models/monetization_models.dart';
 
 /// Daily Streak Widget - Display streak count, coins, and max streak

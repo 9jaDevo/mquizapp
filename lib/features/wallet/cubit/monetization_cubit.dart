@@ -113,7 +113,7 @@ class MonetizationCubit extends Cubit<MonetizationState> {
   Future<void> applyBoostEarnings({required String coinsEarned}) async {
     emit(state.copyWith(isLoadingBoost: true, clearError: true));
     try {
-      final data = await _monetizationRemoteDataSource.applyBoostEarnings(boostedCoins: coinsEarned);
+      await _monetizationRemoteDataSource.applyBoostEarnings(boostedCoins: coinsEarned);
       emit(state.copyWith(isLoadingBoost: false));
       // Optionally handle success data
     } catch (e) {

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutterquiz/utils/extensions.dart';
 
 /// Dialog to show ad consent before displaying rewarded ads
 /// Complies with AdMob policies by providing clear disclosure and skip option

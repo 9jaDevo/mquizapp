@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/core/routes/routes.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
-import 'package:flutterquiz/utils/extensions.dart';
 
 class FeatureShowcaseScreen extends StatelessWidget {
   const FeatureShowcaseScreen({super.key});

@@ -62,7 +62,6 @@ class AdMetrics {
 /// AdAnalyticsCollector tracks metrics for A/B testing
 /// Measures: eCPM, CTR, fill rate, impressions, conversions per variant
 class AdAnalyticsCollector {
-  static const String _metricsKey = 'ad_metrics_';
   static const String _variantMetricsKey = 'variant_metrics_';
   static const String _dailyStatsKey = 'daily_stats_';
 
@@ -124,12 +123,16 @@ class AdAnalyticsCollector {
 
       return AdMetrics(
         variant: variantName,
-        impressions: data['impressions'] ?? 0,
-        clicks: data['clicks'] ?? 0,
-        conversions: data['conversions'] ?? 0,
-        estimatedRevenue: (data['revenue'] ?? 0.0).toDouble(),
-        startTime: DateTime.parse(data['start_time'] ?? DateTime.now().toIso8601String()),
-        lastUpdated: DateTime.parse(data['last_updated'] ?? DateTime.now().toIso8601String()),
+        impressions: (data['impressions'] as num?)?.toInt() ?? 0,
+        clicks: (data['clicks'] as num?)?.toInt() ?? 0,
+        conversions: (data['conversions'] as num?)?.toInt() ?? 0,
+        estimatedRevenue: (data['revenue'] as num?)?.toDouble() ?? 0.0,
+        startTime: DateTime.parse(
+          (data['start_time'] as String?) ?? DateTime.now().toIso8601String(),
+        ),
+        lastUpdated: DateTime.parse(
+          (data['last_updated'] as String?) ?? DateTime.now().toIso8601String(),
+        ),
       );
     } catch (e) {
       log('Error getting variant metrics: $e', name: 'Analytics');

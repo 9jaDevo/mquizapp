@@ -18,6 +18,7 @@ import 'package:flutterquiz/features/quiz/models/quiz_type.dart';
 import 'package:flutterquiz/features/quiz/quiz_repository.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/features/wallet/cubit/monetization_cubit.dart';
+import 'package:flutterquiz/utils/answer_encryption.dart';
 import 'package:flutterquiz/features/wallet/widgets/monetization_widgets.dart';
 import 'package:flutterquiz/ui/screens/quiz/widgets/audio_question_container.dart';
 import 'package:flutterquiz/ui/widgets/already_logged_in_dialog.dart';
@@ -278,7 +279,14 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
   void _evaluateFraudRisk() {
     try {
       final questions = context.read<QuestionsCubit>().questions();
-      final correctAnswers = questions.where((q) => q.attempted && q.attempted == q.correctAnswer).length;
+      final userId = context.read<UserDetailsCubit>().getUserFirebaseId();
+      final correctAnswers = questions.where((q) {
+        final ans = AnswerEncryption.decryptCorrectAnswer(
+          rawKey: userId,
+          correctAnswer: q.correctAnswer!,
+        );
+        return q.attempted && q.submittedAnswerId == ans;
+      }).length;
       final accuracy = questions.isEmpty ? 0.0 : (correctAnswers / questions.length) * 100;
       
       final metadata = {
@@ -301,7 +309,14 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
   void _showBoostEarningsPopup() {
     try {
       final questions = context.read<QuestionsCubit>().questions();
-      final correctAnswers = questions.where((q) => q.attempted && q.attempted == q.correctAnswer).length;
+      final userId = context.read<UserDetailsCubit>().getUserFirebaseId();
+      final correctAnswers = questions.where((q) {
+        final ans = AnswerEncryption.decryptCorrectAnswer(
+          rawKey: userId,
+          correctAnswer: q.correctAnswer!,
+        );
+        return q.attempted && q.submittedAnswerId == ans;
+      }).length;
       
       if (correctAnswers > 0) {
         // Calculate coin value (example: 10 coins per correct answer)
