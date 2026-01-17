@@ -29,8 +29,16 @@ import 'package:flutterquiz/features/wallet/cubit/monetization_cubit.dart';
 import 'package:flutterquiz/features/wallet/widgets/monetization_widgets.dart';
 import 'package:flutterquiz/ui/screens/battle/create_or_join_screen.dart';
 import 'package:flutterquiz/ui/screens/home/widgets/all.dart';
-import 'package:flutterquiz/ui/screens/home/widgets/daily_challenge_card.dart';
+import 'package:flutterquiz/ui/screens/home/widgets/daily_challenge_glass_card.dart';
+import 'package:flutterquiz/ui/screens/home/widgets/gradient_background.dart';
+import 'package:flutterquiz/ui/screens/home/widgets/live_contest_glass_card.dart';
+import 'package:flutterquiz/ui/screens/home/widgets/monetization_glass_section.dart';
+import 'package:flutterquiz/ui/screens/home/widgets/profile_header_glass.dart';
+import 'package:flutterquiz/ui/screens/home/widgets/quiz_grid_glass_card.dart';
+import 'package:flutterquiz/ui/screens/home/widgets/user_achievements_glass_card.dart';
 import 'package:flutterquiz/ui/screens/profile/create_or_edit_profile_screen.dart';
+import 'package:flutterquiz/ui/styles/glass_theme.dart';
+import 'package:flutterquiz/ui/widgets/staggered_fade_in.dart';
 import 'package:flutterquiz/ui/screens/quiz/category_screen.dart';
 import 'package:flutterquiz/ui/widgets/all.dart';
 import 'package:flutterquiz/ui/widgets/skill_tier_badge.dart';
@@ -100,6 +108,9 @@ class HomeScreenState extends State<HomeScreen>
   void initState() {
     super.initState();
 
+    // Initialize device performance detection for glassmorphism
+    GlassThemeConfig.detectPerformanceTier();
+
     showAppUnderMaintenanceDialog();
 
     _sysConfigCubit = context.read<SystemConfigCubit>();
@@ -162,47 +173,11 @@ class HomeScreenState extends State<HomeScreen>
     }
   }
 
-  // Step 5: Daily Streak Widget
-  Widget _buildDailyStreakWidget() {
-    return BlocBuilder<MonetizationCubit, MonetizationState>(
-      builder: (context, state) {
-        if (state.streak != null && state.streak!.coinsEarned > 0) {
-          return Padding(
-            padding: EdgeInsets.symmetric(horizontal: hzMargin),
-            child: DailyStreakWidget(streak: state.streak!),
-          );
-        }
-        return const SizedBox.shrink();
-      },
-    );
-  }
-
-  // Step 4: Sponsor Banner Widget
-  Widget _buildSponsorBanner() {
-    // Load sponsor banner when home screen builds
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && !_isGuest) {
-        context.read<MonetizationCubit>().getSponsorBanner();
-      }
-    });
-
-    return BlocBuilder<MonetizationCubit, MonetizationState>(
-      builder: (context, state) {
-        if (state.banner != null) {
-          return Padding(
-            padding: EdgeInsets.symmetric(horizontal: hzMargin),
-            child: SponsorBannerWidget(
-              banner: state.banner!,
-              onBannerTap: () {
-                context.read<MonetizationCubit>().recordBannerClick(
-                  bannerId: state.banner!.bannerId,
-                );
-              },
-            ),
-          );
-        }
-        return const SizedBox.shrink();
-      },
+  // Monetization Section (Daily Streak + Sponsor Banner) with Glassmorphism
+  Widget _buildMonetizationSection() {
+    return StaggeredFadeIn(
+      delay: 300,
+      child: MonetizationGlassSection(isGuest: _isGuest),
     );
   }
 
@@ -550,7 +525,9 @@ class HomeScreenState extends State<HomeScreen>
 
   Widget _buildBattle() {
     return battleZones.isNotEmpty
-        ? Padding(
+        ? StaggeredFadeIn(
+            delay: 400,
+            child: Padding(
             padding: EdgeInsets.only(
               left: hzMargin,
               right: hzMargin,
@@ -582,7 +559,7 @@ class HomeScreenState extends State<HomeScreen>
                   // Generate 100 widgets that display their index in the List.
                   children: List.generate(
                     battleZones.length,
-                    (i) => QuizGridCard(
+                    (i) => QuizGridGlassCard(
                       onTap: () => _onPressedBattle(battleZones[i].title),
                       title: context.tr(battleZones[i].title)!,
                       desc: context.tr(battleZones[i].desc)!,
@@ -592,13 +569,16 @@ class HomeScreenState extends State<HomeScreen>
                 ),
               ],
             ),
-          )
+          ),
+        )
         : const SizedBox();
   }
 
   Widget _buildExamSelf() {
     return examZones.isNotEmpty
-        ? Padding(
+        ? StaggeredFadeIn(
+            delay: 500,
+            child: Padding(
             padding: EdgeInsets.only(
               left: hzMargin,
               right: hzMargin,
@@ -626,7 +606,7 @@ class HomeScreenState extends State<HomeScreen>
                   // Generate 100 widgets that display their index in the List.
                   children: List.generate(
                     examZones.length,
-                    (i) => QuizGridCard(
+                    (i) => QuizGridGlassCard(
                       onTap: () => _onPressedSelfExam(examZones[i].title),
                       title: context.tr(examZones[i].title)!,
                       desc: context.tr(examZones[i].desc)!,
@@ -636,7 +616,8 @@ class HomeScreenState extends State<HomeScreen>
                 ),
               ],
             ),
-          )
+          ),
+        )
         : const SizedBox();
   }
 
@@ -725,320 +706,57 @@ class HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildLiveContestSection() {
-    void onTapViewAll() {
-      if (_sysConfigCubit.isContestEnabled) {
-        Navigator.of(context).pushNamed(Routes.contest);
-      } else {
-        context.showSnack(context.tr(currentlyNotAvailableKey)!);
-      }
-    }
+    return BlocConsumer<ContestCubit, ContestState>(
+      bloc: context.read<ContestCubit>(),
+      listener: (context, state) {
+        if (state is ContestFailure) {
+          if (state.errorMessage == errorCodeUnauthorizedAccess) {
+            showAlreadyLoggedInDialog(context);
+          }
+        }
+      },
+      builder: (context, state) {
+        if (state is ContestSuccess && state.contestList.live.contestDetails.isNotEmpty) {
+          final contest = state.contestList.live.contestDetails.first;
+          final entryFee = int.parse(contest.entry ?? '0');
 
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: hzMargin, vertical: 10),
-      child: Column(
-        children: [
-          /// Contest Section Title
-          Row(
-            children: [
-              Text(
-                context.tr(contest) ?? contest,
-                textAlign: TextAlign.start,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeights.semiBold,
-                  color: context.primaryTextColor,
-                ),
-              ),
-              const Spacer(),
-              GestureDetector(
-                onTap: onTapViewAll,
-                child: Text(
-                  context.tr(viewAllKey) ?? viewAllKey,
-                  textAlign: TextAlign.end,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeights.semiBold,
-                    color: context.primaryTextColor.withValues(alpha: 0.3),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
+          void onPlayNow() {
+            final userDetailsCubit = context.read<UserDetailsCubit>();
+            if (int.parse(userDetailsCubit.getCoins() ?? '0') >= entryFee) {
+              context.read<UpdateCoinsCubit>().updateCoins(
+                coins: entryFee,
+                addCoin: false,
+                title: playedContestKey,
+              );
+              userDetailsCubit.updateCoins(
+                addCoin: false,
+                coins: entryFee,
+              );
+              Navigator.of(globalCtx).pushNamed(
+                Routes.quiz,
+                arguments: {
+                  'quizType': QuizTypes.contest,
+                  'contestId': contest.id,
+                },
+              );
+            } else {
+              showNotEnoughCoinsDialog(context);
+            }
+          }
 
-          /// Contest Card
-          BlocConsumer<ContestCubit, ContestState>(
-            bloc: context.read<ContestCubit>(),
-            listener: (context, state) {
-              if (state is ContestFailure) {
-                if (state.errorMessage == errorCodeUnauthorizedAccess) {
-                  showAlreadyLoggedInDialog(context);
-                }
-              }
-            },
-            builder: (context, state) {
-              if (state is ContestFailure) {
-                return Container(
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  height: 100,
-                  alignment: Alignment.center,
-                  child: Text(
-                    context.tr(
-                      convertErrorCodeToLanguageKey(state.errorMessage),
-                    )!,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeights.regular,
-                      color: Theme.of(context).primaryColor,
-                    ),
-                    maxLines: 2,
-                  ),
-                );
-              }
-
-              if (state is ContestSuccess) {
-                final colorScheme = Theme.of(context).colorScheme;
-                final textStyle = GoogleFonts.nunito(
-                  textStyle: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeights.regular,
-                    color: colorScheme.onTertiary.withValues(alpha: 0.6),
-                  ),
-                );
-
-                ///
-                final live = state.contestList.live;
-
-                /// No Contest
-                if (live.errorMessage.isNotEmpty) {
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: colorScheme.surface,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    height: 100,
-                    alignment: Alignment.center,
-                    child: Text(
-                      context.tr(
-                        convertErrorCodeToLanguageKey(live.errorMessage),
-                      )!,
-                      style: _boldTextStyle.copyWith(
-                        fontSize: 16,
-                        color: Theme.of(context).primaryColor,
-                      ),
-                    ),
-                  );
-                }
-
-                final contest = live.contestDetails.first;
-                final entryFee = int.parse(contest.entry!);
-
-                void onTapPlayNow() {
-                  final userDetailsCubit = context.read<UserDetailsCubit>();
-
-                  if (int.parse(userDetailsCubit.getCoins()!) >= entryFee) {
-                    context.read<UpdateCoinsCubit>().updateCoins(
-                      coins: entryFee,
-                      addCoin: false,
-                      title: playedContestKey,
-                    );
-                    userDetailsCubit.updateCoins(
-                      addCoin: false,
-                      coins: entryFee,
-                    );
-
-                    Navigator.of(globalCtx).pushNamed(
-                      Routes.quiz,
-                      arguments: {
-                        'quizType': QuizTypes.contest,
-                        'contestId': contest.id,
-                      },
-                    );
-                  } else {
-                    showNotEnoughCoinsDialog(context);
-                  }
-                }
-
-                return Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.transparent,
-                    boxShadow: [
-                      BoxShadow(
-                        offset: Offset(0, 5),
-                        blurRadius: 5,
-                        color: Colors.black12,
-                      ),
-                    ],
-                    borderRadius: BorderRadius.vertical(
-                      bottom: Radius.circular(99999),
-                    ),
-                  ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: colorScheme.surface,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.all(12.5),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            /// Contest Image
-                            Container(
-                              padding: const EdgeInsets.all(5),
-                              decoration: BoxDecoration(
-                                color: Colors.transparent,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: Theme.of(
-                                    context,
-                                  ).scaffoldBackgroundColor,
-                                ),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(5),
-                                child: QImage(
-                                  imageUrl: contest.image!,
-                                  height: 45,
-                                  width: 45,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-
-                            /// Contest Name & Description
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    contest.name.toString(),
-                                    textAlign: TextAlign.start,
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 2,
-                                    style: _boldTextStyle.copyWith(
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  Text(
-                                    contest.description.toString(),
-                                    softWrap: true,
-                                    textAlign: TextAlign.start,
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 2,
-                                    style: textStyle,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-
-                        ///
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                /// Entry Fees
-                                Text.rich(
-                                  TextSpan(
-                                    children: [
-                                      TextSpan(
-                                        text: context.tr('entryFeesLbl'),
-                                      ),
-                                      const TextSpan(text: ' : '),
-                                      TextSpan(
-                                        text:
-                                            "$entryFee ${context.tr("coinsLbl")!}",
-                                        style: textStyle.copyWith(
-                                          color: colorScheme.onTertiary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  style: textStyle,
-                                ),
-                                const SizedBox(height: 5),
-
-                                /// Ends on
-                                Text.rich(
-                                  style: textStyle,
-                                  TextSpan(
-                                    children: [
-                                      TextSpan(text: context.tr('endsOnLbl')),
-                                      const TextSpan(text: ' : '),
-                                      TextSpan(
-                                        text: '${contest.endDate}  |  ',
-                                        style: textStyle.copyWith(
-                                          color: colorScheme.onTertiary,
-                                        ),
-                                      ),
-                                      TextSpan(
-                                        text: contest.participants.toString(),
-                                        style: textStyle.copyWith(
-                                          color: colorScheme.onTertiary,
-                                        ),
-                                      ),
-                                      const TextSpan(text: ' : '),
-                                      TextSpan(text: context.tr('playersLbl')),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 15),
-
-                            /// Play Now
-                            GestureDetector(
-                              onTap: onTapPlayNow,
-                              child: Container(
-                                width: double.maxFinite,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                  horizontal: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  color: Theme.of(
-                                    context,
-                                  ).scaffoldBackgroundColor,
-                                ),
-                                child: Text(
-                                  context.tr('playnowLbl')!,
-                                  maxLines: 1,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).primaryColor,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-
-              return const Center(child: CircularProgressContainer());
-            },
-          ),
-        ],
-      ),
+          return StaggeredFadeIn(
+            delay: 350,
+            child: LiveContestGlassCard(
+              contest: contest,
+              onViewAll: () {
+                Navigator.of(context).pushNamed(Routes.contest);
+              },
+              onPlayNow: onPlayNow,
+            ),
+          );
+        }
+        return const SizedBox.shrink();
+      },
     );
   }
 
@@ -1062,14 +780,16 @@ class HomeScreenState extends State<HomeScreen>
         }
       },
       builder: (context, state) {
-        return Stack(
-          children: [
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Column(
-                children: [
-                  SizedBox(height: context.height * .12),
-                  Expanded(
+        return GradientBackground(
+          scrollController: _scrollController,
+          child: Stack(
+            children: [
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: Column(
+                  children: [
+                    SizedBox(height: context.height * .12),
+                    Expanded(
                     child: RefreshIndicator(
                       key: refreshKey,
                       color: context.primaryColor,
@@ -1090,22 +810,23 @@ class HomeScreenState extends State<HomeScreen>
                         controller: _scrollController,
                         children: [
                           const SizedBox(height: 24),
-                          UserAchievements(
-                            userRank: _userRank,
-                            userCoins: _userCoins,
-                            userScore: _userScore,
+                          StaggeredFadeIn(
+                            delay: 100,
+                            child: UserAchievementsGlassCard(
+                              userRank: _userRank,
+                              userCoins: _userCoins,
+                              userScore: _userScore,
+                            ),
                           ),
                           const SizedBox(height: 16),
-                          const DailyChallengeCard(),
+                          StaggeredFadeIn(
+                            delay: 200,
+                            child: const DailyChallengeGlassCard(),
+                          ),
                           const SizedBox(height: 8),
-                          // Step 5: Daily Streak Widget
+                          // Monetization section (daily streak + sponsor banner)
                           if (!_isGuest) ...[
-                            _buildDailyStreakWidget(),
-                            const SizedBox(height: 8),
-                          ],
-                          // Step 4: Sponsor Banner Widget
-                          if (!_isGuest) ...[
-                            _buildSponsorBanner(),
+                            _buildMonetizationSection(),
                             const SizedBox(height: 8),
                           ],
                           if (!_isGuest &&
@@ -1129,7 +850,21 @@ class HomeScreenState extends State<HomeScreen>
             ),
             Align(
               alignment: Alignment.topCenter,
-              child: _buildUserProfileHeader(),
+              child: ProfileHeaderGlass(
+                userName: _userName,
+                userProfileImg: _userProfileImg,
+                isGuest: _isGuest,
+                onTapNotification: () {
+                  if (_isGuest) {
+                    globalCtx.pushNamed(Routes.login);
+                  } else {
+                    globalCtx.pushNamed(Routes.notification);
+                  }
+                },
+                onTapCoinStore: () {
+                  globalCtx.pushNamed(Routes.coinStore);
+                },
+              ),
             ),
           ],
         );
@@ -1137,152 +872,7 @@ class HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildUserProfileHeader() {
-    void onTapNotification() {
-      if (_isGuest) {
-        globalCtx.pushNamed(Routes.login);
-      } else {
-        globalCtx.pushNamed(Routes.notification);
-      }
-    }
 
-    void onTapCoinStore() {
-      globalCtx.pushNamed(Routes.coinStore);
-    }
-
-    const minHeaderHeight = 100.0;
-    const minContentHeight = 48.0;
-    const iconSize = 36.0;
-    const avatarSize = 44.0;
-
-    final headerHeight = (context.height * .16).clamp(minHeaderHeight, 160.0);
-
-    return Stack(
-      clipBehavior: .none,
-      alignment: .bottomCenter,
-      children: [
-        Container(
-          height: context.height * .01,
-          width: context.width * .8,
-          margin: const EdgeInsets.only(bottom: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.all(
-              Radius.elliptical(context.height * .04, context.height * .04),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: context.primaryTextColor.withValues(alpha: .3),
-                blurRadius: 16,
-                spreadRadius: 4,
-              ),
-            ],
-          ),
-        ),
-        Container(
-          height: headerHeight,
-          width: context.width,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          decoration: BoxDecoration(
-            color: context.surfaceColor,
-            borderRadius: const BorderRadius.vertical(
-              bottom: Radius.circular(10),
-            ),
-          ),
-          alignment: .bottomCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: minContentHeight),
-            child: Row(
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    shape: .circle,
-                    border: Border.all(
-                      color: context.primaryTextColor.withValues(alpha: .3),
-                    ),
-                  ),
-                  padding: const EdgeInsets.all(4),
-                  width: avatarSize,
-                  height: avatarSize,
-                  child: QImage.circular(imageUrl: _userProfileImg),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: .start,
-                    mainAxisAlignment: .center,
-                    mainAxisSize: .min,
-                    children: [
-                      Text(
-                        _userName,
-                        textAlign: .start,
-                        maxLines: 1,
-                        overflow: .ellipsis,
-                        style: TextStyle(
-                          color: context.primaryTextColor,
-                          fontSize: 18,
-                          fontWeight: .bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const SkillTierBadge(),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                InkWell(
-                  onTap: onTapNotification,
-                  child: Container(
-                    width: iconSize,
-                    height: iconSize,
-                    decoration: BoxDecoration(
-                      color: context.primaryColor,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    alignment: .center,
-                    child: _isGuest
-                        ? Icon(
-                            Icons.login_rounded,
-                            color: context.surfaceColor,
-                            size: 20,
-                          )
-                        : QImage(
-                            imageUrl: Assets.notificationMenuIcon,
-                            color: context.surfaceColor,
-                            height: 20,
-                            width: 20,
-                            fit: .contain,
-                          ),
-                  ),
-                ),
-                if (_sysConfigCubit.isCoinStoreEnabled) ...[
-                  const SizedBox(width: 8),
-                  InkWell(
-                    onTap: onTapCoinStore,
-                    child: Container(
-                      width: iconSize,
-                      height: iconSize,
-                      decoration: BoxDecoration(
-                        color: context.primaryColor,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      alignment: .center,
-                      child: QImage(
-                        imageUrl: Assets.coinMenuIcon,
-                        color: context.surfaceColor,
-                        height: 20,
-                        width: 20,
-                        fit: .contain,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 
   void fetchUserDetails() {
     context.read<UserDetailsCubit>().fetchUserDetails();
