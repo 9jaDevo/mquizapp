@@ -1073,6 +1073,8 @@ class Api extends REST_Controller
                     $tbl = 'tbl_maths_question';
                 } else if ($type == 6 || $type == '6') {
                     $tbl = 'tbl_multi_match';
+                } else {
+                    $tbl = 'tbl_question'; // Default to tbl_question if type doesn't match
                 }
 
                 $no_of =  '(SELECT COUNT(s.id) FROM tbl_subcategory s WHERE s.maincat_id = c.id ' . $no_of_Condition . ' AND s.status = 1 AND s.id IN (SELECT DISTINCT subcategory FROM ' . $tbl . ' WHERE subcategory != 0)) as no_of';

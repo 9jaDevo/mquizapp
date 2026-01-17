@@ -253,10 +253,9 @@ class Sponsor_model extends CI_Model
 
         if ($inserted && $action == 'showed') {
             // Increment impression counter
-            $this->db->where('id', $banner_id)
-                     ->update('tbl_sponsor_banners', [
-                         'current_impressions' => $this->db->raw('current_impressions + 1')
-                     ]);
+            $this->db->set('current_impressions', 'current_impressions + 1', FALSE)
+                     ->where('id', $banner_id)
+                     ->update('tbl_sponsor_banners');
         }
 
         return $inserted;
