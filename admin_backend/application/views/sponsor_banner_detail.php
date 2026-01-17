@@ -120,6 +120,7 @@
                                     <div class="card-body">
                                         <form method="post" enctype="multipart/form-data">
                                             <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" value="<?= $this->security->get_csrf_hash(); ?>">
+                                            <input type="hidden" name="id" value="<?= $banner['id']; ?>">
 
                                             <div class="row">
                                                 <div class="form-group col-md-6">
@@ -134,12 +135,12 @@
 
                                             <div class="row">
                                                 <div class="form-group col-md-6">
-                                                    <label class="control-label">Redirect URL</label>
-                                                    <input type="url" name="redirect_url" class="form-control" value="<?= $banner['redirect_url']; ?>" required>
+                                                    <label class="control-label">Redirect URL (optional)</label>
+                                                    <input type="url" name="redirect_url" class="form-control" value="<?= $banner['redirect_url']; ?>" placeholder="https://example.com">
                                                 </div>
                                                 <div class="form-group col-md-6">
                                                     <label class="control-label">New Image (Optional)</label>
-                                                    <input type="file" name="image" class="form-control-file" accept="image/*">
+                                                    <input type="file" name="banner_image" class="form-control-file" accept="image/*">
                                                     <small class="form-text text-muted">Leave blank to keep current image</small>
                                                 </div>
                                             </div>

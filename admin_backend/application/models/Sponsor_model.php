@@ -96,7 +96,7 @@ class Sponsor_model extends CI_Model
             'title' => $this->input->post('title'),
             'image_url' => $image_url,
             'image_path' => SPONSOR_BANNER_IMG_PATH . basename($image_url),
-            'redirect_url' => $this->input->post('redirect_url'),
+            'redirect_url' => $this->input->post('redirect_url') ?: null,
             'redirect_type' => $this->input->post('redirect_type') ?? 'url',
             'impression_limit' => $this->input->post('impression_limit') ?? 0,
             'impression_period' => $this->input->post('impression_period') ?? 'daily',
@@ -132,6 +132,12 @@ class Sponsor_model extends CI_Model
         $id = $this->input->post('id');
         $banner = $this->get_banner($id);
 
+        // Bail out early if banner not found to avoid null access
+        if (!$banner) {
+            log_message('error', '[SPONSOR_MODEL] update_banner: Banner not found for ID ' . $id);
+            return false;
+        }
+
         // Handle image upload if provided
         $image_url = $banner['image_url'];
         if (!empty($_FILES['banner_image']['name'])) {
@@ -146,8 +152,8 @@ class Sponsor_model extends CI_Model
             'sponsor_name' => $this->input->post('sponsor_name'),
             'title' => $this->input->post('title'),
             'image_url' => $image_url,
-            'redirect_url' => $this->input->post('redirect_url'),
-            'redirect_type' => $this->input->post('redirect_type'),
+            'redirect_url' => $this->input->post('redirect_url') ?: null,
+            'redirect_type' => $this->input->post('redirect_type') ?: 'url',
             'impression_limit' => $this->input->post('impression_limit') ?? 0,
             'impression_period' => $this->input->post('impression_period'),
             'is_active' => $this->input->post('is_active') ?? 0,
@@ -170,8 +176,13 @@ class Sponsor_model extends CI_Model
     public function delete_banner($id)
     {
         $banner = $this->get_banner($id);
-        
-        if ($banner && $banner['image_path'] && file_exists($banner['image_path'])) {
+
+        if (!$banner) {
+            log_message('error', '[SPONSOR_MODEL] delete_banner: Banner not found for ID ' . $id);
+            return false;
+        }
+
+        if ($banner['image_path'] && file_exists($banner['image_path'])) {
             unlink($banner['image_path']);
         }
 

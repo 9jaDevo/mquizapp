@@ -29,6 +29,7 @@ class Sponsors extends CI_Controller
         error_log('FILES data: ' . print_r($_FILES, true));
         error_log('btnadd present: ' . ($this->input->post('btnadd') ? 'YES' : 'NO'));
 
+        // Create new banner
         if ($this->input->post('btnadd')) {
             error_log('Processing btnadd...');
             if (!has_permissions('create', 'sponsor_banners')) {
@@ -45,15 +46,13 @@ class Sponsors extends CI_Controller
             redirect('sponsor-banners');
         }
 
-        if ($this->input->post('btnupdate')) {
+        // Update settings
+        if ($this->input->post('btnupdate_settings')) {
             if (!has_permissions('update', 'sponsor_banners')) {
                 $this->session->set_flashdata('error', lang('permission_denied'));
             } else {
-                $result = $this->Sponsor_model->update_banner();
-                $this->session->set_flashdata(
-                    $result ? 'success' : 'error',
-                    $result ? 'Banner updated' : 'Update failed'
-                );
+                $this->update_settings();
+                $this->session->set_flashdata('success', 'Settings updated');
             }
             redirect('sponsor-banners');
         }
@@ -78,6 +77,22 @@ class Sponsors extends CI_Controller
 
         if (!$id) {
             $id = $this->input->get('id');
+        }
+        
+        // Handle update form submission
+        if ($this->input->post('btnupdate')) {
+            if (!has_permissions('update', 'sponsor_banners')) {
+                $this->session->set_flashdata('error', 'No permission to update');
+            } else {
+                // Set the banner ID for update_banner method
+                $_POST['id'] = $id;
+                $result = $this->Sponsor_model->update_banner();
+                $this->session->set_flashdata(
+                    $result ? 'success' : 'error',
+                    $result ? 'Banner updated successfully' : 'Failed to update banner'
+                );
+            }
+            redirect('Sponsors/view/' . $id);
         }
         
         $banner = $this->Sponsor_model->get_banner($id);
@@ -107,17 +122,22 @@ class Sponsors extends CI_Controller
      */
     public function delete()
     {
-        if (!has_permissions('delete', 'sponsor_banners')) {
-            echo json_encode(['success' => false, 'message' => 'No permission']);
+        if (!ALLOW_MODIFICATION) {
+            echo json_encode(['error' => true, 'message' => 'Modification not allowed in demo']);
             return;
         }
 
-        $id = $this->input->post('id');
+        if (!has_permissions('delete', 'sponsor_banners')) {
+            echo json_encode(['error' => true, 'message' => 'No permission']);
+            return;
+        }
+
+        $id = $this->input->post('id') ? $this->input->post('id') : $this->input->post('banner_id');
         $result = $this->Sponsor_model->delete_banner($id);
 
         echo json_encode([
-            'success' => $result,
-            'message' => $result ? 'Banner deleted' : 'Delete failed'
+            'error' => !$result,
+            'message' => $result ? 'Banner deleted successfully' : 'Delete failed'
         ]);
     }
 
@@ -157,8 +177,8 @@ class Sponsors extends CI_Controller
         ];
 
         foreach ($settings as $name => $value) {
-            $this->db->where('setting_name', $name)
-                     ->update('tbl_settings', ['setting_value' => $value]);
+            $this->db->where('type', $name)
+                     ->update('tbl_settings', ['message' => $value]);
         }
 
         echo json_encode(['success' => true, 'message' => 'Settings updated']);

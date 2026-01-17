@@ -88,7 +88,7 @@
 
                                             <div class="row">
                                                 <div class="form-group col-sm-12">
-                                                    <input type="submit" name="btnupdate" value="Update Settings" class="<?= BUTTON_CLASS ?>" />
+                                                    <input type="submit" name="btnupdate_settings" value="Update Settings" class="<?= BUTTON_CLASS ?>" />
                                                 </div>
                                             </div>
                                         </form>
@@ -179,7 +179,7 @@
                     </div>
                     <div class="modal-body">
                         <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" value="<?= $this->security->get_csrf_hash(); ?>">
-                        <input type="hidden" id="bannerId" name="banner_id" value="">
+                        <input type="hidden" id="bannerId" name="id" value="">
                         <input type="hidden" name="btnadd" value="1">
 
                         <div class="form-group">
@@ -199,8 +199,8 @@
                         </div>
 
                         <div class="form-group">
-                            <label class="control-label">Redirect URL <small class="text-danger">*</small></label>
-                            <input type="url" id="redirectUrl" name="redirect_url" class="form-control" required placeholder="https://example.com">
+                            <label class="control-label">Redirect URL (optional)</label>
+                            <input type="url" id="redirectUrl" name="redirect_url" class="form-control" placeholder="https://example.com">
                         </div>
 
                         <hr>
@@ -321,7 +321,7 @@
 
         $(document).on('click', '.view-banner', function() {
             var banner_id = $(this).data('banner-id');
-            window.location.href = '<?= base_url('Sponsors/view/'); ?>' + banner_id;
+            window.location.href = '<?= base_url('sponsor-banners'); ?>/view/' + banner_id;
         });
 
         $(document).on('click', '.delete-banner', function() {
@@ -331,16 +331,22 @@
                     type: 'POST',
                     url: '<?= base_url('Sponsors/delete'); ?>',
                     data: {
-                        banner_id: banner_id,
+                        id: banner_id,
                         '<?= $this->security->get_csrf_token_name(); ?>': '<?= $this->security->get_csrf_hash(); ?>'
                     },
+                    dataType: 'json',
                     success: function(response) {
-                        if (response.error === false) {
+                        var ok = (response && response.error === false) || response === true || response.success === true;
+                        if (ok) {
                             alert('Banner deleted successfully');
                             location.reload();
                         } else {
-                            alert('Error: ' + response.message);
+                            alert('Error: ' + (response.message || 'Unknown error'));
                         }
+                    },
+                    error: function(xhr, status, error) {
+                        alert('Error deleting banner: ' + error);
+                        console.error('Delete error:', xhr.responseText);
                     }
                 });
             }
