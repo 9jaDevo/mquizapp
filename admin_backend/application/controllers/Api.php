@@ -6962,7 +6962,6 @@ class Api extends REST_Controller
      */
     public function get_sponsor_banners_post()
     {
-        $this->isJSON();
         $this->load->model('Sponsor_model');
 
         $banners = $this->Sponsor_model->get_active_banners(10);
@@ -6976,7 +6975,7 @@ class Api extends REST_Controller
                 'banner_id' => (string)$banner['id'],
                 'sponsor_name' => $banner['sponsor_name'],
                 'title' => $banner['title'],
-                'image_url' => base_url() . SPONSOR_BANNER_IMG_PATH . $banner['image'],
+                'image_url' => !empty($banner['image_url']) ? $banner['image_url'] : (base_url() . SPONSOR_BANNER_IMG_PATH . $banner['image_path']),
                 'redirect_url' => $banner['redirect_url'],
                 'impression_limit' => (int)$banner['impression_limit'],
             ];

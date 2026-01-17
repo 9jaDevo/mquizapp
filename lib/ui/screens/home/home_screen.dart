@@ -124,6 +124,13 @@ class HomeScreenState extends State<HomeScreen>
     ///
     _currLangId = UiUtils.getCurrentQuizLanguageId(context);
 
+    // Fetch banners for both guests and logged-in users
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (mounted) {
+        context.read<MonetizationCubit>().getSponsorBanners();
+      }
+    });
+
     if (!_isGuest) {
       fetchUserDetails();
 
@@ -132,11 +139,10 @@ class HomeScreenState extends State<HomeScreen>
       // Step 2: Register device after login
       _registerDevice();
       
-      // Step 3: Check daily streak and fetch sponsor banners with delay
+      // Step 3: Check daily streak with a slight delay
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
           context.read<MonetizationCubit>().checkDailyStreak();
-          context.read<MonetizationCubit>().getSponsorBanners();
         }
       });
     }
@@ -216,6 +222,7 @@ class HomeScreenState extends State<HomeScreen>
             padding: EdgeInsets.symmetric(horizontal: hzMargin),
             child: SponsorBannerWidget(
               banner: state.banner!,
+              margin: EdgeInsets.zero,
               onBannerTap: () async {
                 context.read<MonetizationCubit>().recordBannerClick(
                   bannerId: state.banner!.bannerId,
@@ -1128,8 +1135,10 @@ class HomeScreenState extends State<HomeScreen>
                           
                           // Refresh monetization data
                           context.read<MonetizationCubit>().checkDailyStreak();
-                          context.read<MonetizationCubit>().getSponsorBanners();
                         }
+
+                        // Always refresh sponsor banners (guests included)
+                        context.read<MonetizationCubit>().getSponsorBanners();
                         setState(() {});
                       },
                       child: ListView(
@@ -1149,11 +1158,9 @@ class HomeScreenState extends State<HomeScreen>
                             _buildDailyStreakWidget(),
                             const SizedBox(height: 8),
                           ],
-                          // Step 4: Sponsor Banner Widget
-                          if (!_isGuest) ...[
-                            _buildSponsorBanner(),
-                            const SizedBox(height: 8),
-                          ],
+                          // Step 4: Sponsor Banner Widget (shown to all users)
+                          _buildSponsorBanner(),
+                          const SizedBox(height: 8),
                           if (!_isGuest &&
                               _sysConfigCubit.isAdsEnable &&
                               _sysConfigCubit.isDailyAdsEnabled) ...[
@@ -1487,12 +1494,16 @@ class _SponsorBannerCarouselState extends State<_SponsorBannerCarousel> {
           onPageChanged: (index) => _currentPage = index,
           itemBuilder: (context, index) {
             final banner = widget.banners[index];
-            return SponsorBannerWidget(
-              banner: banner,
-              onBannerTap: () => _onBannerTap(banner),
-              onErrorRetry: () {
-                // No-op: could trigger a refetch if desired
-              },
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 6),
+              child: SponsorBannerWidget(
+                banner: banner,
+                margin: EdgeInsets.zero,
+                onBannerTap: () => _onBannerTap(banner),
+                onErrorRetry: () {
+                  // No-op: could trigger a refetch if desired
+                },
+              ),
             );
           },
         ),

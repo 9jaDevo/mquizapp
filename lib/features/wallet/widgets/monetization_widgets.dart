@@ -164,7 +164,11 @@ class SponsorBannerWidget extends StatelessWidget {
     required this.banner,
     this.onBannerTap,
     this.onErrorRetry,
+    this.margin,
   }) : super(key: key);
+
+  /// Optional margin to align with surrounding layout (e.g., daily streak)
+  final EdgeInsetsGeometry? margin;
 
   @override
   Widget build(BuildContext context) {
@@ -172,7 +176,7 @@ class SponsorBannerWidget extends StatelessWidget {
       onTap: onBannerTap,
       child: Container(
         height: 180,
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        margin: margin ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
