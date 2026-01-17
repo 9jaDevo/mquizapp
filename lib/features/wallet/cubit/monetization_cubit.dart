@@ -12,7 +12,6 @@ class MonetizationCubit extends Cubit<MonetizationState> {
 
   // Daily Streak
   Future<void> checkDailyStreak() async {
-    emit(state.copyWith(isLoadingStreak: true, clearError: true));
     try {
       final data = await _monetizationRemoteDataSource.checkDailyStreak();
       final streak = DailyStreak.fromJson(data);
@@ -74,7 +73,6 @@ class MonetizationCubit extends Cubit<MonetizationState> {
 
   // Get Sponsor Banner
   Future<void> getSponsorBanner() async {
-    emit(state.copyWith(isLoadingBanner: true, clearError: true));
     try {
       final data = await _monetizationRemoteDataSource.getSponsorBanner();
       if (data != null) {

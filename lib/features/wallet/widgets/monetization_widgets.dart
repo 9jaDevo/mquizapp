@@ -14,6 +14,9 @@ class DailyStreakWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Use coinsEarned if available, otherwise use a default display value
+    final displayCoins = streak.coinsEarned > 0 ? streak.coinsEarned : 10;
+    
     return GestureDetector(
       onTap: onStreakTap,
       child: Container(
@@ -73,7 +76,7 @@ class DailyStreakWidget extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '+${streak.coinsEarned}',
+                  '+$displayCoins',
                   style: const TextStyle(
                     color: Colors.yellow,
                     fontSize: 20,

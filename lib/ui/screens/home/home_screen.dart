@@ -168,10 +168,29 @@ class HomeScreenState extends State<HomeScreen>
   Widget _buildDailyStreakWidget() {
     return BlocBuilder<MonetizationCubit, MonetizationState>(
       builder: (context, state) {
-        if (state.streak != null && state.streak!.coinsEarned > 0) {
+        // Show widget if streak data exists (don't hide on loading or if coins == 0)
+        if (state.streak != null) {
           return Padding(
             padding: EdgeInsets.symmetric(horizontal: hzMargin),
             child: DailyStreakWidget(streak: state.streak!),
+          );
+        }
+        // Show loading state while fetching
+        if (state.isLoadingStreak) {
+          return Padding(
+            padding: EdgeInsets.symmetric(horizontal: hzMargin),
+            child: Container(
+              height: 120,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFF9800), Color(0xFFE64A19)],
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
+            ),
           );
         }
         return const SizedBox.shrink();
@@ -198,6 +217,23 @@ class HomeScreenState extends State<HomeScreen>
                   await launchUrl(uri);
                 }
               },
+            ),
+          );
+        }
+        // Show loading state while fetching
+        if (state.isLoadingBanner) {
+          return Padding(
+            padding: EdgeInsets.symmetric(horizontal: hzMargin),
+            child: Container(
+              height: 180,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: Colors.grey.shade200,
+              ),
+              child: const Center(
+                child: CircularProgressIndicator(),
+              ),
             ),
           );
         }
