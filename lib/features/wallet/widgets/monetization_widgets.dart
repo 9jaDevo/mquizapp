@@ -176,7 +176,7 @@ class SponsorBannerWidget extends StatelessWidget {
       onTap: onBannerTap,
       child: Container(
         height: 180,
-        margin: margin ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        margin: margin,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           boxShadow: [

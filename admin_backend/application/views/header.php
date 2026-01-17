@@ -284,6 +284,18 @@
                     </a></li>
                 </ul>
             </li>
+            <!-- Custom Settings Menu -->
+            <li class="nav-item dropdown">
+                <a href="javascript:void(0)" class="nav-link has-dropdown"><em class="fas fa-sliders-h"></em><span>Custom Settings</span></a>
+                <ul class="dropdown-menu">
+                    <li><a class="nav-link" href="<?= base_url('sponsor-banners') ?>">
+                        <em class="fas fa-ad"></em> Sponsor Banners
+                    </a></li>
+                    <li><a class="nav-link" href="<?= base_url('daily-streak-settings') ?>">
+                        <em class="fas fa-fire"></em> Daily Streak Settings
+                    </a></li>
+                </ul>
+            </li>
             <?php if (has_permissions('read', 'leaderboard')) { ?>
                 <li class="nav-item dropdown">
                     <a href="javascript:void(0)" class="nav-link has-dropdown"><em class="fas fa-th"></em><span><?= lang('leaderboard'); ?></span></a>
@@ -328,8 +340,6 @@
                         <?php if (has_permissions('read', 'ads_settings')) { ?>
                             <li><a class="nav-link" href="<?= base_url(); ?>ads-settings"><?= lang('ads_settings'); ?></a></li>
                         <?php } ?>
-                        <!-- Sponsor Banners Management -->
-                        <li><a class="nav-link" href="<?= base_url(); ?>sponsor-banners"><em class="fas fa-ad"></em> Sponsor Banners</a></li>
                         <?php if (has_permissions('read', 'badges_settings')) { ?>
                             <li><a class="nav-link" href="<?= base_url(); ?>badges-settings"><?= lang('badges_settings'); ?></a></li>
                         <?php } ?>

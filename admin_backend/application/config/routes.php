@@ -242,3 +242,6 @@ $route['referral-settings'] = 'Settings/referral_settings';
 $route['admin/save-referral-settings'] = 'Settings/save_referral_settings';
 $route['admin/resolve-fraud'] = 'Settings/resolve_fraud';
 
+// Daily Streak Settings
+$route['daily-streak-settings'] = 'Streak';
+

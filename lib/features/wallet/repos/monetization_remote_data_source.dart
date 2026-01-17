@@ -172,6 +172,7 @@ final class MonetizationRemoteDataSource {
     try {
       final response = await http.post(
         Uri.parse(getSponsorBannersUrl),
+        headers: await ApiUtils.getHeaders(),
       );
 
       final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
@@ -180,7 +181,17 @@ final class MonetizationRemoteDataSource {
         return <Map<String, dynamic>>[];
       }
 
-      final list = responseJson['data'] as List<dynamic>;
+      // Handle case where data might be false (when banners are disabled)
+      final data = responseJson['data'];
+      if (data is bool && !data) {
+        return <Map<String, dynamic>>[];
+      }
+
+      if (data == null || data is! List) {
+        return <Map<String, dynamic>>[];
+      }
+
+      final list = data as List<dynamic>;
       return list.cast<Map<String, dynamic>>();
     } on SocketException {
       throw const ApiException(errorCodeNoInternet);

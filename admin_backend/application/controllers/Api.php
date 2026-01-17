@@ -6962,26 +6962,50 @@ class Api extends REST_Controller
      */
     public function get_sponsor_banners_post()
     {
-        $this->load->model('Sponsor_model');
+        try {
+            $this->load->model('Sponsor_model');
 
-        $banners = $this->Sponsor_model->get_active_banners(10);
-        if (!$banners || count($banners) === 0) {
-            return $this->response(false, 'no_active_banner');
+            // Log: Check if sponsor banner is enabled
+            $is_enabled = is_settings('sponsor_banner_enable');
+            log_message('debug', '[SPONSOR_BANNER_API] sponsor_banner_enable setting: ' . ($is_enabled ? 'true' : 'false'));
+
+            $banners = $this->Sponsor_model->get_active_banners(10);
+            log_message('debug', '[SPONSOR_BANNER_API] Retrieved banners count: ' . count($banners));
+            
+            if (!$banners || count($banners) === 0) {
+                log_message('debug', '[SPONSOR_BANNER_API] No active banners found, returning empty array');
+                $response['error'] = false;
+                $response['message'] = 'no_active_banner';
+                $response['data'] = [];
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            log_message('debug', '[SPONSOR_BANNER_API] Processing ' . count($banners) . ' banners');
+            $res = [];
+            foreach ($banners as $banner) {
+                log_message('debug', '[SPONSOR_BANNER_API] Banner: ' . $banner['sponsor_name'] . ' (ID: ' . $banner['id'] . ')');
+                $res[] = [
+                    'banner_id' => (string)$banner['id'],
+                    'sponsor_name' => $banner['sponsor_name'],
+                    'title' => $banner['title'],
+                    'image_url' => !empty($banner['image_url']) ? $banner['image_url'] : (base_url() . SPONSOR_BANNER_IMG_PATH . $banner['image_path']),
+                    'redirect_url' => $banner['redirect_url'],
+                    'impression_limit' => (int)$banner['impression_limit'],
+                ];
+            }
+
+            log_message('debug', '[SPONSOR_BANNER_API] Returning ' . count($res) . ' banners');
+            $response['error'] = false;
+            $response['message'] = 'success';
+            $response['data'] = $res;
+            
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = '122';
         }
 
-        $res = [];
-        foreach ($banners as $banner) {
-            $res[] = [
-                'banner_id' => (string)$banner['id'],
-                'sponsor_name' => $banner['sponsor_name'],
-                'title' => $banner['title'],
-                'image_url' => !empty($banner['image_url']) ? $banner['image_url'] : (base_url() . SPONSOR_BANNER_IMG_PATH . $banner['image_path']),
-                'redirect_url' => $banner['redirect_url'],
-                'impression_limit' => (int)$banner['impression_limit'],
-            ];
-        }
-
-        return $this->response(true, 'success', $res);
+        $this->response($response, REST_Controller::HTTP_OK);
     }
 
     /**

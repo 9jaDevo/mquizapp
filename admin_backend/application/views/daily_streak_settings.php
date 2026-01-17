@@ -76,6 +76,13 @@
 
                                                     <input type="hidden" id="daily_streak_multiplier_enable" name="daily_streak_multiplier_enable" value="<?= ($daily_streak_multiplier_enable) ? $daily_streak_multiplier_enable['message'] : 0; ?>">
                                                 </div>
+                                                <div class="form-group col-md-10 col-sm-6">
+                                                    <label class="control-label">&nbsp;</label>
+                                                    <div class="alert alert-warning mb-0">
+                                                        <strong>Multiplier Logic:</strong> When enabled, coins increase by 10% per day (max 3x).
+                                                        <br>Example: Day 1 = 10 coins, Day 2 = 12 coins, Day 3 = 13 coins... Day 20+ = 30 coins (capped)
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             <hr>

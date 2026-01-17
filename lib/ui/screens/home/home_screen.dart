@@ -70,7 +70,11 @@ class HomeScreenState extends State<HomeScreen>
 
   final examZones = <ZoneType>[
     (title: 'exam', img: Assets.examQuizIcon, desc: 'desExam'),
-    (title: 'selfChallenge', img: Assets.selfChallengeIcon, desc: 'challengeYourselfLbl'),
+    (
+      title: 'selfChallenge',
+      img: Assets.selfChallengeIcon,
+      desc: 'challengeYourselfLbl',
+    ),
   ];
 
   // Screen dimensions
@@ -111,12 +115,14 @@ class HomeScreenState extends State<HomeScreen>
     Future.delayed(Duration.zero, () async {
       await context.read<RewardedAdCubit>().createDailyRewardAd(context);
       context.read<InterstitialAdCubit>().createInterstitialAd(context);
-      
+
       // Create app open ad
       await context.read<AppOpenAdCubit>().loadAppOpenAd(context);
-      
+
       // Create rewarded interstitial ad
-      await context.read<RewardedInterstitialAdCubit>().createRewardedInterstitialAd(context);
+      await context
+          .read<RewardedInterstitialAdCubit>()
+          .createRewardedInterstitialAd(context);
     });
 
     WidgetsBinding.instance.addObserver(this);
@@ -124,21 +130,22 @@ class HomeScreenState extends State<HomeScreen>
     ///
     _currLangId = UiUtils.getCurrentQuizLanguageId(context);
 
-    // Fetch banners for both guests and logged-in users
-    Future.delayed(const Duration(milliseconds: 400), () {
-      if (mounted) {
-        context.read<MonetizationCubit>().getSponsorBanners();
-      }
-    });
-
     if (!_isGuest) {
       fetchUserDetails();
+      
+      // Fetch banners after user details are loaded (ensures JWT token is available)
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        if (mounted) {
+          log('[SPONSOR_BANNER] Triggering getSponsorBanners from HomeScreen');
+          context.read<MonetizationCubit>().getSponsorBanners();
+        }
+      });
 
       context.read<ContestCubit>().getContest(languageId: _currLangId);
-      
+
       // Step 2: Register device after login
       _registerDevice();
-      
+
       // Step 3: Check daily streak with a slight delay
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
@@ -155,7 +162,7 @@ class HomeScreenState extends State<HomeScreen>
       final deviceId = await authCubit.getDeviceId();
       final deviceType = authCubit.getDeviceType();
       final deviceName = await authCubit.getDeviceName();
-      
+
       if (mounted) {
         context.read<MonetizationCubit>().registerDevice(
           deviceId: deviceId,
@@ -206,8 +213,16 @@ class HomeScreenState extends State<HomeScreen>
   Widget _buildSponsorBanner() {
     return BlocBuilder<MonetizationCubit, MonetizationState>(
       builder: (context, state) {
+        log('[SPONSOR_BANNER_UI] Building sponsor banner widget');
+        log(
+          '[SPONSOR_BANNER_UI] State - banners: ${state.banners?.length ?? 0}, banner: ${state.banner != null}, loading: ${state.isLoadingBanner}',
+        );
+
         // Multiple banners - show carousel
         if (state.banners != null && state.banners!.isNotEmpty) {
+          log(
+            '[SPONSOR_BANNER_UI] Showing carousel with ${state.banners!.length} banners',
+          );
           return Padding(
             padding: EdgeInsets.symmetric(horizontal: hzMargin),
             child: SizedBox(
@@ -218,11 +233,12 @@ class HomeScreenState extends State<HomeScreen>
         }
         // Single banner fallback
         if (state.banner != null) {
+          log('[SPONSOR_BANNER_UI] Showing single banner');
           return Padding(
             padding: EdgeInsets.symmetric(horizontal: hzMargin),
             child: SponsorBannerWidget(
               banner: state.banner!,
-              margin: EdgeInsets.zero,
+              margin: const EdgeInsets.symmetric(vertical: 12),
               onBannerTap: () async {
                 context.read<MonetizationCubit>().recordBannerClick(
                   bannerId: state.banner!.bannerId,
@@ -237,6 +253,7 @@ class HomeScreenState extends State<HomeScreen>
         }
         // Loading state
         if (state.isLoadingBanner) {
+          log('[SPONSOR_BANNER_UI] Showing loading indicator');
           return Padding(
             padding: EdgeInsets.symmetric(horizontal: hzMargin),
             child: Container(
@@ -250,6 +267,7 @@ class HomeScreenState extends State<HomeScreen>
             ),
           );
         }
+        log('[SPONSOR_BANNER_UI] No banner to show - returning empty widget');
         return const SizedBox.shrink();
       },
     );
@@ -524,7 +542,7 @@ class HomeScreenState extends State<HomeScreen>
     //show you left the game
     if (state == AppLifecycleState.resumed) {
       UiUtils.needToUpdateCoinsLocally(context);
-      
+
       // Show app open ad when user resumes app
       context.read<AppOpenAdCubit>().showAppOpenAdIfAvailable();
     } else {
@@ -1132,7 +1150,7 @@ class HomeScreenState extends State<HomeScreen>
                           await context.read<ContestCubit>().getContest(
                             languageId: _currLangId,
                           );
-                          
+
                           // Refresh monetization data
                           context.read<MonetizationCubit>().checkDailyStreak();
                         }
@@ -1452,10 +1470,17 @@ class _SponsorBannerCarouselState extends State<_SponsorBannerCarousel> {
   @override
   void initState() {
     super.initState();
+    log(
+      '[SPONSOR_CAROUSEL] Initializing carousel with ${widget.banners.length} banners',
+    );
+    for (var i = 0; i < widget.banners.length; i++) {
+      log('[SPONSOR_CAROUSEL] Banner $i: ${widget.banners[i].title}');
+    }
     _pageController = PageController();
 
     // Start auto-slide only if multiple banners
     if (widget.banners.length > 1) {
+      log('[SPONSOR_CAROUSEL] Starting auto-slide timer');
       _autoSlideTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
         if (!mounted) return;
         _currentPage = (_currentPage + 1) % widget.banners.length;
@@ -1477,7 +1502,9 @@ class _SponsorBannerCarouselState extends State<_SponsorBannerCarousel> {
 
   Future<void> _onBannerTap(SponsorBanner banner) async {
     // Record click and open URL
-    context.read<MonetizationCubit>().recordBannerClick(bannerId: banner.bannerId);
+    context.read<MonetizationCubit>().recordBannerClick(
+      bannerId: banner.bannerId,
+    );
     final uri = Uri.parse(banner.redirectUrl);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
@@ -1491,19 +1518,22 @@ class _SponsorBannerCarouselState extends State<_SponsorBannerCarousel> {
         PageView.builder(
           controller: _pageController,
           itemCount: widget.banners.length,
-          onPageChanged: (index) => _currentPage = index,
+          onPageChanged: (index) {
+            if (mounted) {
+              setState(() {
+                _currentPage = index;
+              });
+            }
+          },
           itemBuilder: (context, index) {
             final banner = widget.banners[index];
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 6),
-              child: SponsorBannerWidget(
-                banner: banner,
-                margin: EdgeInsets.zero,
-                onBannerTap: () => _onBannerTap(banner),
-                onErrorRetry: () {
-                  // No-op: could trigger a refetch if desired
-                },
-              ),
+            return SponsorBannerWidget(
+              banner: banner,
+              margin: EdgeInsets.zero,
+              onBannerTap: () => _onBannerTap(banner),
+              onErrorRetry: () {
+                // No-op: could trigger a refetch if desired
+              },
             );
           },
         ),

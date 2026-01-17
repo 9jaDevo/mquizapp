@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:bloc/bloc.dart';
 import 'package:flutterquiz/features/wallet/models/monetization_models.dart';
 import 'package:flutterquiz/features/wallet/repos/monetization_remote_data_source.dart';
@@ -6,7 +8,8 @@ import 'package:equatable/equatable.dart';
 part 'monetization_state.dart';
 
 class MonetizationCubit extends Cubit<MonetizationState> {
-  MonetizationCubit(this._monetizationRemoteDataSource) : super(const MonetizationState());
+  MonetizationCubit(this._monetizationRemoteDataSource)
+    : super(const MonetizationState());
 
   final MonetizationRemoteDataSource _monetizationRemoteDataSource;
 
@@ -35,7 +38,12 @@ class MonetizationCubit extends Cubit<MonetizationState> {
         deviceName: deviceName,
       );
       final registration = DeviceRegistration.fromJson(data);
-      emit(state.copyWith(deviceRegistration: registration, isLoadingDevice: false));
+      emit(
+        state.copyWith(
+          deviceRegistration: registration,
+          isLoadingDevice: false,
+        ),
+      );
     } catch (e) {
       emit(state.copyWith(isLoadingDevice: false, error: e.toString()));
     }
@@ -65,7 +73,9 @@ class MonetizationCubit extends Cubit<MonetizationState> {
     try {
       final data = await _monetizationRemoteDataSource.checkPayoutEligibility();
       final eligibility = PayoutEligibility.fromJson(data);
-      emit(state.copyWith(payoutEligibility: eligibility, isLoadingPayout: false));
+      emit(
+        state.copyWith(payoutEligibility: eligibility, isLoadingPayout: false),
+      );
     } catch (e) {
       emit(state.copyWith(isLoadingPayout: false, error: e.toString()));
     }
@@ -77,7 +87,13 @@ class MonetizationCubit extends Cubit<MonetizationState> {
       final data = await _monetizationRemoteDataSource.getSponsorBanner();
       if (data != null) {
         final banner = SponsorBanner.fromJson(data);
-        emit(state.copyWith(banner: banner, banners: [banner], isLoadingBanner: false));
+        emit(
+          state.copyWith(
+            banner: banner,
+            banners: [banner],
+            isLoadingBanner: false,
+          ),
+        );
       } else {
         emit(state.copyWith(isLoadingBanner: false));
       }
@@ -89,14 +105,34 @@ class MonetizationCubit extends Cubit<MonetizationState> {
   // Get multiple Sponsor Banners
   Future<void> getSponsorBanners() async {
     try {
+      log('[SPONSOR_BANNER] Fetching sponsor banners...');
       final list = await _monetizationRemoteDataSource.getSponsorBanners();
+      log('[SPONSOR_BANNER] Raw response list length: ${list.length}');
+      log('[SPONSOR_BANNER] Raw response: $list');
+
       final banners = list.map((e) => SponsorBanner.fromJson(e)).toList();
+      log('[SPONSOR_BANNER] Parsed ${banners.length} banners');
+
       if (banners.isNotEmpty) {
-        emit(state.copyWith(banners: banners, banner: banners.first, isLoadingBanner: false));
+        log('[SPONSOR_BANNER] Emitting ${banners.length} banners to state');
+        for (var i = 0; i < banners.length; i++) {
+          log(
+            '[SPONSOR_BANNER] Banner $i: ID=${banners[i].bannerId}, Title="${banners[i].title}", Image="${banners[i].imageUrl}"',
+          );
+        }
+        emit(
+          state.copyWith(
+            banners: banners,
+            banner: banners.first,
+            isLoadingBanner: false,
+          ),
+        );
       } else {
+        log('[SPONSOR_BANNER] No banners returned from API');
         emit(state.copyWith(isLoadingBanner: false));
       }
     } catch (e) {
+      log('[SPONSOR_BANNER] ERROR fetching banners: $e');
       emit(state.copyWith(isLoadingBanner: false, error: e.toString()));
     }
   }
@@ -104,7 +140,9 @@ class MonetizationCubit extends Cubit<MonetizationState> {
   // Record Banner Click
   Future<void> recordBannerClick({required String bannerId}) async {
     try {
-      await _monetizationRemoteDataSource.recordSponsorBannerClick(bannerId: bannerId);
+      await _monetizationRemoteDataSource.recordSponsorBannerClick(
+        bannerId: bannerId,
+      );
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
@@ -114,7 +152,9 @@ class MonetizationCubit extends Cubit<MonetizationState> {
   Future<void> offerBoostEarnings({required String coinsEarned}) async {
     emit(state.copyWith(isLoadingBoost: true, clearError: true));
     try {
-      final data = await _monetizationRemoteDataSource.offerBoostEarnings(coinsEarned: coinsEarned);
+      final data = await _monetizationRemoteDataSource.offerBoostEarnings(
+        coinsEarned: coinsEarned,
+      );
       final boost = BoostEarnings.fromJson(data);
       emit(state.copyWith(boostEarnings: boost, isLoadingBoost: false));
     } catch (e) {
@@ -126,7 +166,9 @@ class MonetizationCubit extends Cubit<MonetizationState> {
   Future<void> applyBoostEarnings({required String coinsEarned}) async {
     emit(state.copyWith(isLoadingBoost: true, clearError: true));
     try {
-      await _monetizationRemoteDataSource.applyBoostEarnings(boostedCoins: coinsEarned);
+      await _monetizationRemoteDataSource.applyBoostEarnings(
+        boostedCoins: coinsEarned,
+      );
       emit(state.copyWith(isLoadingBoost: false));
       // Optionally handle success data
     } catch (e) {
@@ -140,7 +182,9 @@ class MonetizationCubit extends Cubit<MonetizationState> {
     try {
       final data = await _monetizationRemoteDataSource.getWatchUnlockConfig();
       final config = WatchUnlockConfig.fromJson(data);
-      emit(state.copyWith(watchUnlockConfig: config, isLoadingWatchUnlock: false));
+      emit(
+        state.copyWith(watchUnlockConfig: config, isLoadingWatchUnlock: false),
+      );
     } catch (e) {
       emit(state.copyWith(isLoadingWatchUnlock: false, error: e.toString()));
     }

@@ -58,9 +58,17 @@ class Streak_model extends CI_Model
         $daily_coin_reward = (int)is_settings('daily_streak_coin_reward');
         $bonus_threshold = (int)is_settings('daily_streak_bonus_threshold');
         $bonus_coin = (int)is_settings('daily_streak_bonus_coin');
+        $multiplier_enabled = (int)is_settings('daily_streak_multiplier_enable');
 
-        // Calculate total coins for today
+        // Calculate base coins with optional multiplier
         $coins_earned = $daily_coin_reward;
+        
+        // Apply streak multiplier if enabled (1.1x per streak day, max 3x)
+        if ($multiplier_enabled == 1 && $new_streak > 1) {
+            $multiplier = min(1 + ($new_streak * 0.1), 3.0); // Cap at 3x
+            $coins_earned = (int)($daily_coin_reward * $multiplier);
+        }
+        
         $bonus_unlocked = false;
         $bonus_earned = 0;
 
@@ -101,6 +109,12 @@ class Streak_model extends CI_Model
             1
         );
 
+        // Calculate multiplier for display
+        $current_multiplier = 1.0;
+        if ($multiplier_enabled == 1 && $new_streak > 1) {
+            $current_multiplier = min(1 + ($new_streak * 0.1), 3.0);
+        }
+
         return [
             'streak_count' => $new_streak,
             'coins_earned' => $coins_earned,
@@ -108,6 +122,8 @@ class Streak_model extends CI_Model
             'bonus_coin' => $bonus_earned,
             'max_streak' => $new_max,
             'bonus_unlocked' => $bonus_unlocked,
+            'multiplier_enabled' => $multiplier_enabled == 1,
+            'current_multiplier' => $current_multiplier,
             'next_bonus_at' => ($bonus_threshold > 0) ? $bonus_threshold - ($new_streak % $bonus_threshold) : 0,
             'message' => $bonus_unlocked 
                 ? "Great! You reached day $new_streak and earned $coins_earned coins!"

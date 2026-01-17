@@ -243,12 +243,18 @@ class Sponsor_model extends CI_Model
     {
         $result = [];
 
-        if (!is_settings('sponsor_banner_enable')) {
+        $is_enabled = is_settings('sponsor_banner_enable');
+        log_message('debug', '[SPONSOR_MODEL] sponsor_banner_enable: ' . ($is_enabled ? 'true' : 'false'));
+        
+        if (!$is_enabled) {
+            log_message('debug', '[SPONSOR_MODEL] Sponsor banners disabled, returning empty array');
             return $result;
         }
 
         $now = date('Y-m-d H:i:s');
         $today = date('Y-m-d');
+        
+        log_message('debug', '[SPONSOR_MODEL] Querying banners. Now: ' . $now . ', Today: ' . $today);
 
         $banners = $this->db->select('*')
                             ->where('is_active', 1)
@@ -259,7 +265,11 @@ class Sponsor_model extends CI_Model
                             ->get('tbl_sponsor_banners')
                             ->result_array();
 
+        log_message('debug', '[SPONSOR_MODEL] Found ' . count($banners) . ' banners from DB');
+
         foreach ($banners as $banner) {
+            log_message('debug', '[SPONSOR_MODEL] Checking banner: ' . $banner['sponsor_name'] . ' (ID: ' . $banner['id'] . ')');
+            
             // Reset daily counters when date changes
             if ($banner['impression_limit'] > 0 && $banner['impression_period'] === 'daily') {
                 if ($banner['impression_reset_date'] < $today) {
@@ -269,12 +279,16 @@ class Sponsor_model extends CI_Model
                                  'impression_reset_date' => $today,
                              ]);
                     $banner['current_impressions'] = 0;
+                    log_message('debug', '[SPONSOR_MODEL] Reset daily counter for banner ' . $banner['id']);
                 }
             }
 
             // Include if unlimited or within limit
             if ($banner['impression_limit'] == 0 || $banner['current_impressions'] < $banner['impression_limit']) {
                 $result[] = $banner;
+                log_message('debug', '[SPONSOR_MODEL] Added banner ' . $banner['id'] . ' to result');
+            } else {
+                log_message('debug', '[SPONSOR_MODEL] Skipped banner ' . $banner['id'] . ' - impression limit reached');
             }
 
             if (count($result) >= $limit) {
@@ -282,6 +296,7 @@ class Sponsor_model extends CI_Model
             }
         }
 
+        log_message('debug', '[SPONSOR_MODEL] Returning ' . count($result) . ' banners');
         return $result;
     }
 

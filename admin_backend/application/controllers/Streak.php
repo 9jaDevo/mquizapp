@@ -21,25 +21,25 @@ class Streak extends CI_Controller
      */
     public function index()
     {
-        if (!has_permissions('read', 'daily_streak_settings')) {
+        if (!$this->session->userdata('isLoggedIn')) {
             redirect('/');
         }
 
         if ($this->input->post('btnupdate')) {
-            if (!has_permissions('update', 'daily_streak_settings')) {
-                $this->session->set_flashdata('error', lang('permission_denied'));
+            if (!ALLOW_MODIFICATION) {
+                $this->session->set_flashdata('error', lang('Modification_in_demo_version_is_not_allowed'));
                 redirect('daily-streak-settings');
             }
 
             $this->update_settings();
-            $this->session->set_flashdata('success', lang('data_updated_successfully'));
+            $this->session->set_flashdata('success', 'Daily Streak settings updated successfully');
             redirect('daily-streak-settings');
         }
 
-        $data['streak_coin_reward'] = is_settings('daily_streak_coin_reward');
-        $data['streak_multiplier_enable'] = is_settings('daily_streak_multiplier_enable');
-        $data['streak_bonus_threshold'] = is_settings('daily_streak_bonus_threshold');
-        $data['streak_bonus_coin'] = is_settings('daily_streak_bonus_coin');
+        $data['daily_streak_coin_reward'] = $this->db->where('type', 'daily_streak_coin_reward')->get('tbl_settings')->row_array();
+        $data['daily_streak_multiplier_enable'] = $this->db->where('type', 'daily_streak_multiplier_enable')->get('tbl_settings')->row_array();
+        $data['daily_streak_bonus_threshold'] = $this->db->where('type', 'daily_streak_bonus_threshold')->get('tbl_settings')->row_array();
+        $data['daily_streak_bonus_coin'] = $this->db->where('type', 'daily_streak_bonus_coin')->get('tbl_settings')->row_array();
 
         // Get statistics
         $data['total_active_streaks'] = $this->db->where('streak_count >', 0)
@@ -78,12 +78,9 @@ class Streak extends CI_Controller
             'daily_streak_bonus_coin' => $this->input->post('daily_streak_bonus_coin')
         ];
 
-        $this->db->set('setting_value', 'CASE setting_name', false);
         foreach ($settings as $name => $value) {
-            $this->db->set("WHEN '$name' THEN '$value'", null, false);
+            $this->db->where('type', $name)
+                     ->update('tbl_settings', ['message' => $value]);
         }
-        $this->db->set('setting_value', 'setting_value', false);
-        $this->db->where_in('setting_name', array_keys($settings));
-        $this->db->update('tbl_settings');
     }
 }
