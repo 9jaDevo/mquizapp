@@ -26,6 +26,7 @@ import 'package:flutterquiz/features/quiz/cubits/subcategory_cubit.dart';
 import 'package:flutterquiz/features/quiz/models/quiz_type.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/features/wallet/cubit/monetization_cubit.dart';
+import 'package:flutterquiz/features/wallet/models/monetization_models.dart';
 import 'package:flutterquiz/features/wallet/widgets/monetization_widgets.dart';
 import 'package:flutterquiz/ui/screens/battle/create_or_join_screen.dart';
 import 'package:flutterquiz/ui/screens/home/widgets/all.dart';
@@ -41,6 +42,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
+// (removed duplicate import)
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -68,11 +70,7 @@ class HomeScreenState extends State<HomeScreen>
 
   final examZones = <ZoneType>[
     (title: 'exam', img: Assets.examQuizIcon, desc: 'desExam'),
-    (
-      title: 'selfChallenge',
-      img: Assets.selfChallengeIcon,
-      desc: 'challengeYourselfLbl',
-    ),
+    (title: 'selfChallenge', img: Assets.selfChallengeIcon, desc: 'challengeYourselfLbl'),
   ];
 
   // Screen dimensions
@@ -134,11 +132,11 @@ class HomeScreenState extends State<HomeScreen>
       // Step 2: Register device after login
       _registerDevice();
       
-      // Step 3: Check daily streak and fetch sponsor banner with delay
+      // Step 3: Check daily streak and fetch sponsor banners with delay
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
           context.read<MonetizationCubit>().checkDailyStreak();
-          context.read<MonetizationCubit>().getSponsorBanner();
+          context.read<MonetizationCubit>().getSponsorBanners();
         }
       });
     }
@@ -202,6 +200,17 @@ class HomeScreenState extends State<HomeScreen>
   Widget _buildSponsorBanner() {
     return BlocBuilder<MonetizationCubit, MonetizationState>(
       builder: (context, state) {
+        // Multiple banners - show carousel
+        if (state.banners != null && state.banners!.isNotEmpty) {
+          return Padding(
+            padding: EdgeInsets.symmetric(horizontal: hzMargin),
+            child: SizedBox(
+              height: 180,
+              child: _SponsorBannerCarousel(banners: state.banners!),
+            ),
+          );
+        }
+        // Single banner fallback
         if (state.banner != null) {
           return Padding(
             padding: EdgeInsets.symmetric(horizontal: hzMargin),
@@ -211,7 +220,6 @@ class HomeScreenState extends State<HomeScreen>
                 context.read<MonetizationCubit>().recordBannerClick(
                   bannerId: state.banner!.bannerId,
                 );
-                // Open banner URL
                 final uri = Uri.parse(state.banner!.redirectUrl);
                 if (await canLaunchUrl(uri)) {
                   await launchUrl(uri);
@@ -220,7 +228,7 @@ class HomeScreenState extends State<HomeScreen>
             ),
           );
         }
-        // Show loading state while fetching
+        // Loading state
         if (state.isLoadingBanner) {
           return Padding(
             padding: EdgeInsets.symmetric(horizontal: hzMargin),
@@ -231,9 +239,7 @@ class HomeScreenState extends State<HomeScreen>
                 borderRadius: BorderRadius.circular(12),
                 color: Colors.grey.shade200,
               ),
-              child: const Center(
-                child: CircularProgressIndicator(),
-              ),
+              child: const Center(child: CircularProgressIndicator()),
             ),
           );
         }
@@ -1122,7 +1128,7 @@ class HomeScreenState extends State<HomeScreen>
                           
                           // Refresh monetization data
                           context.read<MonetizationCubit>().checkDailyStreak();
-                          context.read<MonetizationCubit>().getSponsorBanner();
+                          context.read<MonetizationCubit>().getSponsorBanners();
                         }
                         setState(() {});
                       },
@@ -1419,4 +1425,105 @@ class HomeScreenState extends State<HomeScreen>
 
   @override
   bool get wantKeepAlive => true;
+}
+
+// Internal carousel widget for sponsor banners with auto-slide
+class _SponsorBannerCarousel extends StatefulWidget {
+  final List<SponsorBanner> banners;
+
+  const _SponsorBannerCarousel({required this.banners});
+
+  @override
+  State<_SponsorBannerCarousel> createState() => _SponsorBannerCarouselState();
+}
+
+class _SponsorBannerCarouselState extends State<_SponsorBannerCarousel> {
+  late final PageController _pageController;
+  Timer? _autoSlideTimer;
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+
+    // Start auto-slide only if multiple banners
+    if (widget.banners.length > 1) {
+      _autoSlideTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+        if (!mounted) return;
+        _currentPage = (_currentPage + 1) % widget.banners.length;
+        _pageController.animateToPage(
+          _currentPage,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        );
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _autoSlideTimer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _onBannerTap(SponsorBanner banner) async {
+    // Record click and open URL
+    context.read<MonetizationCubit>().recordBannerClick(bannerId: banner.bannerId);
+    final uri = Uri.parse(banner.redirectUrl);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        PageView.builder(
+          controller: _pageController,
+          itemCount: widget.banners.length,
+          onPageChanged: (index) => _currentPage = index,
+          itemBuilder: (context, index) {
+            final banner = widget.banners[index];
+            return SponsorBannerWidget(
+              banner: banner,
+              onBannerTap: () => _onBannerTap(banner),
+              onErrorRetry: () {
+                // No-op: could trigger a refetch if desired
+              },
+            );
+          },
+        ),
+        // Simple page indicator
+        Positioned(
+          bottom: 8,
+          right: 16,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.4),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(widget.banners.length, (i) {
+                final isActive = i == _currentPage;
+                return Container(
+                  width: isActive ? 10 : 6,
+                  height: 6,
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  decoration: BoxDecoration(
+                    color: isActive ? Colors.white : Colors.white70,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }

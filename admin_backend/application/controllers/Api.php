@@ -6956,6 +6956,34 @@ class Api extends REST_Controller
 
         $this->response($response, REST_Controller::HTTP_OK);
     }
+    
+    /**
+     * Get multiple active sponsor banners for client-side rotation
+     */
+    public function get_sponsor_banners_post()
+    {
+        $this->isJSON();
+        $this->load->model('Sponsor_model');
+
+        $banners = $this->Sponsor_model->get_active_banners(10);
+        if (!$banners || count($banners) === 0) {
+            return $this->response(false, 'no_active_banner');
+        }
+
+        $res = [];
+        foreach ($banners as $banner) {
+            $res[] = [
+                'banner_id' => (string)$banner['id'],
+                'sponsor_name' => $banner['sponsor_name'],
+                'title' => $banner['title'],
+                'image_url' => base_url() . SPONSOR_BANNER_IMG_PATH . $banner['image'],
+                'redirect_url' => $banner['redirect_url'],
+                'impression_limit' => (int)$banner['impression_limit'],
+            ];
+        }
+
+        return $this->response(true, 'success', $res);
+    }
 
     /**
      * Offer boost earnings (double coins)

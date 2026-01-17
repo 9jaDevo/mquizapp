@@ -77,7 +77,22 @@ class MonetizationCubit extends Cubit<MonetizationState> {
       final data = await _monetizationRemoteDataSource.getSponsorBanner();
       if (data != null) {
         final banner = SponsorBanner.fromJson(data);
-        emit(state.copyWith(banner: banner, isLoadingBanner: false));
+        emit(state.copyWith(banner: banner, banners: [banner], isLoadingBanner: false));
+      } else {
+        emit(state.copyWith(isLoadingBanner: false));
+      }
+    } catch (e) {
+      emit(state.copyWith(isLoadingBanner: false, error: e.toString()));
+    }
+  }
+
+  // Get multiple Sponsor Banners
+  Future<void> getSponsorBanners() async {
+    try {
+      final list = await _monetizationRemoteDataSource.getSponsorBanners();
+      final banners = list.map((e) => SponsorBanner.fromJson(e)).toList();
+      if (banners.isNotEmpty) {
+        emit(state.copyWith(banners: banners, banner: banners.first, isLoadingBanner: false));
       } else {
         emit(state.copyWith(isLoadingBanner: false));
       }

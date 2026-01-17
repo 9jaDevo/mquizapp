@@ -233,6 +233,59 @@ class Sponsor_model extends CI_Model
     }
 
     /**
+     * Get multiple active banners for rotation (client-side carousel)
+     * Respects impression limits and date ranges, ordered by priority
+     *
+     * @param int $limit
+     * @return array
+     */
+    public function get_active_banners($limit = 10)
+    {
+        $result = [];
+
+        if (!is_settings('sponsor_banner_enable')) {
+            return $result;
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $today = date('Y-m-d');
+
+        $banners = $this->db->select('*')
+                            ->where('is_active', 1)
+                            ->where('start_date <=', $now)
+                            ->where('end_date >=', $now)
+                            ->order_by('priority', 'DESC')
+                            ->order_by('RAND()')
+                            ->get('tbl_sponsor_banners')
+                            ->result_array();
+
+        foreach ($banners as $banner) {
+            // Reset daily counters when date changes
+            if ($banner['impression_limit'] > 0 && $banner['impression_period'] === 'daily') {
+                if ($banner['impression_reset_date'] < $today) {
+                    $this->db->where('id', $banner['id'])
+                             ->update('tbl_sponsor_banners', [
+                                 'current_impressions' => 0,
+                                 'impression_reset_date' => $today,
+                             ]);
+                    $banner['current_impressions'] = 0;
+                }
+            }
+
+            // Include if unlimited or within limit
+            if ($banner['impression_limit'] == 0 || $banner['current_impressions'] < $banner['impression_limit']) {
+                $result[] = $banner;
+            }
+
+            if (count($result) >= $limit) {
+                break;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
      * Record banner impression
      * 
      * @param int $banner_id

@@ -74,6 +74,7 @@ const registerDeviceUrl = '$_api/register_device';
 const evaluateUserRiskUrl = '$_api/evaluate_user_risk';
 const checkPayoutEligibilityUrl = '$_api/check_payout_eligibility';
 const getSponsorBannerUrl = '$_api/get_sponsor_banner';
+const getSponsorBannersUrl = '$_api/get_sponsor_banners';
 const sponsorBannerClickUrl = '$_api/sponsor_banner_click';
 const offerBoostEarningsUrl = '$_api/offer_boost_earnings';
 const applyBoostEarningsUrl = '$_api/apply_boost_earnings';

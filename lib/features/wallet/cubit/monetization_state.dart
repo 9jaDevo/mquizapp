@@ -3,6 +3,7 @@ part of 'monetization_cubit.dart';
 class MonetizationState extends Equatable {
   final DailyStreak? streak;
   final SponsorBanner? banner;
+  final List<SponsorBanner>? banners;
   final DeviceRegistration? deviceRegistration;
   final FraudDetection? fraud;
   final PayoutEligibility? payoutEligibility;
@@ -20,6 +21,7 @@ class MonetizationState extends Equatable {
   const MonetizationState({
     this.streak,
     this.banner,
+    this.banners,
     this.deviceRegistration,
     this.fraud,
     this.payoutEligibility,
@@ -38,6 +40,7 @@ class MonetizationState extends Equatable {
   MonetizationState copyWith({
     DailyStreak? streak,
     SponsorBanner? banner,
+    List<SponsorBanner>? banners,
     DeviceRegistration? deviceRegistration,
     FraudDetection? fraud,
     PayoutEligibility? payoutEligibility,
@@ -56,6 +59,7 @@ class MonetizationState extends Equatable {
     return MonetizationState(
       streak: streak ?? this.streak,
       banner: banner ?? this.banner,
+      banners: banners ?? this.banners,
       deviceRegistration: deviceRegistration ?? this.deviceRegistration,
       fraud: fraud ?? this.fraud,
       payoutEligibility: payoutEligibility ?? this.payoutEligibility,
@@ -76,6 +80,7 @@ class MonetizationState extends Equatable {
   List<Object?> get props => [
     streak,
     banner,
+    banners,
     deviceRegistration,
     fraud,
     payoutEligibility,

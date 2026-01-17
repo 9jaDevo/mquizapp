@@ -166,6 +166,31 @@ final class MonetizationRemoteDataSource {
     }
   }
 
+  /// Get multiple active sponsor banners for rotation display
+  /// Returns: [ {banner...}, ... ]
+  Future<List<Map<String, dynamic>>> getSponsorBanners() async {
+    try {
+      final response = await http.post(
+        Uri.parse(getSponsorBannersUrl),
+      );
+
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
+
+      if (responseJson['error'] as bool) {
+        return <Map<String, dynamic>>[];
+      }
+
+      final list = responseJson['data'] as List<dynamic>;
+      return list.cast<Map<String, dynamic>>();
+    } on SocketException {
+      throw const ApiException(errorCodeNoInternet);
+    } on ApiException {
+      rethrow;
+    } on Exception {
+      throw const ApiException(errorCodeDefaultMessage);
+    }
+  }
+
   /// Log sponsor banner click for analytics
   /// Parameters: banner_id
   Future<void> recordSponsorBannerClick({
