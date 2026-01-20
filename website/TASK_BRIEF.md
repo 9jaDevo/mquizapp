@@ -25,14 +25,23 @@ c:\xampp\htdocs\mquizapp\website\
 ### Technology Stack
 - **Framework**: React 18+ with TypeScript
 - **Build Tool**: Vite (latest)
-- **Styling**: Tailwind CSS 4.0 with custom glass utilities
+- **Styling**: Tailwind CSS 4.0 with custom glass utilities (Blue & White theme)
 - **Animation**: Framer Motion for smooth, professional animations
 - **Routing**: React Router v6 for multi-page navigation
 - **SEO**: React Helmet Async with structured data
-- **Blog**: MDX with remark/rehype plugins
+- **Blog**: API-based (PHP admin backend integration)
+- **Data Fetching**: Axios + SWR for API calls and caching
 - **Forms**: React Hook Form + Zod validation
 - **Icons**: Lucide React
 - **Deployment**: Vercel-ready configuration
+
+### Branding Colors
+- **Primary Blue**: `#2563eb` (Royal Blue)
+- **Secondary Blue**: `#1e40af` (Deep Blue)
+- **Accent Blue**: `#60a5fa` (Light Blue)
+- **White**: `#ffffff`
+- **Dark Background**: `#0f172a`
+- **Glass Tint**: Blue-tinted glass with `rgba(37, 99, 235, 0.1)`
 
 ### Pages to Build
 1. **Home** (`/`) - Hero, features, stats, testimonials, app showcase
@@ -85,19 +94,48 @@ c:\xampp\htdocs\mquizapp\website\
 ✓ Fast load times (<3 seconds)
 ✓ Core Web Vitals optimization
 
-### Blog Features
-- MDX support for React components in posts
-- Syntax highlighting for code blocks
-- Reading time calculation
-- Table of contents (auto-generated from headings)
-- Category and tag filtering
-- Search functionality
+### Blog Features (PHP Backend Integration)
+**Backend Management (PHP Admin Panel):**
+- All blog posts managed via existing PHP admin backend
+- MySQL database storage (admin_backend/database)
+- Content creation/editing in PHP admin
+- Image upload and management
+- Category/tag management
+- SEO meta fields management
+- Publish/draft status control
+
+**Frontend Display (React):**
+- Fetch posts from PHP API endpoints
+- Display blog listing with glass cards
+- Individual post pages with dynamic routing
+- Client-side reading time calculation
+- Syntax highlighting for code blocks (Prism.js)
+- Category and tag filtering (data from API)
+- Search functionality (API-based or client-side)
 - Social share buttons
-- Author bio section
-- Related posts
+- Author bio section (from API)
+- Related posts (from API)
 - Comments section (Disqus integration ready)
 - Reading progress bar
-- RSS feed generation ready
+- Responsive design with glassmorphism
+
+**Required API Endpoints (to be created in PHP backend):**
+```
+GET /api/blog/posts?page=1&limit=10&category=&search=
+Response: { posts: [], total: number, pages: number }
+
+GET /api/blog/post/:slug
+Response: { post: {...} }
+
+GET /api/blog/categories
+Response: { categories: [] }
+
+GET /api/blog/featured
+Response: { posts: [] }
+
+GET /api/blog/related/:id
+Response: { posts: [] }
+```
 
 ### Responsive Breakpoints
 - **xs**: 0-639px (Mobile)
@@ -289,7 +327,8 @@ The project is successful when:
 ✓ Site is perfectly responsive on all devices
 ✓ Lighthouse scores are 95+ on all metrics
 ✓ SEO is fully implemented with meta tags and structured data
-✓ Blog platform works with MDX posts
+✓ Blog platform works with PHP API integration
+✓ Blue and white branding is consistent throughout
 ✓ Contact form sends emails successfully
 ✓ Dark mode works flawlessly
 ✓ All animations are smooth and performant
@@ -317,7 +356,10 @@ npm run dev
 ## 🔗 Resources
 - Current site: https://mquiz.uk
 - Reference design: LearnWay (provided in image)
-- Brand colors: Blue (#2563eb), Purple (#7c3aed), Cyan (#06b6d4)
+- Brand colors: Blue (#2563eb, #1e40af, #60a5fa) and White (#ffffff)
+- Admin backend: PHP CodeIgniter in admin_backend folder
+- Database: MySQL (see API_INTEGRATION_GUIDE.md for schema)
+- Blog API documentation: website/API_INTEGRATION_GUIDE.md
 
 ## ⚠️ Important Notes
 - Follow TypeScript best practices (strict typing)

@@ -21,12 +21,13 @@ Create a state-of-the-art, SEO-optimized React-based landing page for mQuiz that
 - **Interactive Particles**: Floating particle effects behind glass surfaces
 - **Smooth Animations**: Framer Motion for fluid glass transitions
 
-### Color Scheme (Enhanced from Current Brand)
+### Color Scheme (Blue and White Branding)
 - Primary: `#2563eb` (Royal Blue) with glass overlay
-- Secondary: `#7c3aed` (Purple) with gradient effects
-- Accent: `#06b6d4` (Cyan) for highlights
+- Secondary: `#1e40af` (Deep Blue) with gradient effects
+- Accent: `#60a5fa` (Light Blue) for highlights
 - Background: Dark mode with `#0f172a` and light mode with `#ffffff`
-- Glass Tints: Semi-transparent overlays with `rgba(255, 255, 255, 0.1)`
+- Glass Tints: Semi-transparent overlays with `rgba(37, 99, 235, 0.1)` for blue tint
+- Text: White on dark backgrounds, blue/dark on light backgrounds
 
 ### Typography
 - Primary Font: Inter (modern, clean)
@@ -188,12 +189,14 @@ Create a state-of-the-art, SEO-optimized React-based landing page for mQuiz that
 
 ### Blog & Content Management
 ```
-- MDX for blog posts (Markdown + React components)
-- Gray-matter for frontmatter parsing
-- Reading time calculation
+- PHP Admin Backend API integration
+- Fetch blog posts from existing database
+- REST API endpoints from admin_backend
+- Reading time calculation (client-side)
 - Syntax highlighting (Prism.js)
-- Image optimization
-- RSS feed generation
+- Image URLs from admin backend
+- Category/tag management via admin panel
+- CRUD operations handled by PHP backend
 ```
 
 ### Performance Optimization
@@ -206,11 +209,26 @@ Create a state-of-the-art, SEO-optimized React-based landing page for mQuiz that
 - Asset preloading
 ```
 
-### State Management
+### State Management & Data Fetching
 ```
 - React Context for theme
 - Local storage for preferences
-- SWR for data fetching (blog posts)
+- Axios for API calls to PHP backend
+- SWR or React Query for blog post caching
+- API base URL configuration via environment variables
+```
+
+### Backend API Integration
+```
+- Base URL: Your admin_backend domain
+- Endpoints:
+  - GET /api/blog/posts - Fetch all blog posts (with pagination)
+  - GET /api/blog/post/:id - Fetch single post
+  - GET /api/blog/categories - Fetch categories
+  - GET /api/blog/search?q=query - Search posts
+  - GET /api/blog/featured - Fetch featured posts
+- Authentication: API key or public endpoints
+- Response format: JSON
 ```
 
 ### Forms & Validation
@@ -283,14 +301,15 @@ Create a state-of-the-art, SEO-optimized React-based landing page for mQuiz that
 5. **Fresh Content**: Regular blog updates
 
 ### Blog SEO Features
-- SEO-friendly URLs (`/blog/how-to-earn-money-with-mquiz`)
-- Meta descriptions (150-160 characters)
-- Featured images with alt tags
-- Schema markup for articles
+- SEO-friendly URLs (`/blog/:slug`)
+- Meta descriptions from database (150-160 characters)
+- Featured images with alt tags from admin backend
+- Schema markup for articles (data from API)
 - Social sharing optimization
-- Related posts for internal linking
-- Category and tag pages
-- Author pages with bio
+- Related posts fetched from API
+- Category and tag pages (data from database)
+- Author information from database
+- Dynamic sitemap generation based on published posts
 
 ## 🎨 Liquid Glass Components Library
 

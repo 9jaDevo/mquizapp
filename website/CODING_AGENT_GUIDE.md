@@ -33,9 +33,9 @@ npm install react-hook-form zod @hookform/resolvers
 # Icons
 npm install lucide-react
 
-# Blog/MDX
-npm install @mdx-js/rollup gray-matter reading-time
-npm install remark-gfm rehype-highlight rehype-slug rehype-autolink-headings
+# API & Data Fetching
+npm install axios swr
+npm install prismjs react-syntax-highlighter
 
 # Utilities
 npm install date-fns
@@ -60,8 +60,8 @@ module.exports = {
     extend: {
       colors: {
         primary: '#2563eb',
-        secondary: '#7c3aed',
-        accent: '#06b6d4',
+        secondary: '#1e40af',
+        accent: '#60a5fa',
       },
       backdropBlur: {
         xs: '2px',
@@ -311,56 +311,74 @@ Similar structure to Privacy Policy
 
 #### 5.1 Blog Listing Page (`/blog`)
 **Requirements:**
+- Fetch blog posts from PHP admin backend API
 - Masonry or grid layout
 - BlogCard components with:
-  - Featured image
+  - Featured image (from API)
   - Category badge
   - Title and excerpt
-  - Author, date, reading time
+  - Author, date, reading time (calculated client-side)
   - Glass card with hover effect
-- Category filter buttons
-- Search bar (filters posts)
+- Category filter buttons (data from API)
+- Search bar (filters posts client-side or via API)
 - Pagination (10 posts per page)
-- Featured posts section
+- Featured posts section (from API endpoint)
 - Sidebar with:
-  - Categories
-  - Recent posts
-  - Tags cloud
+  - Categories (from API)
+  - Recent posts (from API)
+  - Tags cloud (from API)
 
 #### 5.2 Blog Post Page (`/blog/:slug`)
 **Requirements:**
-- Hero with featured image
+- Fetch single post from API by ID or slug
+- Hero with featured image (from API)
 - Article metadata (author, date, reading time)
-- Table of contents (sticky sidebar on desktop)
-- MDX content rendering
-- Syntax highlighting for code blocks
+- Table of contents (generated from HTML headings)
+- HTML content rendering with sanitization
+- Syntax highlighting for code blocks (Prism.js)
 - Image captions
 - Social share buttons (Twitter, Facebook, LinkedIn)
 - Reading progress bar (top of page)
-- Author bio section
-- Related posts (3-4 posts)
+- Author bio section (from API)
+- Related posts (from API endpoint)
 - Comments section (Disqus or custom)
 - Newsletter subscription CTA
 
-#### 5.3 MDX Setup
+#### 5.3 API Integration Setup
 **Configure:**
-- Remark plugins: remark-gfm (tables, task lists)
-- Rehype plugins: rehype-highlight, rehype-slug, rehype-autolink-headings
-- Custom components for MDX:
-  - Callout boxes
-  - Image with caption
-  - Video embed
-  - Code block with copy button
-  - Tweet embed
-  - Button/CTA
+- Create API client with Axios
+- Base URL from environment variable (.env)
+- Error handling and loading states
+- Data type definitions (TypeScript interfaces)
+- SWR for caching and revalidation
 
-#### 5.4 Sample Blog Posts
-Create 5 initial blog posts covering:
-1. "How to Earn Money with mQuiz: Complete Guide"
-2. "10 Study Tips to Maximize Your Learning on mQuiz"
-3. "mQuiz vs. Traditional Learning: Why Gamification Works"
-4. "Top 10 Quiz Categories to Try on mQuiz"
-5. "Referral Program: Earn While You Share mQuiz"
+**API Endpoints to create in PHP backend:**
+```typescript
+// GET /api/blog/posts?page=1&limit=10&category=&search=
+// Response: { posts: [], total: number, pages: number }
+
+// GET /api/blog/post/:slug
+// Response: { post: { id, title, slug, content, excerpt, featured_image, author, category, tags, created_at, updated_at } }
+
+// GET /api/blog/categories
+// Response: { categories: [] }
+
+// GET /api/blog/featured
+// Response: { posts: [] }
+
+// GET /api/blog/related/:id
+// Response: { posts: [] }
+```
+
+#### 5.4 Blog Management Note
+**Important:** Blog posts are managed entirely through the PHP admin backend:
+- Admin panel handles all CRUD operations
+- Content editor in admin (TinyMCE or CKEditor)
+- Image uploads through admin
+- Category/tag management in admin
+- SEO meta fields in admin panel
+- Publish/draft status control
+- The React frontend only fetches and displays published posts
 
 ### Phase 6: SEO Implementation (Priority: CRITICAL)
 
@@ -793,7 +811,7 @@ cd c:\xampp\htdocs\mquizapp\website
 npm create vite@latest . -- --template react-ts
 
 # Install all dependencies
-npm install react-router-dom tailwindcss postcss autoprefixer framer-motion clsx tailwind-merge react-helmet-async react-hook-form zod @hookform/resolvers lucide-react @mdx-js/rollup gray-matter reading-time remark-gfm rehype-highlight rehype-slug rehype-autolink-headings date-fns emailjs-com
+npm install react-router-dom tailwindcss postcss autoprefixer framer-motion clsx tailwind-merge react-helmet-async react-hook-form zod @hookform/resolvers lucide-react axios swr prismjs react-syntax-highlighter date-fns emailjs-com
 
 # Install dev dependencies
 npm install -D @types/node
