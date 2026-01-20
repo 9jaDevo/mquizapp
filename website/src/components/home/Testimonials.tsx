@@ -7,21 +7,21 @@ const testimonials = [
   {
     name: 'Sarah Johnson',
     role: 'Student',
-    image: 'https://i.pravatar.cc/150?img=1',
+    image: '/placeholder-user-1.jpg', // TODO: Replace with actual user photo
     rating: 5,
     text: 'mQuiz has completely transformed my learning experience. The gamification makes studying fun, and I love earning rewards while learning!',
   },
   {
     name: 'Michael Chen',
     role: 'Teacher',
-    image: 'https://i.pravatar.cc/150?img=2',
+    image: '/placeholder-user-2.jpg', // TODO: Replace with actual user photo
     rating: 5,
     text: 'As an educator, I recommend mQuiz to all my students. The quiz battles feature creates healthy competition and improves engagement.',
   },
   {
     name: 'Emily Davis',
     role: 'Professional',
-    image: 'https://i.pravatar.cc/150?img=3',
+    image: '/placeholder-user-3.jpg', // TODO: Replace with actual user photo
     rating: 5,
     text: 'I use mQuiz to keep my knowledge fresh. The variety of categories and the ability to earn real rewards is simply amazing!',
   },
