@@ -19,20 +19,20 @@
 }
 
 @layer components {
-  /* Glass Morphism Base Styles */
+  /* Glass Morphism Base Styles with Blue Tint */
   .glass {
     @apply relative;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(37, 99, 235, 0.1); /* Blue-tinted glass */
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(96, 165, 250, 0.2); /* Light blue border */
     border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 32px rgba(37, 99, 235, 0.15); /* Blue shadow */
   }
 
   .glass-dark {
     background: rgba(15, 23, 42, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(96, 165, 250, 0.15);
   }
 
   .glass-hover {
@@ -40,9 +40,9 @@
   }
 
   .glass-hover:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(37, 99, 235, 0.15);
     transform: translateY(-4px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 12px 40px rgba(37, 99, 235, 0.2);
   }
 
   /* Container */

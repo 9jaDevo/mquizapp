@@ -14,19 +14,22 @@ export default {
       },
       colors: {
         primary: {
-          DEFAULT: '#2563eb',
-          light: '#3b82f6',
-          dark: '#1d4ed8',
+          DEFAULT: '#2563eb', // Primary Blue
+          light: '#60a5fa', // Accent Light Blue
+          dark: '#1e40af', // Secondary Blue
         },
         secondary: {
-          DEFAULT: '#7c3aed',
-          light: '#8b5cf6',
-          dark: '#6d28d9',
+          DEFAULT: '#1e40af', // Secondary Blue
+          light: '#3b82f6',
+          dark: '#1e3a8a',
         },
         accent: {
-          DEFAULT: '#06b6d4',
-          light: '#22d3ee',
-          dark: '#0891b2',
+          DEFAULT: '#60a5fa', // Accent Light Blue
+          light: '#93c5fd',
+          dark: '#3b82f6',
+        },
+        white: {
+          DEFAULT: '#ffffff',
         },
       },
       backdropBlur: {

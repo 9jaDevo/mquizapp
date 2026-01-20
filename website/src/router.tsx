@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import About from './pages/About';
 import Features from './pages/Features';
 import Blog from './pages/Blog';
+import BlogPost from './pages/BlogPost';
 import Contact from './pages/Contact';
 import Download from './pages/Download';
 import Privacy from './pages/Privacy';
@@ -30,6 +31,10 @@ export const router = createBrowserRouter([
       {
         path: 'blog',
         element: <Blog />,
+      },
+      {
+        path: 'blog/:slug',
+        element: <BlogPost />,
       },
       {
         path: 'contact',
