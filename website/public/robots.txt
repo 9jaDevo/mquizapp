@@ -1,0 +1,8 @@
+# User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://mquiz.uk/sitemap.xml
+
+# Disallow admin paths if any
+# Disallow: /admin/
