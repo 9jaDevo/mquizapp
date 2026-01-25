@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Trophy,
@@ -16,7 +16,6 @@ import {
   Zap,
   Shield,
   Clock,
-  BarChart3,
   BookOpen,
   Headphones,
   Calculator,
@@ -87,8 +86,6 @@ const Features: React.FC = () => {
     window.scrollTo(0, 0);
   }, []);
 
-  const [activeFeature, setActiveFeature] = useState(0);
-
   return (
     <>
       <SEO
@@ -138,7 +135,6 @@ const Features: React.FC = () => {
                     className="p-8 h-full hover:shadow-glass-xl cursor-pointer"
                     blur="lg"
                     hover
-                    onClick={() => setActiveFeature(index)}
                   >
                     <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-6`}>
                       <Icon className="w-8 h-8 text-white" />

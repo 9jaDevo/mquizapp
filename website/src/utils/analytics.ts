@@ -115,7 +115,7 @@ class AnalyticsManager {
 
         // Initialize dataLayer
         (window as any).dataLayer = (window as any).dataLayer || [];
-        (window as any).gtag = function (...args: any[]) {
+        (window as any).gtag = function (..._args: any[]) {
             (window as any).dataLayer.push(arguments);
         };
 

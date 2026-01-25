@@ -2,7 +2,6 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Download, Smartphone } from 'lucide-react';
 import GlassButton from '../common/GlassButton';
-import GlassCard from '../common/GlassCard';
 import appMockup from '../../assets/app-mockup.webp';
 
 const CTA: React.FC = () => {

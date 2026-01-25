@@ -6,7 +6,6 @@ import Statistics from '../components/home/Statistics';
 import HowItWorks from '../components/home/HowItWorks';
 import Testimonials from '../components/home/Testimonials';
 import FAQ from '../components/home/FAQ';
-import AppShowcase from '../components/home/AppShowcase';
 import CTA from '../components/home/CTA';
 
 const Home: React.FC = () => {

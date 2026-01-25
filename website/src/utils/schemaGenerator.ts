@@ -55,8 +55,6 @@ export function generateArticleSchema(
     post: BlogPost,
     baseUrl: string = 'https://mquiz.uk'
 ): Record<string, any> {
-    const authorSchema = generateAuthorSchema(post.author);
-
     return {
         '@context': 'https://schema.org',
         '@type': 'NewsArticle',
