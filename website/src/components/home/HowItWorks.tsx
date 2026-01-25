@@ -51,11 +51,12 @@ const HowItWorks: React.FC = () => {
 
         <div className="relative">
           {/* Timeline line */}
-          <div className="hidden lg:block absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-primary via-secondary to-accent -translate-y-1/2" />
+          <div className="hidden lg:block absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-primary/30 via-secondary/30 to-accent/30 -translate-y-1/2" />
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 relative">
             {steps.map((step, index) => {
               const Icon = step.icon;
+              const stepNumber = String(index + 1).padStart(2, '0');
               return (
                 <motion.div
                   key={index}
@@ -63,18 +64,28 @@ const HowItWorks: React.FC = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: index * 0.1 }}
-                  className="relative"
+                  className="relative pt-10"
                 >
-                  <GlassCard className="p-6 text-center h-full" blur="md" hover>
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold text-xl">
-                      <Icon className="w-8 h-8" />
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-white dark:bg-slate-900 shadow-lg border border-primary/20 flex items-center justify-center z-20">
+                    <span className="text-2xl font-extrabold text-primary dark:text-primary-light leading-none">
+                      {stepNumber}
+                    </span>
+                  </div>
+
+                  <GlassCard className="p-6 pt-10 text-center h-full relative overflow-visible" blur="md" hover>
+                    <div className="relative z-10 space-y-4">
+                      <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold text-xl shadow-lg/50">
+                        <Icon className="w-8 h-8" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-heading font-semibold mb-2 text-slate-900 dark:text-white">
+                          {step.title}
+                        </h3>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                          {step.description}
+                        </p>
+                      </div>
                     </div>
-                    <h3 className="text-lg font-heading font-semibold mb-2 text-slate-900 dark:text-white">
-                      {step.title}
-                    </h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                      {step.description}
-                    </p>
                   </GlassCard>
                 </motion.div>
               );

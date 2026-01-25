@@ -39,8 +39,8 @@ const Navbar: React.FC = () => {
       className={cn(
         'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
         scrolled
-          ? 'backdrop-blur-lg bg-white/80 dark:bg-slate-950/80 shadow-lg'
-          : 'bg-transparent'
+          ? 'backdrop-blur-xl bg-white/80 dark:bg-slate-950/80 border-b border-white/30 dark:border-slate-800/70 shadow-lg'
+          : 'backdrop-blur-lg bg-white/60 dark:bg-slate-950/60 border-b border-white/20 dark:border-slate-900/50 shadow-md'
       )}
     >
       <div className="container-custom">

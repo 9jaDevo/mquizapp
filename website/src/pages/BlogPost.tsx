@@ -6,8 +6,11 @@ import { Calendar, Clock, User, ArrowLeft, Loader2 } from 'lucide-react';
 import SEO from '../components/common/SEO';
 import GlassCard from '../components/common/GlassCard';
 import GlassButton from '../components/common/GlassButton';
+import SmartImage from '../components/common/SmartImage';
 import { getBlogPost, getRelatedPosts, incrementPostViews } from '../api/blog';
 import { format } from 'date-fns';
+import { generateCompleteArticleSchema } from '../utils/schemaGenerator';
+import { trackAnalyticsEvent } from '../utils/analytics';
 
 const BlogPost: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -28,10 +31,18 @@ const BlogPost: React.FC = () => {
 
   const relatedPosts = relatedData?.data.posts || [];
 
-  // Increment view count
+  // Increment view count and track analytics
   useEffect(() => {
     if (post) {
       incrementPostViews(post.id).catch(console.error);
+      
+      // Track blog post view in analytics
+      trackAnalyticsEvent('blog_post_viewed', {
+        content_id: post.id.toString(),
+        content_title: post.title,
+        reading_time: post.reading_time || 5,
+        category: post.category.name,
+      });
     }
   }, [post]);
 
@@ -61,6 +72,14 @@ const BlogPost: React.FC = () => {
     );
   }
 
+  // Generate schema markup with breadcrumbs
+  const breadcrumbs = [
+    { name: 'Home', url: '/' },
+    { name: post.category.name, url: `/blog?category=${post.category.slug}` },
+    { name: post.title, url: `/blog/${post.slug}` },
+  ];
+  const schemas = generateCompleteArticleSchema(post, breadcrumbs);
+
   return (
     <>
       <SEO
@@ -72,6 +91,7 @@ const BlogPost: React.FC = () => {
         image={post.featured_image}
         publishedTime={post.created_at}
         modifiedTime={post.updated_at}
+        structuredData={schemas}
       />
 
       <div className="container-custom section-padding">
@@ -94,10 +114,11 @@ const BlogPost: React.FC = () => {
               <GlassCard className="overflow-hidden">
                 {/* Featured Image */}
                 {post.featured_image && (
-                  <img
+                  <SmartImage
                     src={post.featured_image}
                     alt={post.title}
                     className="w-full h-96 object-cover"
+                    priority={true}
                   />
                 )}
 
@@ -204,7 +225,7 @@ const BlogPost: React.FC = () => {
                       >
                         <div className="flex gap-3">
                           {relatedPost.featured_image && (
-                            <img
+                            <SmartImage
                               src={relatedPost.featured_image}
                               alt={relatedPost.title}
                               className="w-20 h-20 object-cover rounded-lg flex-shrink-0"

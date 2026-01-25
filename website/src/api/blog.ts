@@ -12,6 +12,13 @@ export interface BlogPost {
     name: string;
     avatar: string;
     bio: string;
+    social_links?: {
+      twitter?: string;
+      linkedin?: string;
+      github?: string;
+      website?: string;
+      [key: string]: string | undefined;
+    };
   };
   category: {
     id: number;
@@ -26,6 +33,7 @@ export interface BlogPost {
   meta_title?: string;
   meta_description?: string;
   meta_keywords?: string;
+  keyword_source?: 'editor' | 'auto';
 }
 
 export interface BlogCategory {

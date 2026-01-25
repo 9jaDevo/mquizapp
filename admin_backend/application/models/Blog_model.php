@@ -197,13 +197,47 @@ class Blog_model extends CI_Model
     }
 
     /**
+     * Get author social links from JSON field
+     */
+    public function get_author_social_links($author_id)
+    {
+        $query = $this->db->select('social_links')->from('tbl_blog_authors')->where('id', $author_id)->get();
+        if ($query->num_rows() > 0) {
+            $row = $query->row_array();
+            if (!empty($row['social_links'])) {
+                return json_decode($row['social_links'], true);
+            }
+        }
+        return null;
+    }
+
+    /**
      * Format post data for API response
      */
-    public function format_post($post)
+    public function format_post($post, $generate_missing_keywords = true)
     {
         if (empty($post)) {
             return null;
         }
+
+        // Initialize keyword source tracking
+        $keyword_source = 'editor';
+        $meta_keywords = $post['meta_keywords'];
+
+        // Auto-generate keywords if empty and enabled
+        if ($generate_missing_keywords && empty($meta_keywords)) {
+            $this->load->helper('seo');
+            $meta_keywords = generate_keywords($post['content'], $post['title'], 3, 10);
+            $keyword_source = 'auto';
+
+            // Log SEO activity
+            if (!empty($meta_keywords)) {
+                log_seo_activity($post['id'], $keyword_source, $meta_keywords, $this);
+            }
+        }
+
+        // Get author social links
+        $author_social_links = $this->get_author_social_links($post['author_id']);
 
         return array(
             'id' => (int) $post['id'],
@@ -216,7 +250,8 @@ class Blog_model extends CI_Model
                 'id' => (int) $post['author_id'],
                 'name' => $post['author_name'],
                 'avatar' => $post['author_avatar'],
-                'bio' => $post['author_bio']
+                'bio' => $post['author_bio'],
+                'social_links' => $author_social_links
             ),
             'category' => array(
                 'id' => (int) $post['category_id'],
@@ -230,7 +265,8 @@ class Blog_model extends CI_Model
             'updated_at' => $post['updated_at'],
             'meta_title' => $post['meta_title'],
             'meta_description' => $post['meta_description'],
-            'meta_keywords' => $post['meta_keywords']
+            'meta_keywords' => $meta_keywords,
+            'keyword_source' => $keyword_source
         );
     }
 

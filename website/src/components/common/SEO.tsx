@@ -10,7 +10,9 @@ interface SEOProps {
   author?: string;
   publishedTime?: string;
   modifiedTime?: string;
-  structuredData?: object;
+  structuredData?: object | object[];
+  relPrev?: string;
+  relNext?: string;
 }
 
 const SEO: React.FC<SEOProps> = ({
@@ -24,6 +26,8 @@ const SEO: React.FC<SEOProps> = ({
   publishedTime,
   modifiedTime,
   structuredData,
+  relPrev,
+  relNext,
 }) => {
   const siteTitle = title.includes('mQuiz') ? title : `${title} | mQuiz`;
 
@@ -62,14 +66,36 @@ const SEO: React.FC<SEOProps> = ({
       <meta name="apple-mobile-web-app-capable" content="yes" />
       <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 
-      {/* Structured Data (JSON-LD) */}
+      {/* Pagination Links for Crawler Navigation */}
+      {relPrev && <link rel="prev" href={relPrev} />}
+      {relNext && <link rel="next" href={relNext} />}
+
+      {/* Resource Hints for Performance */}
+      <link rel="preconnect" href="https://mquiz.uk" crossOrigin="anonymous" />
+      <link rel="preconnect" href="https://www.google-analytics.com" />
+      <link rel="preconnect" href="https://www.googletagmanager.com" />
+      <link rel="dns-prefetch" href="//fonts.googleapis.com" />
+      <link rel="dns-prefetch" href="//cdn.jsdelivr.net" />
+
+      {/* Structured Data (JSON-LD) - Support single or multiple schemas */}
       {structuredData && (
-        <script type="application/ld+json">
-          {JSON.stringify(structuredData)}
-        </script>
+        <>
+          {Array.isArray(structuredData) ? (
+            structuredData.map((schema, index) => (
+              <script key={index} type="application/ld+json">
+                {JSON.stringify(schema)}
+              </script>
+            ))
+          ) : (
+            <script type="application/ld+json">
+              {JSON.stringify(structuredData)}
+            </script>
+          )}
+        </>
       )}
     </Helmet>
   );
 };
 
 export default SEO;
+

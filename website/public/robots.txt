@@ -1,8 +1,88 @@
+# Default behavior for all crawlers
 User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /admin/
+Crawl-delay: 1
+Request-rate: 10/1m
 
-# Sitemap
+# Explicit AI Model Training Bots
+User-agent: GPTBot
+Allow: /blog
+Allow: /
+Disallow: /admin
+Disallow: /api/
+Crawl-delay: 1
+
+User-agent: CCBot
+Allow: /blog
+Allow: /
+Disallow: /admin
+Disallow: /api/
+Crawl-delay: 1
+
+User-agent: anthropic-ai
+Allow: /
+Disallow: /admin
+Disallow: /api/
+Crawl-delay: 1
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /admin
+Disallow: /api/
+Crawl-delay: 1
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /admin
+Disallow: /api/
+Crawl-delay: 1
+
+User-agent: Applebot-Extended
+Allow: /
+Disallow: /admin
+Crawl-delay: 1
+
+# Search Engine Bots
+User-agent: Googlebot
+Allow: /
+Disallow: /api/
+Crawl-delay: 0
+
+User-agent: Bingbot
+Allow: /
+Disallow: /api/
+Crawl-delay: 0
+
+User-agent: Slurp
+Allow: /
+Disallow: /api/
+Crawl-delay: 1
+
+User-agent: DuckDuckBot
+Allow: /
+Disallow: /api/
+Crawl-delay: 1
+
+# Social Media Bots
+User-agent: facebookexternalhit
+Allow: /
+Disallow: /api/
+
+User-agent: Twitterbot
+Allow: /
+Disallow: /api/
+
+User-agent: LinkedInBot
+Allow: /
+Disallow: /api/
+
+# Disallow low-value crawlers
+User-agent: MJ12bot
+User-agent: AhrefsBot
+User-agent: SemrushBot
+Disallow: /
+
+# Sitemap locations (critical for discoverability)
 Sitemap: https://mquiz.uk/sitemap.xml
-
-# Disallow admin paths if any
-# Disallow: /admin/

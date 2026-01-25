@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Download, Play } from 'lucide-react';
 import GlassButton from '../common/GlassButton';
 import GlassCard from '../common/GlassCard';
+import appMockup from '../../assets/hero-mockup.webp';
 
 const Hero: React.FC = () => {
   return (
@@ -15,16 +16,17 @@ const Hero: React.FC = () => {
       </div>
 
       <div className="container-custom relative z-10 py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          {/* Left Content */}
-          <motion.div
-            initial={{ opacity: 0, x: -60 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <GlassCard className="p-8 md:p-12" blur="xl">
+        <GlassCard className="p-8 md:p-12" blur="xl">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            {/* Left Content */}
+            <motion.div
+              initial={{ opacity: 0, x: -60 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8 }}
+              className="space-y-6"
+            >
               <motion.h1
-                className="text-4xl md:text-5xl lg:text-6xl font-heading font-bold mb-6"
+                className="text-4xl md:text-5xl lg:text-6xl font-heading font-bold"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
@@ -34,14 +36,12 @@ const Hero: React.FC = () => {
               </motion.h1>
 
               <motion.p
-                className="text-lg md:text-xl text-slate-600 dark:text-slate-300 mb-8"
+                className="text-lg md:text-xl text-slate-600 dark:text-slate-300"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
               >
-                Join mQuiz, the ultimate quiz learning platform where knowledge
-                meets rewards. Challenge yourself, compete with friends, and earn
-                real gems while you learn.
+                Join mQuiz, the ultimate quiz learning platform where knowledge meets rewards. Challenge yourself, compete with friends, and earn real gems while you learn.
               </motion.p>
 
               <motion.div
@@ -69,76 +69,47 @@ const Hero: React.FC = () => {
 
               {/* Stats Preview */}
               <motion.div
-                className="grid grid-cols-3 gap-6 mt-12 pt-8 border-t border-white/20"
+                className="grid grid-cols-3 gap-6 pt-8 border-t border-white/20"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.8 }}
               >
                 <div>
-                  <p className="text-2xl md:text-3xl font-bold gradient-text">
-                    10K+
-                  </p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    Active Users
-                  </p>
+                  <p className="text-2xl md:text-3xl font-bold gradient-text">10K+</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Active Users</p>
                 </div>
                 <div>
-                  <p className="text-2xl md:text-3xl font-bold gradient-text">
-                    50K+
-                  </p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    Lessons
-                  </p>
+                  <p className="text-2xl md:text-3xl font-bold gradient-text">50K+</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Lessons</p>
                 </div>
                 <div>
-                  <p className="text-2xl md:text-3xl font-bold gradient-text">
-                    25K+
-                  </p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    Quiz Battles
-                  </p>
+                  <p className="text-2xl md:text-3xl font-bold gradient-text">25K+</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Quiz Battles</p>
                 </div>
               </motion.div>
-            </GlassCard>
-          </motion.div>
+            </motion.div>
 
-          {/* Right Content - App Mockup */}
-          <motion.div
-            initial={{ opacity: 0, x: 60 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="hidden lg:flex justify-center"
-          >
-            <div className="relative">
-              {/* Placeholder for app mockup */}
-              <GlassCard className="w-80 h-[600px] flex items-center justify-center" blur="xl">
-                <div className="text-center p-8">
-                  <div className="w-32 h-32 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                    <span className="text-6xl font-bold text-white">m</span>
-                  </div>
-                  <p className="text-2xl font-heading font-bold gradient-text">
-                    mQuiz App
-                  </p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
-                    Coming Soon on All Platforms
-                  </p>
+            {/* Right Content - App Mockup Image */}
+            <motion.div
+              initial={{ opacity: 0, x: 60 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="flex justify-center"
+            >
+              <div className="relative w-full max-w-sm">
+                <div className="absolute -top-6 -left-8 w-40 h-40 rounded-full bg-gradient-to-br from-primary/40 to-secondary/30 blur-3xl" />
+                <div className="absolute -bottom-10 -right-10 w-48 h-48 rounded-full bg-gradient-to-br from-accent/40 to-primary/20 blur-3xl" />
+                <div className="relative rounded-[32px] overflow-hidden shadow-2xl border border-white/30 dark:border-slate-800/60 bg-slate-50/60 dark:bg-slate-900/40 backdrop-blur-xl">
+                  <img
+                    src={appMockup}
+                    alt="mQuiz app mockup"
+                    className="w-full h-full object-contain"
+                  />
                 </div>
-              </GlassCard>
-              
-              {/* Floating elements */}
-              <motion.div
-                className="absolute -top-4 -right-4 w-24 h-24 rounded-full bg-gradient-to-br from-accent to-primary/50 blur-2xl"
-                animate={{ y: [0, -20, 0] }}
-                transition={{ duration: 3, repeat: Infinity }}
-              />
-              <motion.div
-                className="absolute -bottom-4 -left-4 w-32 h-32 rounded-full bg-gradient-to-br from-secondary to-accent/50 blur-2xl"
-                animate={{ y: [0, 20, 0] }}
-                transition={{ duration: 4, repeat: Infinity }}
-              />
-            </div>
-          </motion.div>
-        </div>
+              </div>
+            </motion.div>
+          </div>
+        </GlassCard>
       </div>
 
       {/* Scroll Indicator */}
