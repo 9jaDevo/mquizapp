@@ -5,6 +5,7 @@ import { Menu, X, Moon, Sun } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import GlassButton from './GlassButton';
 import { cn } from '../../utils/cn';
+import logoSvg from '../../assets/logo.svg';
 
 const navLinks = [
   { name: 'Home', path: '/' },
@@ -45,13 +46,14 @@ const Navbar: React.FC = () => {
       <div className="container-custom">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold text-xl">
-              m
-            </div>
-            <span className="text-2xl font-heading font-bold gradient-text">
-              Quiz
-            </span>
+          <Link to="/" className="flex items-center space-x-2 group">
+            <img 
+              src={logoSvg} 
+              alt="mQuiz Logo" 
+              className="w-46 h-25 group-hover:scale-110 transition-transform duration-200"
+              width="115"
+              height="65"
+            />
           </Link>
 
           {/* Desktop Navigation */}

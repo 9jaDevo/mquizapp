@@ -132,7 +132,7 @@ class Api extends REST_Controller
                                 $friends = $this->db->where('friends_code', $friends_code)->get('tbl_users')->result_array();
                                 $friends_counter = count($friends);
                                 $this->set_coins($credited['user_id'], $friends_counter, false, $type = 'sharing_caring');
-                                
+
                                 // LINK TO NEW REFERRAL SYSTEM: Track for bonus rewards after activity
                                 if (is_settings('referral_bonus_system_enable') == '1') {
                                     $this->link_to_bonus_referral_system($credited['user_id'], $user_id, $friends_code, $this->input->ip_address(), $device_id ?? '');
@@ -270,7 +270,7 @@ class Api extends REST_Controller
                             $friends = $this->db->where('friends_code', $friends_code)->get('tbl_users')->result_array();
                             $friends_counter = count($friends);
                             $this->set_coins($credited['user_id'], $friends_counter, false, $type = 'sharing_caring');
-                            
+
                             // LINK TO NEW REFERRAL SYSTEM: Track for bonus rewards after activity
                             if (is_settings('referral_bonus_system_enable') == '1') {
                                 $this->link_to_bonus_referral_system($credited['user_id'], $insert_id, $friends_code, $this->input->ip_address(), $device_id ?? '');
@@ -6748,7 +6748,6 @@ class Api extends REST_Controller
             $response['error'] = false;
             $response['message'] = "Daily streak checked";
             $response['data'] = $result;
-
         } catch (Exception $e) {
             $response['error'] = true;
             $response['message'] = "122";
@@ -6793,7 +6792,6 @@ class Api extends REST_Controller
             $response['error'] = false;
             $response['message'] = "Device registered";
             $response['data'] = $result;
-
         } catch (Exception $e) {
             $response['error'] = true;
             $response['message'] = "122";
@@ -6833,7 +6831,6 @@ class Api extends REST_Controller
             $response['error'] = false;
             $response['message'] = "Risk evaluation complete";
             $response['data'] = $result;
-
         } catch (Exception $e) {
             $response['error'] = true;
             $response['message'] = "122";
@@ -6863,11 +6860,11 @@ class Api extends REST_Controller
 
             // Count unique active days (from daily streak table)
             $active_days = $this->db->select('COUNT(DISTINCT last_login_date) as days')
-                                    ->where('user_id', $user_id)
-                                    ->where('last_login_date >=', $date_from)
-                                    ->get('tbl_daily_streak')
-                                    ->row()
-                                    ->days;
+                ->where('user_id', $user_id)
+                ->where('last_login_date >=', $date_from)
+                ->get('tbl_daily_streak')
+                ->row()
+                ->days;
 
             $eligible = (int)$active_days >= $min_days;
 
@@ -6881,7 +6878,6 @@ class Api extends REST_Controller
                     ? "You're eligible to withdraw"
                     : "You need " . ($min_days - $active_days) . " more active days to be eligible"
             ];
-
         } catch (Exception $e) {
             $response['error'] = true;
             $response['message'] = "122";
@@ -6915,7 +6911,6 @@ class Api extends REST_Controller
                 $response['data'] = null;
                 $response['message'] = "No active sponsor banner";
             }
-
         } catch (Exception $e) {
             $response['error'] = true;
             $response['message'] = "122";
@@ -6948,7 +6943,6 @@ class Api extends REST_Controller
 
             $response['error'] = false;
             $response['message'] = "Click recorded";
-
         } catch (Exception $e) {
             $response['error'] = true;
             $response['message'] = "122";
@@ -6956,7 +6950,7 @@ class Api extends REST_Controller
 
         $this->response($response, REST_Controller::HTTP_OK);
     }
-    
+
     /**
      * Get multiple active sponsor banners for client-side rotation
      */
@@ -6971,7 +6965,7 @@ class Api extends REST_Controller
 
             $banners = $this->Sponsor_model->get_active_banners(10);
             log_message('debug', '[SPONSOR_BANNER_API] Retrieved banners count: ' . count($banners));
-            
+
             if (!$banners || count($banners) === 0) {
                 log_message('debug', '[SPONSOR_BANNER_API] No active banners found, returning empty array');
                 $response['error'] = false;
@@ -6999,7 +6993,6 @@ class Api extends REST_Controller
             $response['error'] = false;
             $response['message'] = 'success';
             $response['data'] = $res;
-            
         } catch (Exception $e) {
             $response['error'] = true;
             $response['message'] = '122';
@@ -7035,7 +7028,6 @@ class Api extends REST_Controller
                 'requires_ad_watch' => $requires_ad,
                 'coin_difference' => $boosted_coins - $quiz_coins
             ];
-
         } catch (Exception $e) {
             $response['error'] = true;
             $response['message'] = "122";
@@ -7073,12 +7065,11 @@ class Api extends REST_Controller
             $response['data'] = [
                 'coins_awarded' => $boosted_coins,
                 'user_coins' => $this->db->select('coins')
-                                         ->where('id', $user_id)
-                                         ->get('tbl_users')
-                                         ->row()
-                                         ->coins
+                    ->where('id', $user_id)
+                    ->get('tbl_users')
+                    ->row()
+                    ->coins
             ];
-
         } catch (Exception $e) {
             $response['error'] = true;
             $response['message'] = "122";
@@ -7103,7 +7094,6 @@ class Api extends REST_Controller
                 'ad_count_required' => $ad_count,
                 'message' => "Watch $ad_count ads to unlock premium content"
             ];
-
         } catch (Exception $e) {
             $response['error'] = true;
             $response['message'] = "122";
@@ -7122,21 +7112,21 @@ class Api extends REST_Controller
             // Get referrer uid
             $referrer = $this->db->select('uid')->where('id', $referrer_id)->get('tbl_users')->row();
             $referee = $this->db->select('uid')->where('id', $referee_id)->get('tbl_users')->row();
-            
+
             if (!$referrer || !$referee) {
                 return;
             }
-            
+
             // Check if referrer has referral code in new system
             $this->load->model('Referral_model');
             $code_check = $this->db->where('user_id', $referrer_id)->get('tbl_referral_codes')->row();
-            
+
             // Generate referral code if doesn't exist
             if (!$code_check) {
                 $this->Referral_model->generate_referral_code($referrer_id, $referrer->uid);
                 $code_check = $this->db->where('user_id', $referrer_id)->get('tbl_referral_codes')->row();
             }
-            
+
             if ($code_check) {
                 // Create referral tracking entry for bonus system
                 $referral_data = [
@@ -7150,16 +7140,16 @@ class Api extends REST_Controller
                     'signup_device_id' => $device_id,
                     'status' => 'pending'
                 ];
-                
+
                 // Check if already exists (avoid duplicates)
                 $existing = $this->db->where('referee_id', $referee_id)->get('tbl_referrals')->row();
                 if (!$existing) {
                     $this->db->insert('tbl_referrals', $referral_data);
-                    
+
                     // Update total referrals count
                     $this->db->where('user_id', $referrer_id)
-                             ->set('total_referrals', 'total_referrals + 1', FALSE)
-                             ->update('tbl_referral_codes');
+                        ->set('total_referrals', 'total_referrals + 1', FALSE)
+                        ->update('tbl_referral_codes');
                 }
             }
         } catch (Exception $e) {
@@ -7199,7 +7189,6 @@ class Api extends REST_Controller
                     'referral_code' => $result['referral_code']
                 ];
             }
-
         } catch (Exception $e) {
             $response['error'] = true;
             $response['message'] = "Failed to generate referral code";
@@ -7254,7 +7243,6 @@ class Api extends REST_Controller
                     'status' => 'pending'
                 ];
             }
-
         } catch (Exception $e) {
             $response['error'] = true;
             $response['message'] = "Failed to apply referral code";
@@ -7284,7 +7272,6 @@ class Api extends REST_Controller
             $response['error'] = false;
             $response['message'] = "Referral stats retrieved";
             $response['data'] = $stats;
-
         } catch (Exception $e) {
             $response['error'] = true;
             $response['message'] = "Failed to get referral stats";
@@ -7316,7 +7303,6 @@ class Api extends REST_Controller
 
             $response['error'] = false;
             $response['message'] = "Activity updated";
-
         } catch (Exception $e) {
             $response['error'] = true;
             $response['message'] = "Failed to update activity";
@@ -7342,9 +7328,9 @@ class Api extends REST_Controller
 
             // Check if user is a referee
             $referral = $this->db->where('referee_id', $user_id)
-                                  ->where_in('status', ['pending', 'qualified'])
-                                  ->get('tbl_referrals')
-                                  ->row();
+                ->where_in('status', ['pending', 'qualified'])
+                ->get('tbl_referrals')
+                ->row();
 
             if (!$referral) {
                 $response['error'] = false;
@@ -7385,7 +7371,6 @@ class Api extends REST_Controller
                 ],
                 'is_eligible' => $is_eligible
             ];
-
         } catch (Exception $e) {
             $response['error'] = true;
             $response['message'] = "Failed to check eligibility";
@@ -7393,5 +7378,279 @@ class Api extends REST_Controller
 
         $this->response($response, REST_Controller::HTTP_OK);
     }
-}
 
+    /**
+     * GET /api/blog/posts
+     * Get all blog posts with pagination and filters
+     */
+    public function blog_posts_get()
+    {
+        try {
+            $this->load->model('Blog_model');
+
+            // Get request parameters
+            $page = $this->input->get('page', TRUE) ?: 1;
+            $limit = $this->input->get('limit', TRUE) ?: 10;
+            $search = $this->input->get('search', TRUE) ?: '';
+            $category = $this->input->get('category', TRUE) ?: '';
+            $sort = $this->input->get('sort', TRUE) ?: 'created_at';
+            $order = $this->input->get('order', TRUE) ?: 'DESC';
+
+            // Validate sort and order
+            $allowed_sorts = ['created_at', 'title', 'views', 'updated_at'];
+            $sort = in_array($sort, $allowed_sorts) ? $sort : 'created_at';
+            $order = strtoupper($order) === 'ASC' ? 'ASC' : 'DESC';
+
+            // Get posts
+            $result = $this->Blog_model->get_posts($page, $limit, $category, $search, $sort, $order);
+
+            // Format posts
+            $formatted_posts = array_map(function ($post) {
+                return $this->Blog_model->format_post($post);
+            }, $result['posts']);
+
+            $response['error'] = false;
+            $response['message'] = 'Blog posts retrieved successfully';
+            $response['data'] = [
+                'posts' => $formatted_posts,
+                'pagination' => [
+                    'current_page' => (int) $result['page'],
+                    'total_pages' => (int) $result['pages'],
+                    'total_posts' => (int) $result['total'],
+                    'per_page' => (int) $result['limit'],
+                    'has_next' => $result['page'] < $result['pages'],
+                    'has_prev' => $result['page'] > 1
+                ]
+            ];
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = 'Failed to retrieve blog posts: ' . $e->getMessage();
+            $response['data'] = [];
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    /**
+     * GET /api/blog/post/{slug}
+     * Get single blog post by slug
+     */
+    public function blog_post_get()
+    {
+        try {
+            $this->load->model('Blog_model');
+
+            $slug = $this->uri->segment(4); // Get slug from URL
+
+            if (empty($slug)) {
+                $response['error'] = true;
+                $response['message'] = 'Post slug is required';
+                $response['data'] = [];
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            // Get post
+            $post = $this->Blog_model->get_post_by_slug($slug);
+
+            if (empty($post)) {
+                $response['error'] = true;
+                $response['message'] = 'Post not found';
+                $response['data'] = [];
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            // Increment view count
+            $this->Blog_model->increment_views($post['id']);
+
+            // Update post with new view count
+            $post['views'] = $this->Blog_model->get_post_views($post['id']);
+
+            $response['error'] = false;
+            $response['message'] = 'Blog post retrieved successfully';
+            $response['data'] = [
+                'post' => $this->Blog_model->format_post($post)
+            ];
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = 'Failed to retrieve blog post: ' . $e->getMessage();
+            $response['data'] = [];
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    /**
+     * GET /api/blog/categories
+     * Get all blog categories with post counts
+     */
+    public function blog_categories_get()
+    {
+        try {
+            $this->load->model('Blog_model');
+
+            // Get categories
+            $categories = $this->Blog_model->get_categories();
+
+            // Format categories
+            $formatted_categories = array_map(function ($category) {
+                return $this->Blog_model->format_category($category);
+            }, $categories);
+
+            $response['error'] = false;
+            $response['message'] = 'Blog categories retrieved successfully';
+            $response['data'] = [
+                'categories' => $formatted_categories
+            ];
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = 'Failed to retrieve blog categories: ' . $e->getMessage();
+            $response['data'] = [];
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    /**
+     * GET /api/blog/featured
+     * Get featured blog posts
+     */
+    public function blog_featured_get()
+    {
+        try {
+            $this->load->model('Blog_model');
+
+            $limit = $this->input->get('limit', TRUE) ?: 5;
+            $limit = (int) $limit;
+
+            // Get featured posts
+            $posts = $this->Blog_model->get_featured_posts($limit);
+
+            // Format posts
+            $formatted_posts = array_map(function ($post) {
+                return $this->Blog_model->format_post($post);
+            }, $posts);
+
+            $response['error'] = false;
+            $response['message'] = 'Featured blog posts retrieved successfully';
+            $response['data'] = [
+                'posts' => $formatted_posts,
+                'pagination' => [
+                    'current_page' => 1,
+                    'total_pages' => 1,
+                    'total_posts' => count($posts),
+                    'per_page' => $limit,
+                    'has_next' => false,
+                    'has_prev' => false
+                ]
+            ];
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = 'Failed to retrieve featured posts: ' . $e->getMessage();
+            $response['data'] = [];
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    /**
+     * GET /api/blog/related/{id}
+     * Get related blog posts by post ID
+     */
+    public function blog_related_get()
+    {
+        try {
+            $this->load->model('Blog_model');
+
+            $post_id = $this->uri->segment(4); // Get post ID from URL
+            $limit = $this->input->get('limit', TRUE) ?: 4;
+            $limit = (int) $limit;
+            $post_id = (int) $post_id;
+
+            if (empty($post_id)) {
+                $response['error'] = true;
+                $response['message'] = 'Post ID is required';
+                $response['data'] = [];
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            // Get the original post to get its category
+            $post = $this->Blog_model->get_post_by_id($post_id);
+
+            if (empty($post)) {
+                $response['error'] = true;
+                $response['message'] = 'Post not found';
+                $response['data'] = [];
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            // Get related posts
+            $posts = $this->Blog_model->get_related_posts($post_id, $post['category_id'], $limit);
+
+            // Format posts
+            $formatted_posts = array_map(function ($p) {
+                return $this->Blog_model->format_post($p);
+            }, $posts);
+
+            $response['error'] = false;
+            $response['message'] = 'Related blog posts retrieved successfully';
+            $response['data'] = [
+                'posts' => $formatted_posts,
+                'pagination' => [
+                    'current_page' => 1,
+                    'total_pages' => 1,
+                    'total_posts' => count($posts),
+                    'per_page' => $limit,
+                    'has_next' => false,
+                    'has_prev' => false
+                ]
+            ];
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = 'Failed to retrieve related posts: ' . $e->getMessage();
+            $response['data'] = [];
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    /**
+     * POST /api/blog/post/{id}/view
+     * Increment post view count
+     */
+    public function blog_view_post()
+    {
+        try {
+            $this->load->model('Blog_model');
+
+            $post_id = $this->uri->segment(4); // Get post ID from URL
+            $post_id = (int) $post_id;
+
+            if (empty($post_id)) {
+                $response['error'] = true;
+                $response['message'] = 'Post ID is required';
+                $response['data'] = [];
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            // Increment views
+            $views = $this->Blog_model->increment_views($post_id);
+
+            $response['error'] = false;
+            $response['message'] = 'View count updated successfully';
+            $response['data'] = [
+                'views' => (int) $views
+            ];
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = 'Failed to update view count: ' . $e->getMessage();
+            $response['data'] = [];
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+}

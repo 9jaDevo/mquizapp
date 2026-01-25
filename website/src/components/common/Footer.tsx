@@ -1,8 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Facebook, Youtube, Mail, ArrowUp } from 'lucide-react';
+import { Facebook, Youtube, Mail, ArrowUp, Instagram, Music } from 'lucide-react';
 import GlassInput from './GlassInput';
 import GlassButton from './GlassButton';
+import logoWhite from '../../assets/logo-white.svg';
 
 const Footer: React.FC = () => {
   const scrollToTop = () => {
@@ -20,12 +21,11 @@ const Footer: React.FC = () => {
           {/* Company Info */}
           <div>
             <div className="flex items-center space-x-2 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold text-xl">
-                m
-              </div>
-              <span className="text-2xl font-heading font-bold text-white">
-                Quiz
-              </span>
+              <img 
+                src={logoWhite} 
+                alt="mQuiz Logo" 
+                className="w-41 h-20"
+              />
             </div>
             <p className="text-sm text-slate-400 mb-6">
               Learn, engage, and earn rewards with the ultimate quiz learning platform.
@@ -51,7 +51,25 @@ const Footer: React.FC = () => {
                 <Youtube className="w-5 h-5" />
               </a>
               <a
-                href="mailto:contact@mquiz.uk"
+                href="https://instagram.com/mquiz.uk"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                aria-label="Instagram"
+              >
+                <Instagram className="w-5 h-5" />
+              </a>
+              <a
+                href="https://tiktok.com/@mquiz.uk"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                aria-label="TikTok"
+              >
+                <Music className="w-5 h-5" />
+              </a>
+              <a
+                href="mailto:support@mquiz.uk"
                 className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
                 aria-label="Email"
               >
