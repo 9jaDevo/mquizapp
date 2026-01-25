@@ -6,7 +6,11 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/api/:path*",
+      "destination": "https://mquiz.uk/api/:path*"
+    },
+    {
+      "source": "/(?!.*\\.(js|css|svg|png|jpg|jpeg|gif|webp|woff|woff2|ttf|eot|json|xml|txt)$).*",
       "destination": "/index.html"
     }
   ],
