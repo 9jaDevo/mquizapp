@@ -39,7 +39,6 @@ CREATE TABLE IF NOT EXISTS `tbl_blog_categories` (
   `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `slug` (`slug`),
   KEY `status` (`status`),
   KEY `display_order` (`display_order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -67,7 +66,6 @@ CREATE TABLE IF NOT EXISTS `tbl_blog_posts` (
   `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `slug` (`slug`),
   KEY `category_id` (`category_id`),
   KEY `author_id` (`author_id`),
   KEY `status` (`status`),

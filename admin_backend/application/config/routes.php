@@ -247,9 +247,9 @@ $route['admin/resolve-fraud'] = 'Settings/resolve_fraud';
 $route['daily-streak-settings'] = 'Streak';
 
 // Blog API Routes
-$route['api/blog/posts'] = 'Api/blog_posts_get';
-$route['api/blog/post/(:any)'] = 'Api/blog_post_get';
-$route['api/blog/categories'] = 'Api/blog_categories_get';
-$route['api/blog/featured'] = 'Api/blog_featured_get';
-$route['api/blog/related/(:num)'] = 'Api/blog_related_get';
-$route['api/blog/post/(:num)/view'] = 'Api/blog_view_post';
+$route['api/blog/posts']['get'] = 'Api/blog_posts';
+$route['api/blog/post/(:any)']['get'] = 'Api/blog_post/$1';
+$route['api/blog/categories']['get'] = 'Api/blog_categories';
+$route['api/blog/featured']['get'] = 'Api/blog_featured';
+$route['api/blog/related/(:num)']['get'] = 'Api/blog_related/$1';
+$route['api/blog/post/(:num)/view']['post'] = 'Api/blog_view/$1';

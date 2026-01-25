@@ -261,6 +261,29 @@
                     <a class="nav-link" href="<?= base_url() ?>activity-tracker"><em class="fas fa-chart-bar"></em> <span><?= lang('activity_tracker'); ?></span></a>
                 </li>
             <?php } ?>
+
+            <!-- Blog Management Menu -->
+            <li class="nav-item dropdown">
+                <a href="javascript:void(0)" class="nav-link has-dropdown"><em class="fas fa-blog"></em><span>Blog Management</span></a>
+                <ul class="dropdown-menu">
+                    <li><a class="nav-link" href="<?= base_url('blog-posts') ?>">
+                            <em class="fas fa-file-alt"></em> All Posts
+                        </a></li>
+                    <li><a class="nav-link" href="<?= base_url('blog-create') ?>">
+                            <em class="fas fa-plus-circle"></em> Create Post
+                        </a></li>
+                    <li><a class="nav-link" href="<?= base_url('blog-categories') ?>">
+                            <em class="fas fa-tags"></em> Categories
+                        </a></li>
+                    <li><a class="nav-link" href="<?= base_url('blog-authors') ?>">
+                            <em class="fas fa-user-edit"></em> Authors
+                        </a></li>
+                    <li><a class="nav-link" href="<?= base_url('blog-seo-analytics') ?>">
+                            <em class="fas fa-chart-line"></em> SEO Analytics
+                        </a></li>
+                </ul>
+            </li>
+
             <?php if (has_permissions('read', 'payment_requests')) { ?>
                 <li>
                     <a class="nav-link" href="<?= base_url() ?>payment-requests"><em class="fas fa-rupee-sign"></em> <span><?= lang('payment_requests'); ?></span></a>
@@ -271,17 +294,17 @@
                 <a href="javascript:void(0)" class="nav-link has-dropdown"><em class="fas fa-users-cog"></em><span>Referral System</span></a>
                 <ul class="dropdown-menu">
                     <li><a class="nav-link" href="<?= base_url('referral-dashboard') ?>">
-                        <em class="fas fa-chart-line"></em> Dashboard
-                    </a></li>
+                            <em class="fas fa-chart-line"></em> Dashboard
+                        </a></li>
                     <li><a class="nav-link" href="<?= base_url('referral-activity') ?>">
-                        <em class="fas fa-list-alt"></em> Activity Log
-                    </a></li>
+                            <em class="fas fa-list-alt"></em> Activity Log
+                        </a></li>
                     <li><a class="nav-link" href="<?= base_url('referral-fraud-review') ?>">
-                        <em class="fas fa-exclamation-triangle"></em> Fraud Review
-                    </a></li>
+                            <em class="fas fa-exclamation-triangle"></em> Fraud Review
+                        </a></li>
                     <li><a class="nav-link" href="<?= base_url('referral-settings') ?>">
-                        <em class="fas fa-cog"></em> Settings
-                    </a></li>
+                            <em class="fas fa-cog"></em> Settings
+                        </a></li>
                 </ul>
             </li>
             <!-- Custom Settings Menu -->
@@ -289,11 +312,11 @@
                 <a href="javascript:void(0)" class="nav-link has-dropdown"><em class="fas fa-sliders-h"></em><span>Custom Settings</span></a>
                 <ul class="dropdown-menu">
                     <li><a class="nav-link" href="<?= base_url('sponsor-banners') ?>">
-                        <em class="fas fa-ad"></em> Sponsor Banners
-                    </a></li>
+                            <em class="fas fa-ad"></em> Sponsor Banners
+                        </a></li>
                     <li><a class="nav-link" href="<?= base_url('daily-streak-settings') ?>">
-                        <em class="fas fa-fire"></em> Daily Streak Settings
-                    </a></li>
+                            <em class="fas fa-fire"></em> Daily Streak
+                        </a></li>
                 </ul>
             </li>
             <?php if (has_permissions('read', 'leaderboard')) { ?>
