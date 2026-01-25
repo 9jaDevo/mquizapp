@@ -7,10 +7,10 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://mquiz.uk/api/:path*"
+      "destination": "https://mquiz.uk/admin_backend/index.php/api/:path*"
     },
     {
-      "source": "/(?!.*\\.(js|css|svg|png|jpg|jpeg|gif|webp|woff|woff2|ttf|eot|json|xml|txt)$).*",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ],
