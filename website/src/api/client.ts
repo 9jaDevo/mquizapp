@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost/admin_backend',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://app.mquiz.uk/',
   timeout: parseInt(import.meta.env.VITE_API_TIMEOUT || '10000'),
   headers: {
     'Content-Type': 'application/json',
