@@ -1,13 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Download, Play } from 'lucide-react';
 import GlassButton from '../common/GlassButton';
 import GlassCard from '../common/GlassCard';
+import VideoModal from '../common/VideoModal';
 import appMockup from '../../assets/hero-mockup.webp';
 
 const Hero: React.FC = () => {
+  const [isVideoOpen, setIsVideoOpen] = useState(false);
+  
+  // Replace with your actual YouTube video ID
+  const DEMO_VIDEO_ID = 'nei4qZMH4Wg'; // Example: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <>
+      <VideoModal
+        isOpen={isVideoOpen}
+        onClose={() => setIsVideoOpen(false)}
+        videoId={DEMO_VIDEO_ID}
+        title="mQuiz App Demo"
+      />
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Animated Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10">
         <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse" />
@@ -62,6 +75,7 @@ const Hero: React.FC = () => {
                   variant="outline"
                   size="lg"
                   icon={<Play className="w-5 h-5" />}
+                  onClick={() => setIsVideoOpen(true)}
                 >
                   Watch Demo
                 </GlassButton>
@@ -123,7 +137,8 @@ const Hero: React.FC = () => {
           <div className="w-1 h-2 bg-slate-400 dark:bg-slate-600 rounded-full" />
         </div>
       </motion.div>
-    </section>
+      </section>
+    </>
   );
 };
 
