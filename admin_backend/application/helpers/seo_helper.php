@@ -167,7 +167,7 @@ function generate_keywords($content, $title = '', $min_length = 3, $max_keywords
     $filtered_keywords = array();
     foreach ($word_freq as $word => $freq) {
         $len = strlen($word);
-        if ($len >= $min_length && !in_array($word, $stop_words) && $freq >= 2) {
+        if ($len >= $min_length && !in_array($word, (array)$stop_words) && $freq >= 2) {
             $filtered_keywords[$word] = $freq;
         }
     }
@@ -242,7 +242,7 @@ function extract_phrases($text, $min_words = 2, $max_words = 3, $stop_words = nu
             // Skip if contains stop words
             $has_stop = false;
             foreach ($phrase_words as $word) {
-                if (in_array($word, $stop_words)) {
+                if (in_array($word, (array)$stop_words)) {
                     $has_stop = true;
                     break;
                 }

@@ -248,7 +248,7 @@ $route['daily-streak-settings'] = 'Streak';
 
 // Blog Admin Routes
 $route['blog-posts'] = 'Blog/posts';
-$route['blog-create'] = 'Blog/posts';
+$route['blog-create'] = 'Blog/create';
 $route['blog/get_posts'] = 'Blog/get_posts';
 $route['blog/create_post'] = 'Blog/create_post';
 $route['blog/update_post'] = 'Blog/update_post';

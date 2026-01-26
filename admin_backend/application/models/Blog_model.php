@@ -17,6 +17,7 @@ class Blog_model extends CI_Model
     {
         $offset = ($page - 1) * $limit;
 
+        // Build query once
         $this->db->select('bp.*, bc.id as category_id, bc.name as category_name, bc.slug as category_slug, 
                           ba.id as author_id, ba.name as author_name, ba.avatar as author_avatar, ba.bio as author_bio');
         $this->db->from('tbl_blog_posts bp');
@@ -36,12 +37,13 @@ class Blog_model extends CI_Model
             $this->db->group_end();
         }
 
-        // Get total count before pagination
-        $total_query = $this->db->get();
-        $total_posts = $total_query->num_rows();
+        // Clone the query for counting
+        $count_query = clone $this->db;
+        $total_posts = $count_query->count_all_results('', false);
 
-        $this->db->limit($limit, $offset);
+        // Apply pagination and sorting to original query
         $this->db->order_by("bp.{$sort}", $order);
+        $this->db->limit($limit, $offset);
 
         $query = $this->db->get();
         $posts = $query->result_array();

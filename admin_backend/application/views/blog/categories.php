@@ -3,136 +3,144 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no" name="viewport">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
     <title>Blog Categories | <?php echo (is_settings('app_name')) ? is_settings('app_name') : "" ?></title>
-    <?php base_url() . include '../include.php'; ?>
+
+    <?php include __DIR__ . '/../include.php'; ?>
 </head>
 
 <body>
-    <?php base_url() . include '../header.php'; ?>
+    <div id="app">
+        <div class="main-wrapper">
+            <?php include __DIR__ . '/../header.php'; ?>
 
-    <section class="section">
-        <div class="section-header">
-            <h1>Blog Categories</h1>
-        </div>
-        <div class="section-body">
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4>Manage Categories</h4>
-                            <div class="card-header-action">
-                                <button class="btn btn-primary" data-toggle="modal" data-target="#createCategoryModal">
-                                    <i class="fas fa-plus"></i> Add Category
-                                </button>
+            <!-- Main Content -->
+            <div class="main-content">
+                <section class="section">
+                    <div class="section-header">
+                        <h1>Blog Categories</h1>
+                    </div>
+                    <div class="section-body">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h4>Manage Categories</h4>
+                                        <div class="card-header-action">
+                                            <button class="btn btn-primary" data-toggle="modal" data-target="#createCategoryModal">
+                                                <i class="fas fa-plus"></i> Add Category
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <table aria-describedby="mydesc" class='table-striped' id='category_list'
+                                            data-toggle="table" data-url="<?= base_url('blog/get_categories') ?>"
+                                            data-click-to-select="true" data-side-pagination="client"
+                                            data-pagination="true" data-page-list="[5, 10, 20, 50, 100, All]"
+                                            data-search="true" data-show-columns="true"
+                                            data-show-refresh="true" data-trim-on-search="false"
+                                            data-responsive="true" data-sort-name="id" data-sort-order="desc">
+                                            <thead>
+                                                <tr>
+                                                    <th scope="col" data-field="id" data-sortable="true">ID</th>
+                                                    <th scope="col" data-field="name" data-sortable="true">Name</th>
+                                                    <th scope="col" data-field="slug">Slug</th>
+                                                    <th scope="col" data-field="description">Description</th>
+                                                    <th scope="col" data-field="post_count" data-sortable="true">Posts</th>
+                                                    <th scope="col" data-field="status" data-sortable="true">Status</th>
+                                                    <th scope="col" data-field="operate">Actions</th>
+                                                </tr>
+                                            </thead>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="card-body">
-                            <table aria-describedby="mydesc" class='table-striped' id='category_list'
-                                data-toggle="table" data-url="<?= base_url('blog/get_categories') ?>"
-                                data-click-to-select="true" data-side-pagination="client"
-                                data-pagination="true" data-page-list="[5, 10, 20, 50, 100, All]"
-                                data-search="true" data-show-columns="true"
-                                data-show-refresh="true" data-trim-on-search="false"
-                                data-responsive="true" data-sort-name="id" data-sort-order="desc">
-                                <thead>
-                                    <tr>
-                                        <th scope="col" data-field="id" data-sortable="true">ID</th>
-                                        <th scope="col" data-field="name" data-sortable="true">Name</th>
-                                        <th scope="col" data-field="slug">Slug</th>
-                                        <th scope="col" data-field="description">Description</th>
-                                        <th scope="col" data-field="post_count" data-sortable="true">Posts</th>
-                                        <th scope="col" data-field="status" data-sortable="true">Status</th>
-                                        <th scope="col" data-field="operate">Actions</th>
-                                    </tr>
-                                </thead>
-                            </table>
+                    </div>
+                </section>
+
+                <!-- Create Category Modal -->
+                <div class="modal fade" id="createCategoryModal" tabindex="-1" role="dialog">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Create Category</h5>
+                                <button type="button" class="close" data-dismiss="modal">
+                                    <span>&times;</span>
+                                </button>
+                            </div>
+                            <form id="createCategoryForm">
+                                <div class="modal-body">
+                                    <div class="form-group">
+                                        <label>Category Name <span class="text-danger">*</span></label>
+                                        <input type="text" name="name" class="form-control" required>
+                                        <small class="text-muted">Slug will be auto-generated</small>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Description</label>
+                                        <textarea name="description" class="form-control" rows="3"></textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Status</label>
+                                        <select name="status" class="form-control">
+                                            <option value="active">Active</option>
+                                            <option value="inactive">Inactive</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                    <button type="submit" class="btn btn-primary">Create Category</button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </section>
 
-    <!-- Create Category Modal -->
-    <div class="modal fade" id="createCategoryModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Create Category</h5>
-                    <button type="button" class="close" data-dismiss="modal">
-                        <span>&times;</span>
-                    </button>
+                <!-- Edit Category Modal -->
+                <div class="modal fade" id="editCategoryModal" tabindex="-1" role="dialog">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Edit Category</h5>
+                                <button type="button" class="close" data-dismiss="modal">
+                                    <span>&times;</span>
+                                </button>
+                            </div>
+                            <form id="editCategoryForm">
+                                <input type="hidden" name="id" id="edit_category_id">
+                                <div class="modal-body">
+                                    <div class="form-group">
+                                        <label>Category Name <span class="text-danger">*</span></label>
+                                        <input type="text" name="name" id="edit_category_name" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Description</label>
+                                        <textarea name="description" id="edit_category_description" class="form-control" rows="3"></textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Status</label>
+                                        <select name="status" id="edit_category_status" class="form-control">
+                                            <option value="active">Active</option>
+                                            <option value="inactive">Inactive</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                    <button type="submit" class="btn btn-primary">Update Category</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
-                <form id="createCategoryForm">
-                    <div class="modal-body">
-                        <div class="form-group">
-                            <label>Category Name <span class="text-danger">*</span></label>
-                            <input type="text" name="name" class="form-control" required>
-                            <small class="text-muted">Slug will be auto-generated</small>
-                        </div>
-                        <div class="form-group">
-                            <label>Description</label>
-                            <textarea name="description" class="form-control" rows="3"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>Status</label>
-                            <select name="status" class="form-control">
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                        <button type="submit" class="btn btn-primary">Create Category</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
 
-    <!-- Edit Category Modal -->
-    <div class="modal fade" id="editCategoryModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Edit Category</h5>
-                    <button type="button" class="close" data-dismiss="modal">
-                        <span>&times;</span>
-                    </button>
-                </div>
-                <form id="editCategoryForm">
-                    <input type="hidden" name="id" id="edit_category_id">
-                    <div class="modal-body">
-                        <div class="form-group">
-                            <label>Category Name <span class="text-danger">*</span></label>
-                            <input type="text" name="name" id="edit_category_name" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Description</label>
-                            <textarea name="description" id="edit_category_description" class="form-control" rows="3"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>Status</label>
-                            <select name="status" id="edit_category_status" class="form-control">
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                        <button type="submit" class="btn btn-primary">Update Category</button>
-                    </div>
-                </form>
             </div>
+            <?php include __DIR__ . '/../footer.php'; ?>
         </div>
-    </div>
-
-    <?php $this->load->view('footer'); ?>
-    </div>
     </div>
 
     <script type="text/javascript">
@@ -234,7 +242,6 @@
         });
     </script>
 
-    <?php base_url() . include '../footer.php'; ?>
 </body>
 
 </html>

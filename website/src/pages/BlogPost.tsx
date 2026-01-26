@@ -94,7 +94,51 @@ const BlogPost: React.FC = () => {
         structuredData={schemas}
       />
 
-      <div className="container-custom section-padding">
+      {/* Hero with full-width image and overlayed title/meta */}
+      {post.featured_image && (
+        <div className="relative w-full mb-16">
+          <SmartImage
+            src={post.featured_image}
+            alt={post.title}
+            className="w-full h-[420px] md:h-[520px] object-cover"
+            priority={true}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-900/70 via-slate-900/65 to-slate-900/85" />
+          <div className="absolute inset-0 flex items-end justify-center pb-10 px-4">
+            <div className="w-full max-w-5xl text-white space-y-4">
+              <Link
+                to={`/blog?category=${post.category.slug}`}
+                className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-white/15 backdrop-blur shadow"
+              >
+                {post.category.name}
+              </Link>
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold leading-tight">
+                {post.title}
+              </h1>
+              <div className="flex flex-wrap items-center gap-4 text-slate-200 text-sm">
+                {post.author && (
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    <span className="font-medium">{post.author.name}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  <span>{format(new Date(post.created_at), 'MMMM dd, yyyy')}</span>
+                </div>
+                {post.reading_time && (
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    <span>{post.reading_time} min read</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="container-custom -mt-16 md:-mt-20 relative z-10">
         {/* Back Button */}
         <Link
           to="/blog"
@@ -111,100 +155,88 @@ const BlogPost: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <GlassCard className="overflow-hidden">
-                {/* Featured Image */}
-                {post.featured_image && (
-                  <SmartImage
-                    src={post.featured_image}
-                    alt={post.title}
-                    className="w-full h-96 object-cover"
-                    priority={true}
-                  />
-                )}
-
-                <div className="p-8 md:p-12">
-                  {/* Category */}
-                  <Link
-                    to={`/blog?category=${post.category.slug}`}
-                    className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-primary text-white mb-4"
-                  >
-                    {post.category.name}
-                  </Link>
-
-                  {/* Title */}
-                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold mb-6 text-slate-900 dark:text-white">
-                    {post.title}
-                  </h1>
-
-                  {/* Meta Info */}
-                  <div className="flex flex-wrap items-center gap-6 mb-8 pb-8 border-b border-slate-200 dark:border-slate-700">
-                    {post.author && (
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={post.author.avatar}
-                          alt={post.author.name}
-                          className="w-12 h-12 rounded-full"
-                        />
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <User className="w-4 h-4" />
-                            <span className="font-medium">{post.author.name}</span>
+              <GlassCard className="p-8 md:p-12">
+                {/* Title block for non-hero fallback */}
+                {!post.featured_image && (
+                  <>
+                    <Link
+                      to={`/blog?category=${post.category.slug}`}
+                      className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-primary text-white mb-4"
+                    >
+                      {post.category.name}
+                    </Link>
+                    <h1 className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold mb-6 text-slate-900 dark:text-white">
+                      {post.title}
+                    </h1>
+                    <div className="flex flex-wrap items-center gap-6 mb-8 pb-8 border-b border-slate-200 dark:border-slate-700">
+                      {post.author && (
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={post.author.avatar}
+                            alt={post.author.name}
+                            className="w-12 h-12 rounded-full"
+                          />
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <User className="w-4 h-4" />
+                              <span className="font-medium">{post.author.name}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                      <Calendar className="w-4 h-4" />
-                      <span>{format(new Date(post.created_at), 'MMMM dd, yyyy')}</span>
-                    </div>
-                    {post.reading_time && (
+                      )}
                       <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                        <Clock className="w-4 h-4" />
-                        <span>{post.reading_time} min read</span>
+                        <Calendar className="w-4 h-4" />
+                        <span>{format(new Date(post.created_at), 'MMMM dd, yyyy')}</span>
                       </div>
-                    )}
-                  </div>
-
-                  {/* Content */}
-                  <div
-                    className="prose prose-lg dark:prose-invert max-w-none prose-headings:font-heading prose-a:text-primary prose-img:rounded-xl"
-                    dangerouslySetInnerHTML={{ __html: post.content || '' }}
-                  />
-
-                  {/* Tags */}
-                  {post.tags && post.tags.length > 0 && (
-                    <div className="mt-12 pt-8 border-t border-slate-200 dark:border-slate-700">
-                      <h3 className="text-lg font-semibold mb-4">Tags</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {post.tags.map((tag, i) => (
-                          <span
-                            key={i}
-                            className="px-3 py-1 rounded-full text-sm bg-primary/10 text-primary dark:bg-primary/20"
-                          >
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Author Bio */}
-                  {post.author && post.author.bio && (
-                    <div className="mt-12 pt-8 border-t border-slate-200 dark:border-slate-700">
-                      <div className="flex items-start gap-4">
-                        <img
-                          src={post.author.avatar}
-                          alt={post.author.name}
-                          className="w-16 h-16 rounded-full"
-                        />
-                        <div>
-                          <h3 className="text-lg font-semibold mb-2">About {post.author.name}</h3>
-                          <p className="text-slate-600 dark:text-slate-400">{post.author.bio}</p>
+                      {post.reading_time && (
+                        <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                          <Clock className="w-4 h-4" />
+                          <span>{post.reading_time} min read</span>
                         </div>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {/* Content */}
+                <div
+                  className="prose prose-lg dark:prose-invert max-w-none prose-headings:font-heading prose-h1:text-3xl prose-h1:font-bold prose-h2:text-2xl prose-h2:font-semibold prose-h3:text-xl prose-h3:font-semibold prose-headings:mt-8 prose-headings:mb-3 prose-a:text-primary prose-img:rounded-xl prose-p:leading-relaxed prose-p:mb-4 prose-li:leading-relaxed prose-li:mb-1 prose-ul:list-disc prose-ol:list-decimal prose-ul:pl-6 prose-ol:pl-6 prose-li:marker:text-primary whitespace-pre-line"
+                  dangerouslySetInnerHTML={{ __html: post.content || '' }}
+                />
+
+                {/* Tags */}
+                {post.tags && post.tags.length > 0 && (
+                  <div className="mt-12 pt-8 border-t border-slate-200 dark:border-slate-700">
+                    <h3 className="text-lg font-semibold mb-4">Tags</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {post.tags.map((tag, i) => (
+                        <span
+                          key={i}
+                          className="px-3 py-1 rounded-full text-sm bg-primary/10 text-primary dark:bg-primary/20"
+                        >
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Author Bio */}
+                {post.author && post.author.bio && (
+                  <div className="mt-12 pt-8 border-t border-slate-200 dark:border-slate-700">
+                    <div className="flex items-start gap-4">
+                      <img
+                        src={post.author.avatar}
+                        alt={post.author.name}
+                        className="w-16 h-16 rounded-full"
+                      />
+                      <div>
+                        <h3 className="text-lg font-semibold mb-2">About {post.author.name}</h3>
+                        <p className="text-slate-600 dark:text-slate-400">{post.author.bio}</p>
                       </div>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </GlassCard>
             </motion.article>
           </div>

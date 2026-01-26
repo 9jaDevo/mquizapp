@@ -27,9 +27,16 @@ class Blog extends CI_Controller
             redirect('/', 'refresh');
         }
 
-        $this->load->view('header');
         $this->load->view('blog/posts');
-        $this->load->view('footer');
+    }
+
+    public function create()
+    {
+        if (!has_permissions('create', 'blog')) {
+            redirect('/', 'refresh');
+        }
+
+        $this->load->view('blog/create_post');
     }
 
     public function get_posts()
@@ -164,8 +171,7 @@ class Blog extends CI_Controller
 
             // Auto-generate keywords if empty
             if (empty($data['meta_keywords'])) {
-                $keywords = generate_keywords($data['content'], $data['title']);
-                $data['meta_keywords'] = implode(', ', $keywords);
+                $data['meta_keywords'] = generate_keywords($data['content'], $data['title']);
                 $keyword_source = 'auto';
             } else {
                 $keyword_source = 'editor';
@@ -238,8 +244,7 @@ class Blog extends CI_Controller
 
             // Auto-generate keywords if empty
             if (empty($data['meta_keywords'])) {
-                $keywords = generate_keywords($data['content'], $data['title']);
-                $data['meta_keywords'] = implode(', ', $keywords);
+                $data['meta_keywords'] = generate_keywords($data['content'], $data['title']);
                 $keyword_source = 'auto';
             } else {
                 $keyword_source = 'editor';
@@ -297,9 +302,7 @@ class Blog extends CI_Controller
             redirect('/', 'refresh');
         }
 
-        $this->load->view('header');
         $this->load->view('blog/categories');
-        $this->load->view('footer');
     }
 
     public function get_categories()
@@ -402,9 +405,7 @@ class Blog extends CI_Controller
             redirect('/', 'refresh');
         }
 
-        $this->load->view('header');
         $this->load->view('blog/authors');
-        $this->load->view('footer');
     }
 
     public function get_authors()
@@ -528,9 +529,7 @@ class Blog extends CI_Controller
             redirect('/', 'refresh');
         }
 
-        $this->load->view('header');
         $this->load->view('blog/seo_analytics');
-        $this->load->view('footer');
     }
 
     public function get_seo_analytics()
@@ -568,30 +567,74 @@ class Blog extends CI_Controller
 
     public function upload_image()
     {
-        if (!empty($_FILES['file']['name'])) {
-            $config['upload_path'] = FCPATH . 'upload/blog/';
-            $config['allowed_types'] = 'jpg|jpeg|png|gif|webp';
-            $config['max_size'] = 5120; // 5MB
-            $config['file_name'] = time() . '_' . $_FILES['file']['name'];
+        $response = array();
 
-            if (!is_dir($config['upload_path'])) {
-                mkdir($config['upload_path'], 0777, true);
+        if (!empty($_FILES['file']['name'])) {
+            $upload_dir = 'images/blog';
+            $upload_path = FCPATH . $upload_dir . '/';
+
+            // DEBUG: Log initial info
+            log_message('info', '[BLOG UPLOAD] Starting upload for file: ' . $_FILES['file']['name']);
+            log_message('info', '[BLOG UPLOAD] FCPATH: ' . FCPATH);
+            log_message('info', '[BLOG UPLOAD] Calculated upload_path: ' . $upload_path);
+            log_message('info', '[BLOG UPLOAD] Directory exists: ' . (is_dir($upload_path) ? 'YES' : 'NO'));
+            log_message('info', '[BLOG UPLOAD] Directory writable: ' . (is_writable($upload_path) ? 'YES' : 'NO'));
+
+            // Ensure upload directory exists
+            if (!is_dir($upload_path)) {
+                log_message('info', '[BLOG UPLOAD] Creating directory: ' . $upload_path);
+                if (!@mkdir($upload_path, 0777, true)) {
+                    log_message('error', '[BLOG UPLOAD] Failed to create directory: ' . $upload_path);
+                    $response['error'] = true;
+                    $response['message'] = 'Failed to create images/blog directory at: ' . $upload_path;
+                    echo json_encode($response);
+                    return;
+                }
+                @chmod($upload_path, 0777);
+                log_message('info', '[BLOG UPLOAD] Directory created successfully');
+            } else {
+                log_message('info', '[BLOG UPLOAD] Directory already exists');
+                // Ensure existing directory is writable
+                if (!is_writable($upload_path)) {
+                    log_message('info', '[BLOG UPLOAD] Directory not writable, setting 0777 permissions');
+                    @chmod($upload_path, 0777);
+                }
             }
 
-            $this->load->library('upload', $config);
+            // Final permission check
+            log_message('info', '[BLOG UPLOAD] Final directory writable check: ' . (is_writable($upload_path) ? 'YES' : 'NO'));
+            log_message('info', '[BLOG UPLOAD] Directory permissions: ' . substr(sprintf('%o', fileperms($upload_path)), -4));
+
+            $config = array();
+            $config['upload_path'] = $upload_path;
+            $config['allowed_types'] = 'jpg|jpeg|png|gif|webp';
+            $config['max_size'] = 5120; // 5MB
+            $config['overwrite'] = false;
+            $config['file_name'] = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $_FILES['file']['name']);
+
+            log_message('info', '[BLOG UPLOAD] Upload config: ' . json_encode($config));
+            log_message('info', '[BLOG UPLOAD] File size: ' . $_FILES['file']['size'] . ' bytes');
+            log_message('info', '[BLOG UPLOAD] File type: ' . $_FILES['file']['type']);
+
+            $this->load->library('upload');
+            $this->upload->initialize($config);
 
             if ($this->upload->do_upload('file')) {
                 $data = $this->upload->data();
                 $response['error'] = false;
-                $response['file_path'] = base_url('upload/blog/' . $data['file_name']);
+                $response['file_path'] = base_url($upload_dir . '/' . $data['file_name']);
                 $response['message'] = 'Image uploaded successfully';
+                log_message('info', '[BLOG UPLOAD] Upload successful: ' . $data['file_name']);
             } else {
+                $upload_errors = $this->upload->display_errors();
                 $response['error'] = true;
-                $response['message'] = $this->upload->display_errors();
+                $response['message'] = $upload_errors;
+                log_message('error', '[BLOG UPLOAD] Upload failed: ' . $upload_errors);
             }
         } else {
             $response['error'] = true;
             $response['message'] = 'No file selected';
+            log_message('warning', '[BLOG UPLOAD] No file provided');
         }
         echo json_encode($response);
     }
