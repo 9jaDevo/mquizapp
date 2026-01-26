@@ -246,6 +246,33 @@ $route['admin/resolve-fraud'] = 'Settings/resolve_fraud';
 // Daily Streak Settings
 $route['daily-streak-settings'] = 'Streak';
 
+// Blog Admin Routes
+$route['blog-posts'] = 'Blog/posts';
+$route['blog-create'] = 'Blog/posts';
+$route['blog/get_posts'] = 'Blog/get_posts';
+$route['blog/create_post'] = 'Blog/create_post';
+$route['blog/update_post'] = 'Blog/update_post';
+$route['blog/delete_post'] = 'Blog/delete_post';
+$route['blog/get_post_by_id'] = 'Blog/get_post_by_id';
+$route['blog/upload_image'] = 'Blog/upload_image';
+
+$route['blog-categories'] = 'Blog/categories';
+$route['blog/get_categories'] = 'Blog/get_categories';
+$route['blog/create_category'] = 'Blog/create_category';
+$route['blog/update_category'] = 'Blog/update_category';
+$route['blog/delete_category'] = 'Blog/delete_category';
+$route['blog/get_category_by_id'] = 'Blog/get_category_by_id';
+
+$route['blog-authors'] = 'Blog/authors';
+$route['blog/get_authors'] = 'Blog/get_authors';
+$route['blog/create_author'] = 'Blog/create_author';
+$route['blog/update_author'] = 'Blog/update_author';
+$route['blog/delete_author'] = 'Blog/delete_author';
+$route['blog/get_author_by_id'] = 'Blog/get_author_by_id';
+
+$route['blog-seo-analytics'] = 'Blog/seo_analytics';
+$route['blog/get_seo_analytics'] = 'Blog/get_seo_analytics';
+
 // Blog API Routes
 $route['api/blog/posts']['get'] = 'Api/blog_posts';
 $route['api/blog/post/(:any)']['get'] = 'Api/blog_post/$1';
