@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/commons/commons.dart';
@@ -8,6 +10,7 @@ import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.da
 import 'package:flutterquiz/ui/screens/home/widgets/quiz_grid_card.dart';
 import 'package:flutterquiz/ui/screens/quiz/category_screen.dart';
 import 'package:flutterquiz/ui/widgets/all.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 final class PlayZoneTabScreen extends StatefulWidget {
   const PlayZoneTabScreen({super.key});
@@ -158,38 +161,151 @@ final class PlayZoneTabScreenState extends State<PlayZoneTabScreen>
   Widget build(BuildContext context) {
     super.build(context);
     return Scaffold(
-      appBar: QAppBar(
-        title: Text(context.tr('playZone')!),
-        automaticallyImplyLeading: false,
-      ),
-      body: SingleChildScrollView(
-        controller: _scrollController,
-        padding: const EdgeInsets.all(20),
-        child: GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          mainAxisSpacing: 20,
-          crossAxisSpacing: 20,
-          physics: const NeverScrollableScrollPhysics(),
-          children: List.generate(
-            _playZones.length,
-            (index) {
-              final zone = _playZones[index];
-              return FadeTransition(
-                opacity: _opacityAnimations[index],
-                child: ScaleTransition(
-                  scale: _scaleAnimations[index],
-                  child: QuizGridCard(
-                    onTap: () => _onTapQuiz(zone.type),
-                    title: context.tr(zone.title)!,
-                    desc: context.tr(zone.desc)!,
-                    img: zone.img,
+      backgroundColor: const Color(0xFFF0F4FF),
+      body: Stack(
+        children: [
+          // Blue gradient header background
+          Container(
+            height: 280,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF4A75E8), Color(0xFF60A5FA)],
+              ),
+            ),
+            child: Stack(
+              children: [
+                // Decorative circle
+                Positioned(
+                  top: -60,
+                  right: -60,
+                  child: Container(
+                    width: 200,
+                    height: 200,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.1),
+                    ),
                   ),
                 ),
-              );
-            },
+              ],
+            ),
           ),
-        ),
+          // Content
+          SafeArea(
+            child: Column(
+              children: [
+                // Custom Header
+                _buildHeader(context),
+                const SizedBox(height: 16),
+                // Content area with rounded top
+                Expanded(
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF0F4FF),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
+                      ),
+                      child: SingleChildScrollView(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.all(20),
+                        child: GridView.count(
+                          crossAxisCount: 2,
+                          shrinkWrap: true,
+                          mainAxisSpacing: 20,
+                          crossAxisSpacing: 20,
+                          physics: const NeverScrollableScrollPhysics(),
+                          children: List.generate(
+                            _playZones.length,
+                            (index) {
+                              final zone = _playZones[index];
+                              return FadeTransition(
+                                opacity: _opacityAnimations[index],
+                                child: ScaleTransition(
+                                  scale: _scaleAnimations[index],
+                                  child: QuizGridCard(
+                                    onTap: () => _onTapQuiz(zone.type),
+                                    title: context.tr(zone.title)!,
+                                    desc: context.tr(zone.desc)!,
+                                    img: zone.img,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Logo/Icon row
+          Row(
+            children: [
+              const SizedBox(width: 44), // Balance for space
+              const Spacer(),
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    width: 2,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.sports_esports_rounded,
+                  color: Colors.white,
+                  size: 32,
+                ),
+              ),
+              const Spacer(),
+              const SizedBox(width: 44), // Balance for back button
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Title
+          Text(
+            context.tr('playZone')!,
+            style: GoogleFonts.nunito(
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Subtitle
+          Text(
+            'Choose your favorite quiz mode and start playing',
+            style: GoogleFonts.nunito(
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              color: Colors.white.withValues(alpha: 0.9),
+            ),
+          ),
+        ],
       ),
     );
   }

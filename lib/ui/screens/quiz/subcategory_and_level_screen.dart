@@ -21,11 +21,9 @@ import 'package:flutterquiz/ui/screens/quiz/multi_match/screens/multi_match_quiz
 import 'package:flutterquiz/ui/screens/quiz/widgets/subcategories_levels_chip.dart';
 import 'package:flutterquiz/ui/widgets/already_logged_in_dialog.dart';
 import 'package:flutterquiz/ui/widgets/circular_progress_container.dart';
-import 'package:flutterquiz/ui/widgets/custom_appbar.dart';
 import 'package:flutterquiz/ui/widgets/error_container.dart';
 import 'package:flutterquiz/ui/widgets/unlock_premium_category_dialog.dart';
 import 'package:flutterquiz/utils/extensions.dart';
-import 'package:flutterquiz/utils/ui_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 final class SubCategoryAndLevelScreenArgs extends RouteArgs {
@@ -74,87 +72,208 @@ class _SubCategoryAndLevelScreen extends State<SubCategoryAndLevelScreen> {
     final bannerAdLoaded =
         context.watch<BannerAdCubit>().bannerAdLoaded &&
         !context.read<UserDetailsCubit>().removeAds();
+
     return Scaffold(
-      appBar: QAppBar(
-        title: Text(widget.args.category.categoryName!),
-        roundedAppBar: false,
-      ),
+      backgroundColor: const Color(0xFFF0F4FF),
       body: Stack(
         children: [
-          Padding(
-            padding: EdgeInsets.only(bottom: bannerAdLoaded ? 60 : 0),
-            child: Column(
+          // Blue gradient header background
+          Container(
+            height: 180,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF4A75E8), Color(0xFF60A5FA)],
+              ),
+            ),
+            child: Stack(
               children: [
-                Flexible(
-                  child: BlocConsumer<SubCategoryCubit, SubCategoryState>(
-                    bloc: context.read<SubCategoryCubit>(),
-                    listener: (context, state) {
-                      if (state is SubCategoryFetchFailure) {
-                        if (state.errorMessage == errorCodeUnauthorizedAccess) {
-                          showAlreadyLoggedInDialog(context);
-                        }
-                      }
-                    },
-                    builder: (context, state) {
-                      if (state is SubCategoryFetchInProgress ||
-                          state is SubCategoryInitial) {
-                        return const Center(child: CircularProgressContainer());
-                      }
-                      if (state is SubCategoryFetchFailure) {
-                        return ErrorContainer(
-                          errorMessageColor: Theme.of(context).primaryColor,
-                          errorMessage: convertErrorCodeToLanguageKey(
-                            state.errorMessage,
-                          ),
-                          showErrorImage: true,
-                          onTapRetry: fetchSubCategory,
-                        );
-                      }
-
-                      if (state is SubCategoryFetchSuccess) {
-                        final subCategoryList = state.subcategoryList;
-                        final quizRepository = QuizRepository();
-                        final size = context;
-
-                        return ListView.separated(
-                          cacheExtent: size.height,
-                          separatorBuilder: (_, i) =>
-                              const SizedBox(height: UiUtils.listTileGap),
-                          padding: EdgeInsets.symmetric(
-                            vertical: size.height * UiUtils.vtMarginPct,
-                            horizontal: size.width * UiUtils.hzMarginPct,
-                          ),
-                          itemCount: subCategoryList.length,
-                          itemBuilder: (_, i) {
-                            return BlocProvider<UnlockedLevelCubit>(
-                              lazy: false,
-                              create: (_) => UnlockedLevelCubit(quizRepository),
-                              child: AnimatedSubcategoryContainer(
-                                quizType: widget.args.quizType,
-                                subcategory: subCategoryList[i],
-                                category: widget.args.category,
-                                categoryCubit: widget.args.categoryCubit,
-                                isPremiumCategory:
-                                    widget.args.category.isPremium,
-                              ),
-                            );
-                          },
-                        );
-                      }
-
-                      return const SizedBox();
-                    },
+                // Decorative circle
+                Positioned(
+                  top: -40,
+                  right: -40,
+                  child: Container(
+                    width: 160,
+                    height: 160,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.1),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          const Align(
-            alignment: Alignment.bottomCenter,
+          // Content
+          SafeArea(
+            child: Column(
+              children: [
+                // Custom Header
+                _buildHeader(context),
+                const SizedBox(height: 16),
+                // Content area with rounded top
+                Expanded(
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF0F4FF),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          bottom: bannerAdLoaded ? 60 : 0,
+                        ),
+                        child: _buildSubcategoryList(),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Banner Ad
+          const Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
             child: BannerAdContainer(),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          // Back button
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          // Category info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.args.category.categoryName!,
+                  style: GoogleFonts.nunito(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Choose a topic to play',
+                  style: GoogleFonts.nunito(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.white.withValues(alpha: 0.8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Category icon
+          if (widget.args.category.image != null &&
+              widget.args.category.image!.isNotEmpty)
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.all(8),
+              child: CachedNetworkImage(
+                imageUrl: widget.args.category.image!,
+                color: Colors.white,
+                fit: BoxFit.contain,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubcategoryList() {
+    return BlocConsumer<SubCategoryCubit, SubCategoryState>(
+      bloc: context.read<SubCategoryCubit>(),
+      listener: (context, state) {
+        if (state is SubCategoryFetchFailure) {
+          if (state.errorMessage == errorCodeUnauthorizedAccess) {
+            showAlreadyLoggedInDialog(context);
+          }
+        }
+      },
+      builder: (context, state) {
+        if (state is SubCategoryFetchInProgress ||
+            state is SubCategoryInitial) {
+          return const Center(child: CircularProgressContainer());
+        }
+        if (state is SubCategoryFetchFailure) {
+          return ErrorContainer(
+            errorMessageColor: Theme.of(context).primaryColor,
+            errorMessage: convertErrorCodeToLanguageKey(
+              state.errorMessage,
+            ),
+            showErrorImage: true,
+            onTapRetry: fetchSubCategory,
+          );
+        }
+
+        if (state is SubCategoryFetchSuccess) {
+          final subCategoryList = state.subcategoryList;
+          final quizRepository = QuizRepository();
+
+          return ListView.separated(
+            cacheExtent: context.height,
+            separatorBuilder: (_, i) => const SizedBox(height: 12),
+            padding: const EdgeInsets.all(16),
+            itemCount: subCategoryList.length,
+            itemBuilder: (_, i) {
+              return BlocProvider<UnlockedLevelCubit>(
+                lazy: false,
+                create: (_) => UnlockedLevelCubit(quizRepository),
+                child: AnimatedSubcategoryContainer(
+                  quizType: widget.args.quizType,
+                  subcategory: subCategoryList[i],
+                  category: widget.args.category,
+                  categoryCubit: widget.args.categoryCubit,
+                  isPremiumCategory: widget.args.category.isPremium,
+                ),
+              );
+            },
+          );
+        }
+
+        return const SizedBox();
+      },
     );
   }
 }
@@ -289,115 +408,124 @@ class _AnimatedSubcategoryContainerState
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 paddedDivider(),
-                FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: List.generate(_showAllLevels ? maxLevels : 6, (
-                      i,
-                    ) {
-                      return GestureDetector(
-                        onTap: () {
-                          if (locked) {
-                            showUnlockPremiumCategoryDialog(
-                              context,
-                              categoryId: widget.category.id!,
-                              categoryName: widget.category.categoryName!,
-                              requiredCoins: widget.category.requiredCoins,
-                              categoryCubit: widget.categoryCubit,
-                            ).then((result) {
-                              if (result != null && result) {
-                                setState(() {
-                                  locked = false;
-                                });
-                              }
-                            });
-                            return;
-                          }
-
-                          if ((i + 1) <= unlockedLevel) {
-                            if (widget.quizType == QuizTypes.multiMatch) {
-                              context
-                                  .pushNamed(
-                                    Routes.multiMatchQuiz,
-                                    arguments: MultiMatchQuizArgs(
-                                      categoryId: widget.category.id!,
-                                      subcategoryId: widget.subcategory.id,
-                                      level: (i + 1).toString(),
-                                      totalLevels: int.parse(
-                                        widget.subcategory.maxLevel!,
-                                      ),
-                                      isPremiumCategory:
-                                          widget.isPremiumCategory,
-                                      unlockedLevel: state.unlockedLevel,
-                                    ),
-                                  )
-                                  .then((_) => fetchUnlockedLevel());
-                            } else {
-                              /// Start level
-                              Navigator.of(context)
-                                  .pushNamed(
-                                    Routes.quiz,
-                                    arguments: {
-                                      'numberOfPlayer': 1,
-                                      'quizType': QuizTypes.quizZone,
-                                      'categoryId': widget.category.id,
-                                      'subcategoryId': widget.subcategory.id,
-                                      'level': (i + 1).toString(),
-                                      'subcategoryMaxLevel':
-                                          widget.subcategory.maxLevel,
-                                      'unlockedLevel': state.unlockedLevel,
-                                      'contestId': '',
-                                      'comprehensionId': '',
-                                      'isPremiumCategory':
-                                          widget.isPremiumCategory,
-                                    },
-                                  )
-                                  .then((_) => fetchUnlockedLevel());
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: List.generate(_showAllLevels ? maxLevels : 6, (
+                        i,
+                      ) {
+                        return GestureDetector(
+                          onTap: () {
+                            if (locked) {
+                              showUnlockPremiumCategoryDialog(
+                                context,
+                                categoryId: widget.category.id!,
+                                categoryName: widget.category.categoryName!,
+                                requiredCoins: widget.category.requiredCoins,
+                                categoryCubit: widget.categoryCubit,
+                              ).then((result) {
+                                if (result != null && result) {
+                                  setState(() {
+                                    locked = false;
+                                  });
+                                }
+                              });
+                              return;
                             }
-                          } else {
-                            ScaffoldMessenger.of(context).clearSnackBars();
-                            context.showSnack(
-                              context.tr(
-                                convertErrorCodeToLanguageKey(
-                                  errorCodeLevelLocked,
-                                ),
-                              )!,
-                            );
-                          }
-                        },
-                        child: SubcategoriesLevelChip(
-                          isLevelUnlocked: (i + 1) <= state.unlockedLevel,
-                          isLevelPlayed: (i + 2) <= state.unlockedLevel,
-                          currIndex: i,
-                        ),
-                      );
-                    }),
+
+                            if ((i + 1) <= unlockedLevel) {
+                              if (widget.quizType == QuizTypes.multiMatch) {
+                                context
+                                    .pushNamed(
+                                      Routes.multiMatchQuiz,
+                                      arguments: MultiMatchQuizArgs(
+                                        categoryId: widget.category.id!,
+                                        subcategoryId: widget.subcategory.id,
+                                        level: (i + 1).toString(),
+                                        totalLevels: int.parse(
+                                          widget.subcategory.maxLevel!,
+                                        ),
+                                        isPremiumCategory:
+                                            widget.isPremiumCategory,
+                                        unlockedLevel: state.unlockedLevel,
+                                      ),
+                                    )
+                                    .then((_) => fetchUnlockedLevel());
+                              } else {
+                                /// Start level
+                                Navigator.of(context)
+                                    .pushNamed(
+                                      Routes.quiz,
+                                      arguments: {
+                                        'numberOfPlayer': 1,
+                                        'quizType': QuizTypes.quizZone,
+                                        'categoryId': widget.category.id,
+                                        'subcategoryId': widget.subcategory.id,
+                                        'level': (i + 1).toString(),
+                                        'subcategoryMaxLevel':
+                                            widget.subcategory.maxLevel,
+                                        'unlockedLevel': state.unlockedLevel,
+                                        'contestId': '',
+                                        'comprehensionId': '',
+                                        'isPremiumCategory':
+                                            widget.isPremiumCategory,
+                                      },
+                                    )
+                                    .then((_) => fetchUnlockedLevel());
+                              }
+                            } else {
+                              ScaffoldMessenger.of(context).clearSnackBars();
+                              context.showSnack(
+                                context.tr(
+                                  convertErrorCodeToLanguageKey(
+                                    errorCodeLevelLocked,
+                                  ),
+                                )!,
+                              );
+                            }
+                          },
+                          child: SubcategoriesLevelChip(
+                            isLevelUnlocked: (i + 1) <= state.unlockedLevel,
+                            isLevelPlayed: (i + 2) <= state.unlockedLevel,
+                            currIndex: i,
+                          ),
+                        );
+                      }),
+                    ),
                   ),
                 ),
                 paddedDivider(),
 
                 /// View More/Less
-                if (maxLevels > 6) ...[
-                  GestureDetector(
+                Visibility(
+                  visible: maxLevels > 6,
+                  child: GestureDetector(
                     onTap: () => setState(() {
                       _showAllLevels = !_showAllLevels;
                     }),
                     child: Container(
                       alignment: Alignment.center,
                       width: double.maxFinite,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                       child: Text(
                         context.tr(!_showAllLevels ? 'viewMore' : 'showLess')!,
-                        style: Theme.of(context).textTheme.titleSmall!.copyWith(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onTertiary.withValues(alpha: .3),
+                        style: GoogleFonts.nunito(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF4A75E8),
                         ),
                       ),
                     ),
                   ),
-                ],
+                ),
+                Visibility(
+                  visible: maxLevels > 6,
+                  child: const SizedBox(height: 4),
+                ),
               ],
             ),
           );
@@ -409,11 +537,11 @@ class _AnimatedSubcategoryContainerState
   }
 
   Padding paddedDivider() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 15),
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       child: Divider(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        height: 2,
+        color: Color(0xFFE2E8F0),
+        height: 1,
       ),
     );
   }
@@ -432,129 +560,118 @@ class _AnimatedSubcategoryContainerState
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final subcategory = widget.subcategory;
 
     return Container(
-      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(10),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          /// subcategory
+          /// Subcategory header
           GestureDetector(
             onTap: () => _onTapSubcategory(subcategory),
             child: Container(
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: colorScheme.surface,
-                border: Border.all(color: Colors.transparent),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
                 children: [
-                  /// subcategory Icon
+                  /// Subcategory Icon with colored background
                   Container(
-                    height: 45,
-                    width: 45,
+                    height: 48,
+                    width: 48,
                     decoration: BoxDecoration(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                      ),
+                      color: const Color(0xFFE8F0FF),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    padding: const EdgeInsets.all(5),
-                    child: CachedNetworkImage(
-                      imageUrl: subcategory.image!,
-                      errorWidget: (_, s, d) => Icon(
-                        Icons.subject,
-                        color: Theme.of(context).primaryColor,
+                    child: Center(
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF4A75E8),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.all(6),
+                        child: CachedNetworkImage(
+                          imageUrl: subcategory.image ?? '',
+                          color: Colors.white,
+                          fit: BoxFit.contain,
+                          errorWidget: (_, s, d) => const Icon(
+                            Icons.quiz_outlined,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
 
-                  /// subcategory details
+                  /// Subcategory details
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        /// subcategory name
+                        /// Subcategory name
                         Text(
                           subcategory.subcategoryName!,
-                          style: TextStyle(
-                            color: colorScheme.onTertiary,
-                            fontSize: 18,
-                            fontWeight: FontWeights.semiBold,
-                            height: 1.2,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.nunito(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1E293B),
                           ),
                         ),
+                        const SizedBox(height: 4),
 
-                        /// subcategory levels, questions details
-                        RichText(
-                          text: TextSpan(
-                            style: GoogleFonts.nunito(
-                              textStyle: TextStyle(
-                                color: colorScheme.onTertiary.withValues(
-                                  alpha: 0.3,
-                                ),
-                                fontWeight: FontWeights.regular,
-                                fontSize: 14,
+                        /// Levels and questions
+                        Row(
+                          children: [
+                            Text(
+                              "${subcategory.maxLevel} ${context.tr("levels")} • ${subcategory.noOfQue} ${context.tr("questions")}",
+                              style: GoogleFonts.nunito(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w400,
+                                color: const Color(0xFF64748B),
                               ),
                             ),
-                            children: [
-                              TextSpan(
-                                text: subcategory.maxLevel.toString(),
-                                style: TextStyle(color: colorScheme.onTertiary),
-                              ),
-                              const TextSpan(text: ' :'),
-                              TextSpan(text: ' ${context.tr("levels")!}'),
-                              const WidgetSpan(child: SizedBox(width: 5)),
-                              WidgetSpan(
-                                child: Container(
-                                  color: Theme.of(
-                                    context,
-                                  ).scaffoldBackgroundColor,
-                                  height: 15,
-                                  width: 1,
-                                ),
-                              ),
-                              const WidgetSpan(child: SizedBox(width: 5)),
-                              TextSpan(
-                                text: subcategory.noOfQue,
-                                style: TextStyle(color: colorScheme.onTertiary),
-                              ),
-                              const TextSpan(text: ' :'),
-                              TextSpan(text: ' ${context.tr("questions")!}'),
-                            ],
-                          ),
+                          ],
                         ),
                       ],
                     ),
                   ),
 
-                  /// subcategory show levels arrow
+                  /// Expand/Collapse arrow
                   Container(
+                    width: 32,
+                    height: 32,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                      ),
+                      color: const Color(0xFF4A75E8).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: AnimatedBuilder(
                       animation: _rotationAnimation,
                       child: Icon(
-                        context.isRTL
-                            ? Icons.keyboard_arrow_left_rounded
-                            : Icons.keyboard_arrow_right_rounded,
-                        size: 25,
-                        color: colorScheme.onTertiary,
+                        _isExpanded
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                        size: 20,
+                        color: const Color(0xFF4A75E8),
                       ),
-                      builder: (_, child) => Transform.rotate(
-                        angle: _rotationAnimation.value,
-                        child: child,
-                      ),
+                      builder: (_, child) => child!,
                     ),
                   ),
                 ],
@@ -562,7 +679,7 @@ class _AnimatedSubcategoryContainerState
             ),
           ),
 
-          /// subcategory expanded levels
+          /// Subcategory expanded levels
           _buildLevelSection(),
         ],
       ),

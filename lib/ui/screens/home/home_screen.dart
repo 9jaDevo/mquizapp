@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer';
+import 'dart:ui';
 import 'dart:io';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -132,7 +133,7 @@ class HomeScreenState extends State<HomeScreen>
 
     if (!_isGuest) {
       fetchUserDetails();
-      
+
       // Fetch banners after user details are loaded (ensures JWT token is available)
       Future.delayed(const Duration(milliseconds: 1500), () {
         if (mounted) {
@@ -194,7 +195,7 @@ class HomeScreenState extends State<HomeScreen>
               height: 120,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFFFF9800), Color(0xFFE64A19)],
+                  colors: [Color(0xFF4A75E8), Color(0xFF60A5FA)],
                 ),
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -669,39 +670,105 @@ class HomeScreenState extends State<HomeScreen>
             padding: EdgeInsets.only(
               left: hzMargin,
               right: hzMargin,
-              top: scrHeight * 0.04,
+              top: scrHeight * 0.02,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  context.tr(selfExamZoneKey)!,
-                  textAlign: TextAlign.start,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeights.semiBold,
-                    color: context.primaryTextColor,
-                  ),
-                ),
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  mainAxisSpacing: 20,
-                  padding: EdgeInsets.only(top: _statusBarPadding * 0.2),
-                  crossAxisSpacing: 20,
-                  physics: const NeverScrollableScrollPhysics(),
-                  // Generate 100 widgets that display their index in the List.
-                  children: List.generate(
-                    examZones.length,
-                    (i) => QuizGridCard(
-                      onTap: () => _onPressedSelfExam(examZones[i].title),
-                      title: context.tr(examZones[i].title)!,
-                      desc: context.tr(examZones[i].desc)!,
-                      img: examZones[i].img,
+              children: List.generate(
+                examZones.length,
+                (i) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: GestureDetector(
+                    onTap: () => _onPressedSelfExam(examZones[i].title),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            const Color(0xFF60A5FA).withValues(alpha: 0.15),
+                            const Color(0xFF4A75E8).withValues(alpha: 0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: const Color(0xFF60A5FA).withValues(alpha: 0.3),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          // Icon container
+                          Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [Color(0xFF4A75E8), Color(0xFF60A5FA)],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(
+                                    0xFF4A75E8,
+                                  ).withValues(alpha: 0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: QImage(
+                                imageUrl: examZones[i].img,
+                                width: 28,
+                                height: 28,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          // Text content
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  context.tr(examZones[i].title)!,
+                                  style: GoogleFonts.nunito(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF4A75E8),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  context.tr(examZones[i].desc)!,
+                                  style: GoogleFonts.nunito(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w400,
+                                    color: const Color(
+                                      0xFF4A75E8,
+                                    ).withValues(alpha: 0.7),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Arrow icon
+                          Icon(
+                            Icons.flash_on_rounded,
+                            color: const Color(0xFF4A75E8),
+                            size: 28,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
           )
         : const SizedBox();
@@ -713,6 +780,8 @@ class HomeScreenState extends State<HomeScreen>
       builder: (context, state) {
         if (state is RewardedAdLoaded &&
             context.read<UserDetailsCubit>().isDailyAdAvailable) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+
           return GestureDetector(
             onTap: () async {
               if (!clicked) {
@@ -728,57 +797,109 @@ class HomeScreenState extends State<HomeScreen>
                 right: hzMargin,
                 top: scrHeight * 0.02,
               ),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                color: Theme.of(context).colorScheme.surface,
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.white.withValues(alpha: 0.95),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.15)
+                      : Colors.white.withValues(alpha: 0.3),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark
+                        ? Colors.black.withValues(alpha: 0.2)
+                        : const Color(0xFF4A75E8).withValues(alpha: 0.08),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
-              width: scrWidth,
-              height: scrWidth * 0.3,
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  DecoratedBox(
+                  // Icon container with gradient
+                  Container(
+                    width: 64,
+                    height: 64,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor,
-                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF4A75E8), Color(0xFF60A5FA)],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF4A75E8).withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
+                    alignment: Alignment.center,
                     child: SvgPicture.asset(
                       Assets.dailyCoins,
-                      width: scrWidth * .23,
-                      height: scrWidth * .23,
+                      width: 36,
+                      height: 36,
+                      colorFilter: const ColorFilter.mode(
+                        Colors.white,
+                        BlendMode.srcIn,
+                      ),
                     ),
                   ),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 250),
-                        child: Text(
+                  const SizedBox(width: 16),
+
+                  // Text content
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
                           context.tr('dailyAdsTitle')!,
                           maxLines: 2,
-                          style: TextStyle(
-                            fontWeight: FontWeights.bold,
+                          style: GoogleFonts.nunito(
+                            fontWeight: FontWeight.w700,
                             fontSize: 16,
-                            color: Theme.of(context).colorScheme.onTertiary,
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF1A1A1A),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        "${context.tr("get")!} "
-                        '${_sysConfigCubit.coinsPerDailyAdView} '
-                        "${context.tr("dailyAdsDesc")!}",
-                        style: TextStyle(
-                          fontWeight: FontWeights.regular,
-                          fontSize: 14,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onTertiary.withValues(alpha: .6),
+                        const SizedBox(height: 4),
+                        Text(
+                          "${context.tr("get")!} "
+                          '${_sysConfigCubit.coinsPerDailyAdView} '
+                          "${context.tr("dailyAdsDesc")!}",
+                          style: GoogleFonts.nunito(
+                            fontWeight: FontWeight.w400,
+                            fontSize: 13,
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.7)
+                                : const Color(0xFF666666),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                  ),
+
+                  // Arrow icon
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4A75E8).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.play_arrow_rounded,
+                      color: const Color(0xFF4A75E8),
+                      size: 20,
+                    ),
                   ),
                 ],
               ),
@@ -869,13 +990,6 @@ class HomeScreenState extends State<HomeScreen>
 
               if (state is ContestSuccess) {
                 final colorScheme = Theme.of(context).colorScheme;
-                final textStyle = GoogleFonts.nunito(
-                  textStyle: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeights.regular,
-                    color: colorScheme.onTertiary.withValues(alpha: 0.6),
-                  ),
-                );
 
                 ///
                 final live = state.contestList.live;
@@ -931,172 +1045,219 @@ class HomeScreenState extends State<HomeScreen>
                 }
 
                 return Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.transparent,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        offset: Offset(0, 5),
-                        blurRadius: 5,
-                        color: Colors.black12,
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
                       ),
                     ],
-                    borderRadius: BorderRadius.vertical(
-                      bottom: Radius.circular(99999),
-                    ),
                   ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: colorScheme.surface,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.all(12.5),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            /// Contest Image
-                            Container(
-                              padding: const EdgeInsets.all(5),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Top gradient section with contest image
+                      Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(16),
+                              topRight: Radius.circular(16),
+                            ),
+                            child: Container(
+                              height: 160,
                               decoration: BoxDecoration(
-                                color: Colors.transparent,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: Theme.of(
-                                    context,
-                                  ).scaffoldBackgroundColor,
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Color(0xFF14B8A6),
+                                    Color(0xFF06B6D4),
+                                  ],
                                 ),
                               ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(5),
-                                child: QImage(
-                                  imageUrl: contest.image!,
-                                  height: 45,
-                                  width: 45,
+                              child:
+                                  contest.image != null &&
+                                      contest.image!.isNotEmpty
+                                  ? Image.network(
+                                      contest.image!,
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                    )
+                                  : const SizedBox(),
+                            ),
+                          ),
+                          // FREE ENTRY Badge
+                          if (entryFee == 0)
+                            Positioned(
+                              top: 12,
+                              right: 12,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF10B981),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'FREE ENTRY',
+                                  style: GoogleFonts.nunito(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 8),
-
-                            /// Contest Name & Description
-                            Expanded(
+                          // Title and description at bottom of image
+                          Positioned(
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.transparent,
+                                    Colors.black.withValues(alpha: 0.7),
+                                  ],
+                                ),
+                              ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     contest.name.toString(),
-                                    textAlign: TextAlign.start,
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 2,
-                                    style: _boldTextStyle.copyWith(
-                                      fontSize: 16,
+                                    style: GoogleFonts.nunito(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
+                                  const SizedBox(height: 4),
                                   Text(
                                     contest.description.toString(),
-                                    softWrap: true,
-                                    textAlign: TextAlign.start,
+                                    style: GoogleFonts.nunito(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w400,
+                                      color: Colors.white.withValues(
+                                        alpha: 0.95,
+                                      ),
+                                    ),
+                                    maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    maxLines: 2,
-                                    style: textStyle,
                                   ),
                                 ],
                               ),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-
-                        ///
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          ),
+                        ],
+                      ),
+                      // Bottom white section - all in ONE ROW
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                /// Entry Fees
-                                Text.rich(
-                                  TextSpan(
-                                    children: [
-                                      TextSpan(
-                                        text: context.tr('entryFeesLbl'),
-                                      ),
-                                      const TextSpan(text: ' : '),
-                                      TextSpan(
-                                        text:
-                                            "$entryFee ${context.tr("coinsLbl")!}",
-                                        style: textStyle.copyWith(
-                                          color: colorScheme.onTertiary,
-                                        ),
-                                      ),
-                                    ],
+                            // Ends On
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    context.tr('endsOnLbl')!,
+                                    style: GoogleFonts.nunito(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w400,
+                                      color: const Color(0xFF64748B),
+                                    ),
                                   ),
-                                  style: textStyle,
-                                ),
-                                const SizedBox(height: 5),
-
-                                /// Ends on
-                                Text.rich(
-                                  style: textStyle,
-                                  TextSpan(
-                                    children: [
-                                      TextSpan(text: context.tr('endsOnLbl')),
-                                      const TextSpan(text: ' : '),
-                                      TextSpan(
-                                        text: '${contest.endDate}  |  ',
-                                        style: textStyle.copyWith(
-                                          color: colorScheme.onTertiary,
-                                        ),
-                                      ),
-                                      TextSpan(
-                                        text: contest.participants.toString(),
-                                        style: textStyle.copyWith(
-                                          color: colorScheme.onTertiary,
-                                        ),
-                                      ),
-                                      const TextSpan(text: ' : '),
-                                      TextSpan(text: context.tr('playersLbl')),
-                                    ],
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    contest.endDate!.split(' ')[0],
+                                    style: GoogleFonts.nunito(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF1E293B),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-
-                            const SizedBox(height: 15),
-
-                            /// Play Now
+                            // Players
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    context.tr('playersLbl')!,
+                                    style: GoogleFonts.nunito(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w400,
+                                      color: const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${contest.participants} Joined',
+                                    style: GoogleFonts.nunito(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF1E293B),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Play Now Button
                             GestureDetector(
                               onTap: onTapPlayNow,
                               child: Container(
-                                width: double.maxFinite,
                                 padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                  horizontal: 5,
+                                  horizontal: 24,
+                                  vertical: 12,
                                 ),
                                 decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  color: Theme.of(
-                                    context,
-                                  ).scaffoldBackgroundColor,
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color(0xFF4A75E8),
+                                      Color(0xFF60A5FA),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(
+                                        0xFF4A75E8,
+                                      ).withValues(alpha: 0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
                                 ),
                                 child: Text(
                                   context.tr('playnowLbl')!,
-                                  maxLines: 1,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).primaryColor,
+                                  style: GoogleFonts.nunito(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
                                   ),
                                 ),
                               ),
                             ),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 );
               }
@@ -1131,6 +1292,21 @@ class HomeScreenState extends State<HomeScreen>
       builder: (context, state) {
         return Stack(
           children: [
+            Positioned.fill(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment(-0.6, -0.6),
+                    radius: 1.1,
+                    colors: [
+                      Colors.white,
+                      Color(0xFFEAF2FF),
+                      Color(0xFFCFE0FF),
+                    ],
+                  ),
+                ),
+              ),
+            ),
             Align(
               alignment: Alignment.bottomCenter,
               child: Column(
@@ -1221,137 +1397,254 @@ class HomeScreenState extends State<HomeScreen>
       globalCtx.pushNamed(Routes.coinStore);
     }
 
-    const minHeaderHeight = 100.0;
-    const minContentHeight = 48.0;
     const iconSize = 36.0;
-    const avatarSize = 44.0;
 
-    final headerHeight = (context.height * .16).clamp(minHeaderHeight, 160.0);
-
-    return Stack(
-      clipBehavior: .none,
-      alignment: .bottomCenter,
-      children: [
-        Container(
-          height: context.height * .01,
-          width: context.width * .8,
-          margin: const EdgeInsets.only(bottom: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.all(
-              Radius.elliptical(context.height * .04, context.height * .04),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: context.primaryTextColor.withValues(alpha: .3),
-                blurRadius: 16,
-                spreadRadius: 4,
-              ),
-            ],
-          ),
+    return Container(
+      width: context.width,
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 20),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF1F51D9),
+            Color(0xFF4A75E8),
+          ],
         ),
-        Container(
-          height: headerHeight,
-          width: context.width,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          decoration: BoxDecoration(
-            color: context.surfaceColor,
-            borderRadius: const BorderRadius.vertical(
-              bottom: Radius.circular(10),
-            ),
-          ),
-          alignment: .bottomCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: minContentHeight),
-            child: Row(
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    shape: .circle,
-                    border: Border.all(
-                      color: context.primaryTextColor.withValues(alpha: .3),
+        borderRadius: BorderRadius.vertical(
+          bottom: Radius.circular(20),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Welcome back text and icons row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Profile picture and name section
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        width: 2,
+                      ),
                     ),
+                    child: QImage.circular(imageUrl: _userProfileImg),
                   ),
-                  padding: const EdgeInsets.all(4),
-                  width: avatarSize,
-                  height: avatarSize,
-                  child: QImage.circular(imageUrl: _userProfileImg),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: .start,
-                    mainAxisAlignment: .center,
-                    mainAxisSize: .min,
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        _userName,
-                        textAlign: .start,
-                        maxLines: 1,
-                        overflow: .ellipsis,
-                        style: TextStyle(
-                          color: context.primaryTextColor,
-                          fontSize: 18,
-                          fontWeight: .bold,
+                        'Welcome back',
+                        style: GoogleFonts.nunito(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.white.withValues(alpha: 0.9),
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      const SkillTierBadge(),
+                      const SizedBox(height: 2),
+                      Text(
+                        _userName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.nunito(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                InkWell(
-                  onTap: onTapNotification,
-                  child: Container(
-                    width: iconSize,
-                    height: iconSize,
-                    decoration: BoxDecoration(
-                      color: context.primaryColor,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    alignment: .center,
-                    child: _isGuest
-                        ? Icon(
-                            Icons.login_rounded,
-                            color: context.surfaceColor,
-                            size: 20,
-                          )
-                        : QImage(
-                            imageUrl: Assets.notificationMenuIcon,
-                            color: context.surfaceColor,
-                            height: 20,
-                            width: 20,
-                            fit: .contain,
-                          ),
-                  ),
-                ),
-                if (_sysConfigCubit.isCoinStoreEnabled) ...[
-                  const SizedBox(width: 8),
+                ],
+              ),
+              // Icons on the right
+              Row(
+                children: [
                   InkWell(
-                    onTap: onTapCoinStore,
+                    onTap: onTapNotification,
                     child: Container(
                       width: iconSize,
                       height: iconSize,
                       decoration: BoxDecoration(
-                        color: context.primaryColor,
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
                       ),
-                      alignment: .center,
-                      child: QImage(
-                        imageUrl: Assets.coinMenuIcon,
-                        color: context.surfaceColor,
-                        height: 20,
-                        width: 20,
-                        fit: .contain,
-                      ),
+                      alignment: Alignment.center,
+                      child: _isGuest
+                          ? const Icon(
+                              Icons.login_rounded,
+                              color: Colors.white,
+                              size: 18,
+                            )
+                          : QImage(
+                              imageUrl: Assets.notificationMenuIcon,
+                              color: Colors.white,
+                              height: 18,
+                              width: 18,
+                              fit: BoxFit.contain,
+                            ),
                     ),
                   ),
+                  if (_sysConfigCubit.isCoinStoreEnabled) ...[
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: onTapCoinStore,
+                      child: Container(
+                        width: iconSize,
+                        height: iconSize,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.3),
+                            width: 1,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Stack(
+                          alignment: Alignment.topRight,
+                          children: [
+                            QImage(
+                              imageUrl: Assets.coinMenuIcon,
+                              color: Colors.white,
+                              height: 18,
+                              width: 18,
+                              fit: BoxFit.contain,
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 3,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFA500),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                _userCoins,
+                                style: GoogleFonts.nunito(
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Badges row
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildBadge('Rank #$_userRank'),
+                const SizedBox(width: 8),
+                _buildBadge('Silver'),
+                const SizedBox(width: 8),
+                _buildBadge('70%'),
               ],
             ),
           ),
+          const SizedBox(height: 16),
+          // Your Total Score card
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.2),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Your Total Score',
+                      style: GoogleFonts.nunito(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _userScore,
+                      style: GoogleFonts.nunito(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.trending_up,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBadge(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.3),
+          width: 1,
         ),
-      ],
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.nunito(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
+      ),
     );
   }
 

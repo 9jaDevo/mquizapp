@@ -1,6 +1,8 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutterquiz/commons/commons.dart';
-import 'package:flutterquiz/core/core.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class QuizGridCard extends StatelessWidget {
   const QuizGridCard({
@@ -18,123 +20,95 @@ class QuizGridCard extends StatelessWidget {
   final bool iconOnRight;
   final void Function()? onTap;
 
-  ///
-  static const _borderRadius = 10.0;
-  static const _padding = EdgeInsets.all(12);
-  static const _iconBorderRadius = 6.0;
-  static const _iconMargin = EdgeInsets.all(5);
-
-  static const _boxShadow = [
-    BoxShadow(
-      offset: Offset(0, 50),
-      blurRadius: 30,
-      spreadRadius: 5,
-      color: Color(0xff45536d),
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: onTap,
       child: LayoutBuilder(
         builder: (_, constraints) {
           final cSize = constraints.maxWidth;
-          final iconSize = cSize * .28;
-          final iconColor = context.primaryColor;
 
-          return Stack(
-            children: [
-              /// Box Shadow
-              Positioned(
-                top: 0,
-                left: cSize * 0.2,
-                right: cSize * 0.2,
-                child: Container(
+          return Container(
+            width: cSize,
+            height: cSize,
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: isDark
+                      ? Colors.black.withValues(alpha: 0.3)
+                      : Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Icon area with light blue background
+                Container(
+                  height: cSize * 0.58,
                   decoration: BoxDecoration(
-                    color: Colors.transparent,
-                    boxShadow: _boxShadow,
-                    borderRadius: BorderRadius.vertical(
-                      bottom: Radius.circular(cSize * .525),
+                    color: isDark
+                        ? const Color(0xFF334155)
+                        : const Color(0xFFDEEAFF),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
                     ),
                   ),
-                  width: cSize,
-                  height: cSize * .6,
+                  alignment: Alignment.center,
+                  child: QImage(
+                    imageUrl: img,
+                    width: cSize * 0.35,
+                    height: cSize * 0.35,
+                    color: const Color(0xFF4A75E8),
+                    fit: BoxFit.contain,
+                  ),
                 ),
-              ),
-
-              /// Card
-              Container(
-                width: cSize,
-                height: cSize,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(_borderRadius),
-                  color: context.surfaceColor,
-                ),
-                padding: _padding,
-                child: Stack(
-                  children: [
-                    Column(
-                      crossAxisAlignment: .stretch,
-                      mainAxisSize: .min,
+                // Text content
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        /// Title
                         Text(
                           title,
-                          maxLines: 2,
-                          overflow: .ellipsis,
-                          style: TextStyle(
-                            fontWeight: FontWeights.semiBold,
-                            fontSize: 18,
-                            color: context.primaryTextColor,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.nunito(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF1E293B),
                           ),
                         ),
-
-                        /// Description
-                        Expanded(
-                          child: Text(
-                            desc,
-                            maxLines: 2,
-                            overflow: .ellipsis,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeights.regular,
-                              color: context.primaryTextColor.withValues(
-                                alpha: .6,
-                              ),
-                            ),
+                        const SizedBox(height: 4),
+                        Text(
+                          desc,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.nunito(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.6)
+                                : const Color(0xFF64748B),
                           ),
                         ),
                       ],
                     ),
-
-                    /// Svg Icon
-                    Align(
-                      alignment: iconOnRight ? .bottomRight : .bottomLeft,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(
-                            _iconBorderRadius,
-                          ),
-                          border: Border.all(
-                            color: context.scaffoldBackgroundColor,
-                          ),
-                        ),
-                        padding: _iconMargin,
-                        width: iconSize,
-                        height: iconSize,
-                        child: QImage(
-                          imageUrl: img,
-                          color: iconColor,
-                          fit: .contain,
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),

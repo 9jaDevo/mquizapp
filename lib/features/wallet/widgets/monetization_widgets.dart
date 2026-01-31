@@ -1,5 +1,7 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutterquiz/features/wallet/models/monetization_models.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// Daily Streak Widget - Display streak count, coins, and max streak
 class DailyStreakWidget extends StatelessWidget {
@@ -14,138 +16,101 @@ class DailyStreakWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Use coinsEarned if available, otherwise use a default display value
     final displayCoins = streak.coinsEarned > 0 ? streak.coinsEarned : 10;
-    
+
     return GestureDetector(
       onTap: onStreakTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFFF9800), Color(0xFFE64A19)],
+            colors: [Color(0xFF4A75E8), Color(0xFF60A5FA)],
           ),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.orange.withOpacity(0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
+              color: const Color(0xFF4A75E8).withValues(alpha: 0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Streak count
-            Column(
-              mainAxisSize: MainAxisSize.min,
+            // Left section - Streak info
+            Row(
               children: [
-                const Text(
-                  '🔥',
-                  style: TextStyle(fontSize: 28),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${streak.streakCount}',
-                  style: const TextStyle(
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.local_fire_department,
                     color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+                    size: 28,
                   ),
                 ),
-                const Text(
-                  'Days',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-
-            // Coins earned
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  '💰',
-                  style: TextStyle(fontSize: 28),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '+$displayCoins',
-                  style: const TextStyle(
-                    color: Colors.yellow,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Text(
-                  'Coins',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-
-            // Max streak indicator
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  '⭐',
-                  style: TextStyle(fontSize: 28),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${streak.maxStreak}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Text(
-                  'Max',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-
-            // Bonus indicator
-            if (streak.bonusUnlocked)
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.yellow.shade700,
-                  shape: BoxShape.circle,
-                ),
-                child: const Column(
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '🎁',
-                      style: TextStyle(fontSize: 24),
+                      'Daily Streak',
+                      style: GoogleFonts.nunito(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.white.withValues(alpha: 0.9),
+                      ),
                     ),
+                    const SizedBox(height: 2),
                     Text(
-                      'BONUS!',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 8,
+                      '${streak.streakCount} Days 🔥',
+                      style: GoogleFonts.nunito(
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
                     ),
                   ],
                 ),
-              ),
+              ],
+            ),
+            // Right section - Earned coins
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Earned',
+                  style: GoogleFonts.nunito(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '+$displayCoins 💰',
+                  style: GoogleFonts.nunito(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -275,7 +240,10 @@ class SponsorBannerWidget extends StatelessWidget {
                 top: 12,
                 right: 12,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.9),
                     borderRadius: BorderRadius.circular(4),

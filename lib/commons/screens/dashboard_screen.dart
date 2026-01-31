@@ -320,21 +320,66 @@ class DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildBottomNavigationBar() {
-    return BottomNavBar(
-      navTabs: _navTabs,
-      currentIndex: _currTabIndex.value,
-      onTap: (idx) {
-        if (_currTabIndex.value != idx) {
-          HapticFeedback.mediumImpact();
-          _currTabIndex.value = idx;
-          _pageController.jumpToPage(idx);
-        } else {
-          HapticFeedback.mediumImpact();
-          // Call onTapTab() method of the current tab
-          // ignore: avoid_dynamic_calls
-          navTabsKeys[_navTabs[idx].tab]?.currentState?.onTapTab();
-        }
-      },
+    return Container(
+      margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          elevation: 0,
+          selectedItemColor: const Color(0xFF4A75E8),
+          unselectedItemColor: const Color(0xFF94A3B8),
+          showSelectedLabels: false,
+          showUnselectedLabels: false,
+          currentIndex: _currTabIndex.value,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_rounded, size: 28),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.emoji_events_outlined, size: 28),
+              label: 'Leaderboard',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.grid_view_rounded, size: 28),
+              label: 'Categories',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.history_rounded, size: 28),
+              label: 'History',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline_rounded, size: 28),
+              label: 'Profile',
+            ),
+          ],
+          onTap: (idx) {
+            if (_currTabIndex.value != idx) {
+              HapticFeedback.mediumImpact();
+              _currTabIndex.value = idx;
+              _pageController.jumpToPage(idx);
+            } else {
+              HapticFeedback.mediumImpact();
+              // Call onTapTab() method of the current tab
+              // ignore: avoid_dynamic_calls
+              navTabsKeys[_navTabs[idx].tab]?.currentState?.onTapTab();
+            }
+          },
+        ),
+      ),
     );
   }
 }

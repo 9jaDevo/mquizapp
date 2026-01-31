@@ -14,11 +14,9 @@ import 'package:flutterquiz/features/quiz/models/subcategory.dart';
 import 'package:flutterquiz/ui/screens/quiz/guess_the_word_quiz_screen.dart';
 import 'package:flutterquiz/ui/widgets/already_logged_in_dialog.dart';
 import 'package:flutterquiz/ui/widgets/circular_progress_container.dart';
-import 'package:flutterquiz/ui/widgets/custom_appbar.dart';
 import 'package:flutterquiz/ui/widgets/error_container.dart';
 import 'package:flutterquiz/ui/widgets/unlock_premium_category_dialog.dart';
-import 'package:flutterquiz/utils/extensions.dart';
-import 'package:flutterquiz/utils/ui_utils.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 final class SubCategoryScreenArgs extends RouteArgs {
   const SubCategoryScreenArgs({
@@ -157,148 +155,146 @@ class _SubCategoryScreenState extends State<SubCategoryScreen> {
         final subcategories =
             (state as SubCategoryFetchSuccess).subcategoryList;
         return ListView.separated(
-          padding: EdgeInsets.symmetric(
-            vertical: context.height * UiUtils.vtMarginPct,
-            horizontal: context.width * UiUtils.hzMarginPct,
-          ),
+          padding: const EdgeInsets.all(16),
           itemCount: subcategories.length,
           physics: const AlwaysScrollableScrollPhysics(),
-          separatorBuilder: (_, i) =>
-              const SizedBox(height: UiUtils.listTileGap),
+          separatorBuilder: (_, i) => const SizedBox(height: 12),
           itemBuilder: (BuildContext context, int index) {
             final subcategory = subcategories[index];
-
-            return GestureDetector(
-              onTap: () => handleListTileTap(subcategory),
-              child: LayoutBuilder(
-                builder: (context, boxConstraints) {
-                  return Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Positioned(
-                        top: 0,
-                        left: boxConstraints.maxWidth * 0.1,
-                        right: boxConstraints.maxWidth * 0.1,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.transparent,
-                            boxShadow: const [
-                              BoxShadow(
-                                offset: Offset(0, 25),
-                                blurRadius: 5,
-                                spreadRadius: 2,
-                                color: Color(0x40808080),
-                              ),
-                            ],
-                            borderRadius: BorderRadius.vertical(
-                              bottom: Radius.circular(
-                                boxConstraints.maxWidth * .525,
-                              ),
-                            ),
-                          ),
-                          width: boxConstraints.maxWidth,
-                          height: 50,
-                        ),
-                      ),
-                      Positioned(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: context.surfaceColor,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          padding: const EdgeInsets.all(12),
-                          width: boxConstraints.maxWidth,
-                          child: Row(
-                            children: [
-                              /// Leading Image
-                              Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: context.primaryTextColor.withValues(
-                                      alpha: 0.1,
-                                    ),
-                                  ),
-                                ),
-                                padding: const EdgeInsets.all(5),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(1),
-                                  child: CachedNetworkImage(
-                                    fit: BoxFit.fill,
-                                    memCacheWidth: 50,
-                                    memCacheHeight: 50,
-                                    placeholder: (_, _) => const SizedBox(),
-                                    imageUrl: subcategory.image!,
-                                    errorWidget: (_, i, e) => const Image(
-                                      image: AssetImage(Assets.placeholder),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-
-                              /// title
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      subcategory.subcategoryName!,
-                                      maxLines: 1,
-                                      style: TextStyle(
-                                        color: context.primaryTextColor,
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    Text(
-                                      "${context.tr(widget.args.quizType == QuizTypes.funAndLearn ? "comprehensiveLbl" : "questions")!}: ${subcategory.noOfQue!}",
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: context.primaryTextColor
-                                            .withValues(alpha: 0.6),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-
-                              /// right arrow
-                              Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(5),
-                                  border: Border.all(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onTertiary
-                                        .withValues(alpha: 0.1),
-                                  ),
-                                ),
-                                child: Icon(
-                                  context.isRTL
-                                      ? Icons.keyboard_arrow_left_rounded
-                                      : Icons.keyboard_arrow_right_rounded,
-                                  size: 30,
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onTertiary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            );
+            return _buildSubCategoryCard(subcategory, index);
           },
         );
       },
+    );
+  }
+
+  Widget _buildSubCategoryCard(Subcategory subcategory, int index) {
+    final isBlue = index % 2 == 0;
+    final iconBgColor = isBlue
+        ? const Color(0xFF4A75E8)
+        : const Color(0xFFE8A04A);
+    final lightBgColor = isBlue
+        ? const Color(0xFFE8F0FF)
+        : const Color(0xFFFFF0E8);
+
+    return GestureDetector(
+      onTap: () => handleListTileTap(subcategory),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // Main subcategory row
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  // Icon container
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: lightBgColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: iconBgColor,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.all(6),
+                        child:
+                            subcategory.image != null &&
+                                subcategory.image!.isNotEmpty
+                            ? CachedNetworkImage(
+                                imageUrl: subcategory.image!,
+                                color: Colors.white,
+                                fit: BoxFit.contain,
+                                placeholder: (_, _) => const SizedBox(),
+                                errorWidget: (_, _, _) => const Icon(
+                                  Icons.quiz_outlined,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.quiz_outlined,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Title and info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          subcategory.subcategoryName!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.nunito(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1E293B),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.help_outline_rounded,
+                              size: 14,
+                              color: Color(0xFF64748B),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              "${subcategory.noOfQue} ${context.tr(widget.args.quizType == QuizTypes.funAndLearn ? "comprehensiveLbl" : "questions")}",
+                              style: GoogleFonts.nunito(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w400,
+                                color: const Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Arrow icon
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: iconBgColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.chevron_right_rounded,
+                      color: iconBgColor,
+                      size: 20,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -309,22 +305,147 @@ class _SubCategoryScreenState extends State<SubCategoryScreen> {
         !context.read<UserDetailsCubit>().removeAds();
 
     return Scaffold(
-      appBar: QAppBar(
-        title: Text(_category.categoryName!),
-        roundedAppBar: false,
-      ),
+      backgroundColor: const Color(0xFFF0F4FF),
       body: Stack(
         children: [
-          Padding(
-            padding: EdgeInsets.only(bottom: bannerAdLoaded ? 60 : 0),
-            child: _buildSubCategory(),
+          // Blue gradient header background
+          Container(
+            height: 180,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF4A75E8), Color(0xFF60A5FA)],
+              ),
+            ),
+            child: Stack(
+              children: [
+                // Decorative circle
+                Positioned(
+                  top: -40,
+                  right: -40,
+                  child: Container(
+                    width: 160,
+                    height: 160,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.1),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-
-          /// Banner Ad
-          const Align(
-            alignment: Alignment.bottomCenter,
+          // Content
+          SafeArea(
+            child: Column(
+              children: [
+                // Custom Header
+                _buildHeader(),
+                const SizedBox(height: 16),
+                // Content area with rounded top
+                Expanded(
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF0F4FF),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          bottom: bannerAdLoaded ? 60 : 0,
+                        ),
+                        child: _buildSubCategory(),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Banner Ad
+          const Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
             child: BannerAdContainer(),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          // Back button
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          // Category info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _category.categoryName!,
+                  style: GoogleFonts.nunito(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${_category.subcategoriesCount} Topics available',
+                  style: GoogleFonts.nunito(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.white.withValues(alpha: 0.8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Category icon
+          if (_category.image != null && _category.image!.isNotEmpty)
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.all(8),
+              child: CachedNetworkImage(
+                imageUrl: _category.image!,
+                color: Colors.white,
+                fit: BoxFit.contain,
+              ),
+            ),
         ],
       ),
     );
