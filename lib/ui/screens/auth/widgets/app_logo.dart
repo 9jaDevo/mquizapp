@@ -7,6 +7,11 @@ class AppLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const QImage(imageUrl: Assets.appLogo);
+    return const QImage(
+      imageUrl: Assets.appLogo,
+      width: 92,
+      height: 92,
+      fit: BoxFit.contain,
+    );
   }
 }

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -49,8 +50,17 @@ class _SignInScreenState extends State<SignInScreen> {
     return BlocProvider<SignInCubit>(
       create: (_) => SignInCubit(AuthRepository()),
       child: Builder(
-        builder: (context) =>
-            Scaffold(body: SingleChildScrollView(child: showForm(context))),
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Stack(
+            children: [
+              _buildBackground(),
+              SafeArea(
+                child: SingleChildScrollView(child: showForm(context)),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -93,16 +103,37 @@ class _SignInScreenState extends State<SignInScreen> {
         key: _formKey,
         child: Padding(
           padding: EdgeInsets.symmetric(
-            vertical: size.height * UiUtils.vtMarginPct,
-            horizontal: size.width * UiUtils.hzMarginPct + 10,
+            vertical: size.height * 0.02,
+            horizontal: size.shortestSide * UiUtils.hzMarginPct + 14,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(height: size.height * .09),
-              const AppLogo(),
-              SizedBox(height: size.height * .08),
+              SizedBox(height: size.height * 0.02),
+              _buildLogoCard(),
+              const SizedBox(height: 24),
+              Text(
+                'Welcome',
+                style: GoogleFonts.nunito(
+                  textStyle: const TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1F51D9),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Sign in to compete with players worldwide',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Theme.of(
+                    context,
+                  ).primaryColor.withValues(alpha: 0.8),
+                ),
+              ),
+              SizedBox(height: size.height * 0.04),
               if (c.areAllLoginMethodsDisabled)
                 ..._buildNoLoginMethods()
               else ...[
@@ -116,8 +147,11 @@ class _SignInScreenState extends State<SignInScreen> {
                     c.isGmailLoginMethodEnabled)
                   ..._buildSocialMediaLoginMethods(context, size.height),
               ],
-              SizedBox(height: size.height * 0.05),
+              const SizedBox(height: 24),
               const TermsAndCondition(),
+              const SizedBox(height: 20),
+              _buildPagerDots(),
+              const SizedBox(height: 12),
             ],
           ),
         ),
@@ -144,9 +178,8 @@ class _SignInScreenState extends State<SignInScreen> {
         const SizedBox(height: 10),
       ],
       if (c.isEmailLoginMethodEnabled) ...[
-        orLabel(),
-        SizedBox(height: height * 0.03),
-        loginWith(),
+        buildOrContinueWith(),
+        SizedBox(height: height * 0.02),
         showSocialMedia(context),
       ] else ...[
         BlocBuilder<SignInCubit, SignInState>(
@@ -213,29 +246,12 @@ class _SignInScreenState extends State<SignInScreen> {
     required String icon,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
+    return _buildSocialButton(
+      title: title,
+      icon: icon,
       onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.all(Radius.circular(10)),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            QImage(imageUrl: icon),
-            const SizedBox(width: 10),
-            Text(
-              title,
-              style: TextStyle(
-                color: Theme.of(context).primaryColor,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-      ),
+      iconBackground: Colors.white,
+      iconGradient: null,
     );
   }
 
@@ -272,7 +288,7 @@ class _SignInScreenState extends State<SignInScreen> {
   Widget showSignIn(BuildContext context) {
     return SizedBox(
       width: context.width,
-      height: context.height * 0.055,
+      height: 58,
       child: BlocConsumer<SignInCubit, SignInState>(
         bloc: context.read<SignInCubit>(),
         listener: (context, state) async {
@@ -310,43 +326,61 @@ class _SignInScreenState extends State<SignInScreen> {
           }
         },
         builder: (context, state) {
-          return CupertinoButton(
-            padding: const EdgeInsets.all(5),
-            color: Theme.of(context).primaryColor,
-            onPressed: state is SignInProgress
-                ? () {}
-                : () async {
-                    if (_formKey.currentState!.validate()) {
-                      {
-                        context.read<SignInCubit>().signInUser(
-                          AuthProviders.email,
-                          email: emailController.text.trim(),
-                          password: pswdController.text.trim(),
-                          appLanguage: context
-                              .read<AppLocalizationCubit>()
-                              .activeLanguage
-                              .name,
-                        );
-                      }
-                    }
-                  },
-            child:
-                state is SignInProgress &&
-                    state.authProvider == AuthProviders.email
-                ? const Center(
-                    child: CircularProgressContainer(whiteLoader: true),
-                  )
-                : Text(
-                    context.tr('loginLbl')!,
-                    style: GoogleFonts.nunito(
-                      textStyle: TextStyle(
-                        color: Theme.of(context).colorScheme.surface,
-                        height: 1.2,
-                        fontSize: 20,
-                        fontWeight: FontWeights.regular,
-                      ),
-                    ),
+          final isLoading =
+              state is SignInProgress &&
+              state.authProvider == AuthProviders.email;
+
+          return AbsorbPointer(
+            absorbing: isLoading,
+            child: GestureDetector(
+              onTap: () async {
+                if (_formKey.currentState!.validate()) {
+                  context.read<SignInCubit>().signInUser(
+                    AuthProviders.email,
+                    email: emailController.text.trim(),
+                    password: pswdController.text.trim(),
+                    appLanguage: context
+                        .read<AppLocalizationCubit>()
+                        .activeLanguage
+                        .name,
+                  );
+                }
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF1F51D9), Color(0xFF4A75E8)],
                   ),
+                  border: Border.all(
+                    color: const Color(0xFF1F51D9).withValues(alpha: 0.5),
+                    width: 1.2,
+                  ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x1A000000),
+                      blurRadius: 25,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: isLoading
+                    ? const CircularProgressContainer(whiteLoader: true)
+                    : Text(
+                        context.tr('loginLbl')!,
+                        style: GoogleFonts.nunito(
+                          textStyle: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeights.bold,
+                          ),
+                        ),
+                      ),
+              ),
+            ),
           );
         },
       ),
@@ -355,7 +389,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
   Padding forgetPwd() {
     return Padding(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.only(right: 6, top: 6, bottom: 6),
       child: Align(
         alignment: Alignment.bottomRight,
         child: InkWell(
@@ -363,17 +397,16 @@ class _SignInScreenState extends State<SignInScreen> {
           child: Text(
             context.tr('forgotPwdLbl')!,
             style: TextStyle(
-              fontWeight: FontWeights.regular,
+              fontWeight: FontWeights.semiBold,
               fontSize: 14,
               height: 1.21,
-              color: Theme.of(
-                context,
-              ).colorScheme.onTertiary.withValues(alpha: 0.4),
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.7),
             ),
           ),
           onTap: () async {
             await showModalBottomSheet<void>(
               isScrollControlled: true,
+              backgroundColor: Colors.transparent,
               shape: const RoundedRectangleBorder(
                 borderRadius: UiUtils.bottomSheetTopRadius,
               ),
@@ -382,57 +415,60 @@ class _SignInScreenState extends State<SignInScreen> {
                 padding: MediaQuery.of(context).viewInsets,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Theme.of(context).scaffoldBackgroundColor,
+                    color: Colors.white,
                     borderRadius: UiUtils.bottomSheetTopRadius,
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x1A000000),
+                        blurRadius: 24,
+                        offset: Offset(0, -6),
+                      ),
+                    ],
                   ),
-                  constraints: BoxConstraints(maxHeight: context.height * 0.41),
+                  padding: const EdgeInsets.fromLTRB(24, 14, 24, 28),
                   child: Form(
                     key: _formKeyDialog,
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        SizedBox(height: context.height * 0.03),
+                        Container(
+                          height: 4,
+                          width: 46,
+                          decoration: BoxDecoration(
+                            color: const Color(
+                              0xFF1F51D9,
+                            ).withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
                         Text(
                           context.tr('resetPwdLbl')!,
-                          style: TextStyle(
-                            fontSize: 22,
-                            color: Theme.of(context).colorScheme.onTertiary,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            color: Color(0xFF1F51D9),
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Padding(
-                          padding: const EdgeInsetsDirectional.only(
-                            start: 20,
-                            end: 20,
-                            top: 20,
-                          ),
-                          child: Text(
-                            context.tr('resetEnterEmailLbl')!,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 18,
-                              color: Theme.of(context).colorScheme.onTertiary,
-                              fontWeight: FontWeights.semiBold,
-                            ),
+                        const SizedBox(height: 6),
+                        Text(
+                          context.tr('resetEnterEmailLbl')!,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Theme.of(
+                              context,
+                            ).primaryColor.withValues(alpha: 0.7),
+                            fontWeight: FontWeights.regular,
                           ),
                         ),
-                        Padding(
-                          padding: EdgeInsetsDirectional.only(
-                            start: context.width * .08,
-                            end: context.width * .08,
-                            top: 20,
-                          ),
-                          child: EmailTextField(
-                            controller: forgotPswdController,
-                          ),
+                        const SizedBox(height: 16),
+                        EmailTextField(
+                          controller: forgotPswdController,
                         ),
-                        const SizedBox(height: 30),
-                        CustomRoundedButton(
-                          widthPercentage: 0.55,
-                          backgroundColor: Theme.of(context).primaryColor,
-                          buttonTitle: context.tr('submitBtn'),
-                          radius: 10,
-                          showBorder: false,
-                          height: 50,
+                        const SizedBox(height: 18),
+                        _buildSheetPrimaryButton(
+                          title: context.tr('submitBtn')!,
                           onTap: () {
                             final form = _formKeyDialog.currentState;
                             if (form!.validate()) {
@@ -452,6 +488,11 @@ class _SignInScreenState extends State<SignInScreen> {
                             }
                           },
                         ),
+                        const SizedBox(height: 12),
+                        _buildSheetSecondaryButton(
+                          title: context.tr('cancel') ?? 'Cancel',
+                          onTap: () => context.pop('Cancel'),
+                        ),
                       ],
                     ),
                   ),
@@ -464,31 +505,32 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 
-  Widget orLabel() {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      child: Text(
-        context.tr('orLbl')!,
-        style: TextStyle(
-          fontWeight: FontWeights.regular,
-          color: Theme.of(
-            context,
-          ).colorScheme.onTertiary.withValues(alpha: 0.4),
-          fontSize: 14,
+  Widget buildOrContinueWith() {
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            height: 1,
+            color: const Color(0xFF1F51D9).withValues(alpha: 0.2),
+          ),
         ),
-      ),
-    );
-  }
-
-  Widget loginWith() {
-    return Text(
-      context.tr('loginSocialMediaLbl')!,
-      textAlign: TextAlign.center,
-      style: TextStyle(
-        fontWeight: FontWeights.regular,
-        color: Theme.of(context).colorScheme.onTertiary,
-        fontSize: 14,
-      ),
+        const SizedBox(width: 12),
+        Text(
+          context.tr('loginSocialMediaLbl') ?? 'or continue with',
+          style: TextStyle(
+            fontWeight: FontWeights.semiBold,
+            color: Theme.of(context).primaryColor.withValues(alpha: 0.6),
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Container(
+            height: 1,
+            color: const Color(0xFF1F51D9).withValues(alpha: 0.2),
+          ),
+        ),
+      ],
     );
   }
 
@@ -496,97 +538,84 @@ class _SignInScreenState extends State<SignInScreen> {
     return BlocBuilder<SignInCubit, SignInState>(
       builder: (context, state) {
         final c = context.read<SystemConfigCubit>();
+        final isLoading =
+            state is SignInProgress &&
+            state.authProvider != AuthProviders.email;
 
-        return Container(
-          padding: const EdgeInsets.only(top: 20),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children:
-                (state is SignInProgress &&
-                    state.authProvider != AuthProviders.email)
-                ? [const Center(child: CircularProgressContainer())]
-                : [
-                    ///
-                    if (Platform.isIOS && c.isAppleLoginMethodEnabled) ...[
-                      _buildAppleLoginIconButton(context),
-                    ],
+        if (isLoading) {
+          return const Padding(
+            padding: EdgeInsets.only(top: 20),
+            child: Center(child: CircularProgressContainer()),
+          );
+        }
 
-                    ///
-                    if (c.isGmailLoginMethodEnabled) ...[
-                      if (Platform.isIOS && c.isAppleLoginMethodEnabled)
-                        const SizedBox(width: 25),
-                      _buildGmailLoginIconButton(context),
-                    ],
+        final buttons = <Widget>[];
 
-                    ///
-                    if (c.isPhoneLoginMethodEnabled) ...[
-                      if (c.isAppleLoginMethodEnabled ||
-                          c.isGmailLoginMethodEnabled)
-                        const SizedBox(width: 25),
-                      _buildPhoneLoginIconButton(context),
-                    ],
-                  ],
+        if (c.isGmailLoginMethodEnabled) {
+          buttons.add(
+            _buildSocialButton(
+              title: context.tr('signInGoogle')!,
+              icon: Assets.googleIcon,
+              onTap: () => context.read<SignInCubit>().signInUser(
+                AuthProviders.gmail,
+                appLanguage: context
+                    .read<AppLocalizationCubit>()
+                    .activeLanguage
+                    .name,
+              ),
+              iconBackground: Colors.white,
+              iconGradient: null,
+            ),
+          );
+        }
+
+        if (c.isPhoneLoginMethodEnabled) {
+          buttons.add(
+            _buildSocialButton(
+              title: context.tr('signInPhone')!,
+              icon: Assets.phoneIcon,
+              onTap: () => context.pushNamed(Routes.otpScreen),
+              iconBackground: null,
+              iconGradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF1F51D9), Color(0xFF4A75E8)],
+              ),
+              iconColor: Colors.white,
+            ),
+          );
+        }
+
+        if (Platform.isIOS && c.isAppleLoginMethodEnabled) {
+          buttons.add(
+            _buildSocialButton(
+              title: context.tr('signInApple')!,
+              icon: Assets.appleIcon,
+              onTap: () => context.read<SignInCubit>().signInUser(
+                AuthProviders.apple,
+                appLanguage: context
+                    .read<AppLocalizationCubit>()
+                    .activeLanguage
+                    .name,
+              ),
+              iconBackground: null,
+              iconGradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF1E293B), Color(0xFF000000)],
+              ),
+              iconColor: Colors.white,
+            ),
+          );
+        }
+
+        return Padding(
+          padding: const EdgeInsets.only(top: 16),
+          child: Column(
+            children: _withSpacing(buttons, 12),
           ),
         );
       },
-    );
-  }
-
-  Widget _buildAppleLoginIconButton(BuildContext context) {
-    return InkWell(
-      child: Container(
-        height: 50,
-        width: 50,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.all(Radius.circular(12)),
-        ),
-        alignment: Alignment.center,
-        padding: const EdgeInsets.all(12),
-        child: SvgPicture.asset(Assets.appleIcon, height: 38, width: 38),
-      ),
-      onTap: () => context.read<SignInCubit>().signInUser(
-        AuthProviders.apple,
-        appLanguage: context.read<AppLocalizationCubit>().activeLanguage.name,
-      ),
-    );
-  }
-
-  Widget _buildGmailLoginIconButton(BuildContext context) {
-    return InkWell(
-      child: Container(
-        height: 50,
-        width: 50,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.all(Radius.circular(12)),
-        ),
-        alignment: Alignment.center,
-        padding: const EdgeInsets.all(12),
-        child: SvgPicture.asset(Assets.googleIcon, height: 38, width: 38),
-      ),
-      onTap: () => context.read<SignInCubit>().signInUser(
-        AuthProviders.gmail,
-        appLanguage: context.read<AppLocalizationCubit>().activeLanguage.name,
-      ),
-    );
-  }
-
-  Widget _buildPhoneLoginIconButton(BuildContext context) {
-    return InkWell(
-      child: Container(
-        height: 50,
-        width: 50,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.all(Radius.circular(12)),
-        ),
-        alignment: Alignment.center,
-        padding: const EdgeInsets.all(12),
-        child: SvgPicture.asset(Assets.phoneIcon, height: 38, width: 38),
-      ),
-      onTap: () => context.pushNamed(Routes.otpScreen),
     );
   }
 
@@ -599,9 +628,7 @@ class _SignInScreenState extends State<SignInScreen> {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeights.regular,
-            color: Theme.of(
-              context,
-            ).colorScheme.onTertiary.withValues(alpha: 0.4),
+            color: Theme.of(context).primaryColor.withValues(alpha: 0.7),
           ),
         ),
         const SizedBox(width: 4),
@@ -615,7 +642,7 @@ class _SignInScreenState extends State<SignInScreen> {
             context.tr('signUpLbl')!,
             style: TextStyle(
               fontSize: 14,
-              fontWeight: FontWeights.regular,
+              fontWeight: FontWeights.semiBold,
               decoration: TextDecoration.underline,
               decorationColor: Theme.of(context).primaryColor,
               color: Theme.of(context).primaryColor,
@@ -623,6 +650,271 @@ class _SignInScreenState extends State<SignInScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildBackground() {
+    return Positioned.fill(
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment(-0.6, -0.6),
+            radius: 1.1,
+            colors: [
+              Colors.white,
+              Color(0xFFEAF2FF),
+              Color(0xFFCFE0FF),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLogoCard() {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Container(
+          width: 128,
+          height: 128,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFF1F51D9).withValues(alpha: 0.3),
+                const Color(0xFF3B82F6).withValues(alpha: 0.3),
+              ],
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x33000000),
+                blurRadius: 40,
+                offset: Offset(0, 12),
+              ),
+            ],
+          ),
+        ),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: Container(
+              width: 128,
+              height: 128,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.8),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: const Color(0xFF1F51D9).withValues(alpha: 0.3),
+                  width: 1.2,
+                ),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x33000000),
+                    blurRadius: 50,
+                    offset: Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: const AppLogo(),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPagerDots() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: const [
+        _PagerDot(opacity: 0.5),
+        SizedBox(width: 8),
+        _PagerDot(opacity: 0.7),
+        SizedBox(width: 8),
+        _PagerDot(opacity: 0.9),
+      ],
+    );
+  }
+
+  Widget _buildSocialButton({
+    required String title,
+    required String icon,
+    required VoidCallback onTap,
+    Gradient? iconGradient,
+    Color? iconBackground,
+    Color? iconColor,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: const Color(0xFF1F51D9).withValues(alpha: 0.2),
+            width: 1.2,
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x1A000000),
+              blurRadius: 15,
+              offset: Offset(0, 6),
+            ),
+            BoxShadow(
+              color: Color(0x1A000000),
+              blurRadius: 6,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: iconBackground,
+                gradient: iconGradient,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x1A000000),
+                    blurRadius: 10,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: SvgPicture.asset(
+                icon,
+                height: 22,
+                width: 22,
+                colorFilter: iconColor == null
+                    ? null
+                    : ColorFilter.mode(iconColor, BlendMode.srcIn),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  color: Theme.of(context).primaryColor,
+                  fontSize: 16,
+                  fontWeight: FontWeights.semiBold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _withSpacing(List<Widget> children, double spacing) {
+    if (children.isEmpty) {
+      return [const SizedBox.shrink()];
+    }
+
+    final spaced = <Widget>[];
+    for (var i = 0; i < children.length; i++) {
+      spaced.add(children[i]);
+      if (i != children.length - 1) {
+        spaced.add(SizedBox(height: spacing));
+      }
+    }
+    return spaced;
+  }
+
+  Widget _buildSheetPrimaryButton({
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        height: 54,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          color: const Color(0xFF1F51D9),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x22000000),
+              blurRadius: 16,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Text(
+          title,
+          style: GoogleFonts.nunito(
+            textStyle: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeights.bold,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSheetSecondaryButton({
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        height: 54,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: const Color(0xFF1F51D9).withValues(alpha: 0.25),
+            width: 1,
+          ),
+        ),
+        child: Text(
+          title,
+          style: GoogleFonts.nunito(
+            textStyle: TextStyle(
+              color: Theme.of(context).primaryColor,
+              fontSize: 16,
+              fontWeight: FontWeights.semiBold,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PagerDot extends StatelessWidget {
+  const _PagerDot({required this.opacity});
+
+  final double opacity;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 8,
+      height: 8,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1F51D9).withValues(alpha: opacity),
+        shape: BoxShape.circle,
+      ),
     );
   }
 }
