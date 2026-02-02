@@ -34,7 +34,6 @@ import 'package:flutterquiz/ui/screens/quiz/review_answers_screen.dart';
 import 'package:flutterquiz/ui/screens/quiz/widgets/radial_result_container.dart';
 import 'package:flutterquiz/ui/widgets/already_logged_in_dialog.dart';
 import 'package:flutterquiz/ui/widgets/circular_progress_container.dart';
-import 'package:flutterquiz/ui/widgets/custom_appbar.dart';
 import 'package:flutterquiz/ui/widgets/custom_rounded_button.dart';
 import 'package:flutterquiz/ui/widgets/error_container.dart';
 import 'package:flutterquiz/utils/answer_encryption.dart';
@@ -1487,17 +1486,74 @@ class _ResultScreenState extends State<ResultScreen> {
           ),
         ],
         child: Scaffold(
-          appBar: QAppBar(
-            roundedAppBar: false,
-            title: Text(_appbarTitle),
-            onTapBackButton: () {
-              onPageBackCalls();
-              Navigator.pop(context);
-            },
+          backgroundColor: const Color(0xFFF0F4FF),
+          appBar: PreferredSize(
+            preferredSize: const Size.fromHeight(96),
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF1F51D9),
+                    Color(0xFF4A75E8),
+                  ],
+                ),
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(20),
+                ),
+              ),
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                  child: Row(
+                    children: [
+                      InkWell(
+                        onTap: () {
+                          onPageBackCalls();
+                          Navigator.pop(context);
+                        },
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.3),
+                              width: 1,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _appbarTitle,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
           body: SingleChildScrollView(
             child: Column(
               children: [
+                const SizedBox(height: 8),
                 Center(child: _buildResultContainer(context)),
                 const SizedBox(height: 20),
                 _buildResultButtons(context),
