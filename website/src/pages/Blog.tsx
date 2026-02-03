@@ -10,6 +10,7 @@ import { getBlogPosts, getBlogCategories } from '../api/blog';
 import type { BlogCategory } from '../api/blog';
 import { Loader2 } from 'lucide-react';
 import { trackAnalyticsEvent } from '../utils/analytics';
+import { generateBlogTitle, generateBlogDescription, generateBlogKeywords, getCategoryDisplayName } from '../utils/seoConfig';
 
 const Blog: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -69,14 +70,57 @@ const Blog: React.FC = () => {
     },
   };
 
+  // Generate dynamic SEO based on current filters
+  const categoryName = selectedCategory 
+    ? categories.find(c => c.slug === selectedCategory)?.name 
+    : undefined;
+  
+  const dynamicTitle = generateBlogTitle({
+    category: categoryName,
+    search: searchQuery,
+    page: currentPage,
+  });
+  
+  const dynamicDescription = generateBlogDescription({
+    category: categoryName,
+    search: searchQuery,
+    page: currentPage,
+    totalPosts: pagination?.total_posts,
+  });
+  
+  const dynamicKeywords = generateBlogKeywords({
+    category: categoryName,
+    search: searchQuery,
+  });
+  
+  // Build canonical URL with filters
+  let canonicalUrl = 'https://mquiz.uk/blog';
+  const urlParams = [];
+  if (selectedCategory) urlParams.push(`category=${selectedCategory}`);
+  if (searchQuery) urlParams.push(`search=${encodeURIComponent(searchQuery)}`);
+  if (currentPage > 1) urlParams.push(`page=${currentPage}`);
+  if (urlParams.length > 0) canonicalUrl += `?${urlParams.join('&')}`;
+  
+  // Pagination rel tags
+  const relPrev = currentPage > 1 
+    ? `https://mquiz.uk/blog?${urlParams.filter(p => !p.startsWith('page=')).join('&')}${currentPage > 2 ? `${urlParams.length > 1 ? '&' : ''}page=${currentPage - 1}` : ''}`.replace(/\?$/, '')
+    : undefined;
+  
+  const relNext = pagination?.has_next
+    ? `https://mquiz.uk/blog?${urlParams.filter(p => !p.startsWith('page=')).join('&')}${urlParams.length > 0 ? '&' : ''}page=${currentPage + 1}`
+    : undefined;
+
   return (
     <>
       <SEO
-        title="mQuiz Blog - Learning Tips, Updates & Insights"
-        description="Read the latest articles, tips, and insights on gamified learning, quiz strategies, and educational technology."
-        url="https://mquiz.uk/blog"
-        type="Blog"
+        title={dynamicTitle}
+        description={dynamicDescription}
+        keywords={dynamicKeywords}
+        url={canonicalUrl}
+        type="blog"
         structuredData={blogCollectionSchema}
+        relPrev={relPrev}
+        relNext={relNext}
       />
 
       <div className="container-custom section-padding">

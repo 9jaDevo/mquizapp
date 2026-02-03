@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import SEO from '../components/common/SEO';
 import { trackAnalyticsEvent } from '../utils/analytics';
+import { seoConfig } from '../utils/seoConfig';
 import Hero from '../components/home/Hero';
 import Features from '../components/home/Features';
 import Statistics from '../components/home/Statistics';
@@ -34,10 +35,12 @@ const Home: React.FC = () => {
   return (
     <>
       <SEO
-        title="mQuiz - Learn, Engage, and Earn Rewards | Quiz Learning App"
-        description="Join mQuiz, the ultimate quiz app that combines fun learning with real rewards. Challenge yourself, compete with friends, and earn while you learn."
-        keywords="quiz app, learning app, earn money, educational games, online quizzes, gamified learning, peer-to-peer quiz battles"
+        title={seoConfig.home.title}
+        description={seoConfig.home.description}
+        keywords={seoConfig.home.keywords}
         url="https://mquiz.uk"
+        type={seoConfig.home.type}
+        image={seoConfig.home.image}
         structuredData={structuredData}
       />
       <Hero />

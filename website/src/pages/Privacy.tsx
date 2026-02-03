@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import SEO from '../components/common/SEO';
 import { trackAnalyticsEvent } from '../utils/analytics';
+import { seoConfig } from '../utils/seoConfig';
 
 const Privacy: React.FC = () => {
   useEffect(() => {
@@ -15,9 +16,11 @@ const Privacy: React.FC = () => {
   return (
     <>
       <SEO
-        title="Privacy Policy - mQuiz"
-        description="Read mQuiz's privacy policy to understand how we collect, use, and protect your personal information."
+        title={seoConfig.privacy.title}
+        description={seoConfig.privacy.description}
+        keywords={seoConfig.privacy.keywords}
         url="https://mquiz.uk/privacy"
+        type={seoConfig.privacy.type}
       />
       <div className="container-custom section-padding">
         <div className="max-w-4xl mx-auto prose prose-invert">

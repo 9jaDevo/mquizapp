@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import SEO from '../components/common/SEO';
 import { trackAnalyticsEvent } from '../utils/analytics';
+import { seoConfig } from '../utils/seoConfig';
 
 const Terms: React.FC = () => {
   useEffect(() => {
@@ -15,9 +16,11 @@ const Terms: React.FC = () => {
   return (
     <>
       <SEO
-        title="Terms & Conditions - mQuiz"
-        description="Read mQuiz's terms and conditions to understand the rules and guidelines for using our platform."
+        title={seoConfig.terms.title}
+        description={seoConfig.terms.description}
+        keywords={seoConfig.terms.keywords}
         url="https://mquiz.uk/terms"
+        type={seoConfig.terms.type}
       />
       <div className="container-custom section-padding">
         <div className="max-w-4xl mx-auto prose prose-invert">

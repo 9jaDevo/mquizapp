@@ -117,9 +117,11 @@ const Download: React.FC = () => {
   return (
     <>
       <SEO
-        title="Download mQuiz App - Available on Android & iOS"
-        description="Download mQuiz app for free on Google Play Store and App Store. Start learning and earning rewards today!"
+        title={seoConfig.download.title}
+        description={seoConfig.download.description}
+        keywords={seoConfig.download.keywords}
         url="https://mquiz.uk/download"
+        type={seoConfig.download.type}
       />
       
       <div className="container-custom section-padding">

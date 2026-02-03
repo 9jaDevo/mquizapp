@@ -5,6 +5,7 @@ import { sendContactEmail, validateContactForm, type ContactFormData } from '../
 import { Mail, Phone, MapPin, Send, AlertCircle, CheckCircle } from 'lucide-react';
 import GlassButton from '../components/common/GlassButton';
 import GlassInput from '../components/common/GlassInput';
+import { seoConfig } from '../utils/seoConfig';
 
 const Contact: React.FC = () => {
   useEffect(() => {
@@ -105,9 +106,11 @@ const Contact: React.FC = () => {
   return (
     <>
       <SEO
-        title="Contact mQuiz - Get in Touch"
-        description="Have questions? Contact the mQuiz team. We're here to help with any queries about our quiz learning platform."
+        title={seoConfig.contact.title}
+        description={seoConfig.contact.description}
+        keywords={seoConfig.contact.keywords}
         url="https://mquiz.uk/contact"
+        type={seoConfig.contact.type}
       />
       <div className="container-custom section-padding">
         <div className="max-w-4xl mx-auto">

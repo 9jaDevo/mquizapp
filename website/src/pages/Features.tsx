@@ -26,6 +26,7 @@ import {
 import SEO from '../components/common/SEO';
 import GlassCard from '../components/common/GlassCard';
 import { trackAnalyticsEvent } from '../utils/analytics';
+import { seoConfig } from '../utils/seoConfig';
 
 const mainFeatures = [
   {

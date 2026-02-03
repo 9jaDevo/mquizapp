@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import SEO from '../components/common/SEO';
 import { CheckCircle } from 'lucide-react';
 import { trackAnalyticsEvent } from '../utils/analytics';
+import { seoConfig } from '../utils/seoConfig';
 
 const About: React.FC = () => {
   useEffect(() => {
@@ -31,9 +32,11 @@ const About: React.FC = () => {
   return (
     <>
       <SEO
-        title="About mQuiz - Our Mission and Story"
-        description="Learn about mQuiz's mission to revolutionize education through gamification and interactive learning. Discover our story and values."
+        title={seoConfig.about.title}
+        description={seoConfig.about.description}
+        keywords={seoConfig.about.keywords}
         url="https://mquiz.uk/about"
+        type={seoConfig.about.type}
       />
       <div className="container-custom section-padding">
         <div className="max-w-4xl mx-auto">
