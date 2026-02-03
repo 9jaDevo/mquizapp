@@ -43,12 +43,30 @@ const Blog: React.FC = () => {
     setCurrentPage(1);
   };
 
+  // Create schema markup for blog collection
+  const blogCollectionSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Blog',
+    name: 'mQuiz Blog',
+    description: 'Learning tips, strategies, and insights for gamified education',
+    url: 'https://mquiz.uk/blog',
+    image: 'https://mquiz.uk/og-image.jpg',
+    mainEntity: {
+      '@type': 'BlogPosting',
+      headline: 'Latest Articles',
+      description: 'Read the latest articles, tips, and insights on gamified learning',
+      image: 'https://mquiz.uk/og-image.jpg',
+    },
+  };
+
   return (
     <>
       <SEO
         title="mQuiz Blog - Learning Tips, Updates & Insights"
         description="Read the latest articles, tips, and insights on gamified learning, quiz strategies, and educational technology."
         url="https://mquiz.uk/blog"
+        type="Blog"
+        structuredData={blogCollectionSchema}
       />
 
       <div className="container-custom section-padding">

@@ -5,9 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "node scripts/generate-assets.js && node scripts/generate-sitemaps.js && tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "generate-assets": "node scripts/generate-assets.js",
+    "generate-sitemaps": "node scripts/generate-sitemaps.js",
+    "prebuild": "npm run generate-assets && npm run generate-sitemaps"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

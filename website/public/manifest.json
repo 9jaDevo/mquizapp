@@ -1,0 +1,39 @@
+{
+    "name": "mQuiz - Learn, Engage, and Earn Rewards",
+    "short_name": "mQuiz",
+    "description": "Join mQuiz, the ultimate quiz app that combines fun learning with real rewards. Challenge yourself, compete with friends, and earn real cash while you learn.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#2563eb",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/favicon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ],
+    "categories": [
+        "education",
+        "entertainment"
+    ],
+    "screenshots": [
+        {
+            "src": "/og-image.jpg",
+            "sizes": "1200x630",
+            "type": "image/jpeg"
+        }
+    ]
+}
