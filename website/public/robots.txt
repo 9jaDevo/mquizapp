@@ -1,88 +1,33 @@
-# Default behavior for all crawlers
+# robots.txt for mQuiz
+# Generated for SEO optimization
+# Last updated: 2026-02-03T10:59:38.805Z
+
+# Allow all bots
 User-agent: *
 Allow: /
-Disallow: /api/
 Disallow: /admin/
-Crawl-delay: 1
-Request-rate: 10/1m
-
-# Explicit AI Model Training Bots
-User-agent: GPTBot
-Allow: /blog
-Allow: /
-Disallow: /admin
 Disallow: /api/
-Crawl-delay: 1
+Disallow: /admin_backend/
+Disallow: *.php
+Disallow: /private/
 
-User-agent: CCBot
-Allow: /blog
-Allow: /
-Disallow: /admin
-Disallow: /api/
-Crawl-delay: 1
-
-User-agent: anthropic-ai
-Allow: /
-Disallow: /admin
-Disallow: /api/
-Crawl-delay: 1
-
-User-agent: PerplexityBot
-Allow: /
-Disallow: /admin
-Disallow: /api/
-Crawl-delay: 1
-
-User-agent: ClaudeBot
-Allow: /
-Disallow: /admin
-Disallow: /api/
-Crawl-delay: 1
-
-User-agent: Applebot-Extended
-Allow: /
-Disallow: /admin
-Crawl-delay: 1
-
-# Search Engine Bots
+# Specific bot rules
 User-agent: Googlebot
 Allow: /
-Disallow: /api/
 Crawl-delay: 0
 
 User-agent: Bingbot
 Allow: /
-Disallow: /api/
-Crawl-delay: 0
-
-User-agent: Slurp
-Allow: /
-Disallow: /api/
 Crawl-delay: 1
 
-User-agent: DuckDuckBot
-Allow: /
-Disallow: /api/
-Crawl-delay: 1
-
-# Social Media Bots
-User-agent: facebookexternalhit
-Allow: /
-Disallow: /api/
-
-User-agent: Twitterbot
-Allow: /
-Disallow: /api/
-
-User-agent: LinkedInBot
-Allow: /
-Disallow: /api/
-
-# Disallow low-value crawlers
-User-agent: MJ12bot
-User-agent: AhrefsBot
-User-agent: SemrushBot
-Disallow: /
-
-# Sitemap locations (critical for discoverability)
+# Sitemaps
 Sitemap: https://mquiz.uk/sitemap.xml
+Sitemap: https://mquiz.uk/sitemap-blog.xml
+Sitemap: https://mquiz.uk/sitemap-pages.xml
+
+# Rate limiting
+Request-rate: 30/60
+
+# Comments
+# Last updated: 2026-02-03T10:59:38.805Z
+# Next update: automatic with each deploy
