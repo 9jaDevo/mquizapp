@@ -1,9 +1,15 @@
 import React, { useEffect } from 'react';
 import SEO from '../components/common/SEO';
+import { trackAnalyticsEvent } from '../utils/analytics';
 
 const Terms: React.FC = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
+    trackAnalyticsEvent('page_view', {
+      page_title: 'Terms & Conditions',
+      page_location: window.location.href,
+      page_path: '/terms',
+    });
   }, []);
 
   return (

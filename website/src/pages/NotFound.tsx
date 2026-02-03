@@ -1,9 +1,18 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import SEO from '../components/common/SEO';
 import GlassButton from '../components/common/GlassButton';
 import GlassCard from '../components/common/GlassCard';
+import { trackAnalyticsEvent } from '../utils/analytics';
 
 const NotFound: React.FC = () => {
+  useEffect(() => {
+    trackAnalyticsEvent('page_view', {
+      page_title: '404 Not Found',
+      page_location: window.location.href,
+      page_path: window.location.pathname,
+    });
+  }, []);
+
   return (
     <>
       <SEO

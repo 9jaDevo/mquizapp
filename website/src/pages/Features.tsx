@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import SEO from '../components/common/SEO';
 import GlassCard from '../components/common/GlassCard';
+import { trackAnalyticsEvent } from '../utils/analytics';
 
 const mainFeatures = [
   {
@@ -84,6 +85,11 @@ const additionalFeatures = [
 const Features: React.FC = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
+    trackAnalyticsEvent('page_view', {
+      page_title: 'Features',
+      page_location: window.location.href,
+      page_path: '/features',
+    });
   }, []);
 
   return (

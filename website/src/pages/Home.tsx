@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import SEO from '../components/common/SEO';
+import { trackAnalyticsEvent } from '../utils/analytics';
 import Hero from '../components/home/Hero';
 import Features from '../components/home/Features';
 import Statistics from '../components/home/Statistics';
@@ -9,6 +10,14 @@ import FAQ from '../components/home/FAQ';
 import CTA from '../components/home/CTA';
 
 const Home: React.FC = () => {
+  useEffect(() => {
+    trackAnalyticsEvent('page_view', {
+      page_title: 'Home',
+      page_location: window.location.href,
+      page_path: '/',
+    });
+  }, []);
+
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'Organization',

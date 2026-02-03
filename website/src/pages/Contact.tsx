@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SEO from '../components/common/SEO';
+import { trackAnalyticsEvent } from '../utils/analytics';
 import { Mail, Phone, MapPin, Send } from 'lucide-react';
 import GlassButton from '../components/common/GlassButton';
 import GlassInput from '../components/common/GlassInput';
@@ -7,6 +8,11 @@ import GlassInput from '../components/common/GlassInput';
 const Contact: React.FC = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
+    trackAnalyticsEvent('page_view', {
+      page_title: 'Contact',
+      page_location: window.location.href,
+      page_path: '/contact',
+    });
   }, []);
 
   const [formData, setFormData] = useState({

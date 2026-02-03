@@ -68,6 +68,29 @@
   <!-- Manifest for PWA -->
   <link rel="manifest" href="/manifest.json">
 
+  <!-- Google Analytics 4 (Primary Tracking) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-NVKN18MWNH"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    // Configure GA4 with privacy-first settings
+    gtag('config', 'G-NVKN18MWNH', {
+      'anonymize_ip': true,
+      'cookie_flags': 'SameSite=None;Secure',
+      'allow_google_signals': false,
+      'allow_ad_personalization_signals': false,
+      'send_page_view': true
+    });
+
+    // Optional: Bot traffic tracking (separate property for bot analysis)
+    gtag('config', 'G-432209366', {
+      'anonymize_ip': true,
+      'send_page_view': false
+    });
+  </script>
+
   <title>mQuiz - Master Your Knowledge</title>
 </head>
 

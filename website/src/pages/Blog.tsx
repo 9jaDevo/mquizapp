@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import useSWR from 'swr';
 import SEO from '../components/common/SEO';
@@ -9,11 +9,21 @@ import GlassCard from '../components/common/GlassCard';
 import { getBlogPosts, getBlogCategories } from '../api/blog';
 import type { BlogCategory } from '../api/blog';
 import { Loader2 } from 'lucide-react';
+import { trackAnalyticsEvent } from '../utils/analytics';
 
 const Blog: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Track page view
+  useEffect(() => {
+    trackAnalyticsEvent('page_view', {
+      page_title: 'Blog',
+      page_location: window.location.href,
+      page_path: '/blog',
+    });
+  }, []);
 
   // Fetch blog posts
   const { data: postsData, error: postsError, isLoading: postsLoading } = useSWR(

@@ -1,10 +1,16 @@
 import React, { useEffect } from 'react';
 import SEO from '../components/common/SEO';
 import { CheckCircle } from 'lucide-react';
+import { trackAnalyticsEvent } from '../utils/analytics';
 
 const About: React.FC = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
+    trackAnalyticsEvent('page_view', {
+      page_title: 'About',
+      page_location: window.location.href,
+      page_path: '/about',
+    });
   }, []);
   const features = [
     'Quiz Zone: Challenge yourself with multiple-choice questions across various categories and levels.',
