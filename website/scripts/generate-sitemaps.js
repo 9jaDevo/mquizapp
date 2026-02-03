@@ -27,16 +27,54 @@ if (!fs.existsSync(PUBLIC_DIR)) {
 }
 
 /**
- * Generate Blog Sitemap
- * Note: In production, you'd fetch from API
+ * Fetch blog posts from API
  */
-const generateBlogSitemap = () => {
-    // Sample blog entries - in production, fetch from API
-    const blogEntries = [
-        { slug: 'getting-started-with-mquiz', updated: '2024-01-15', priority: '0.8' },
-        { slug: 'tips-for-effective-learning', updated: '2024-01-10', priority: '0.8' },
-        { slug: 'gamification-in-education', updated: '2024-01-05', priority: '0.7' },
-    ];
+const fetchBlogPosts = async () => {
+    try {
+        const apiUrl = 'https://app.mquiz.uk/api/blog/posts?limit=100';
+        const response = await fetch(apiUrl);
+
+        if (!response.ok) {
+            console.warn(`⚠ API returned ${response.status}, using fallback`);
+            return null;
+        }
+
+        const data = await response.json();
+
+        if (!data.error && data.data && data.data.posts) {
+            return data.data.posts.map(post => ({
+                slug: post.slug,
+                updated: post.updated_at ? post.updated_at.split(' ')[0] : new Date().toISOString().split('T')[0],
+                priority: '0.8'
+            }));
+        }
+
+        return null;
+    } catch (error) {
+        console.warn('⚠ Failed to fetch blog posts from API:', error.message);
+        return null;
+    }
+};
+
+/**
+ * Generate Blog Sitemap
+ * Fetches from API or uses fallback
+ */
+const generateBlogSitemap = async () => {
+    // Try to fetch from API first
+    let blogEntries = await fetchBlogPosts();
+
+    // Fallback to sample entries if API fails
+    if (!blogEntries || blogEntries.length === 0) {
+        console.warn('⚠ Using fallback blog entries');
+        blogEntries = [
+            { slug: 'getting-started-with-mquiz', updated: '2024-01-15', priority: '0.8' },
+            { slug: 'tips-for-effective-learning', updated: '2024-01-10', priority: '0.8' },
+            { slug: 'gamification-in-education', updated: '2024-01-05', priority: '0.7' },
+        ];
+    } else {
+        console.log(`✓ Fetched ${blogEntries.length} blog posts from API`);
+    }
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <?xml-stylesheet type="text/xsl" href="${WEBSITE_URL}/sitemap.xsl"?>
@@ -181,26 +219,28 @@ Request-rate: 30/60
 /**
  * Main execution
  */
-try {
-    console.log('🚀 Generating SEO sitemaps...\n');
+(async () => {
+    try {
+        console.log('🚀 Generating SEO sitemaps...\n');
 
-    const blogSitemap = generateBlogSitemap();
-    const pagesSitemap = generatePagesSitemap();
+        const blogSitemap = await generateBlogSitemap();
+        const pagesSitemap = generatePagesSitemap();
 
-    generateSitemapIndex([blogSitemap, pagesSitemap]);
-    generateRobotsTxt();
+        generateSitemapIndex([blogSitemap, pagesSitemap]);
+        generateRobotsTxt();
 
-    console.log('\n✓ All sitemaps generated successfully!');
-    console.log(`\nNext steps:`);
-    console.log(`1. Submit to Google Search Console: ${WEBSITE_URL}/sitemap.xml`);
-    console.log(`2. Submit to Bing Webmaster Tools: ${WEBSITE_URL}/sitemap.xml`);
-    console.log(`3. Verify robots.txt: ${WEBSITE_URL}/robots.txt`);
-    console.log(`\nFiles created:`);
-    console.log(`  - ${PUBLIC_DIR}/sitemap.xml`);
-    console.log(`  - ${PUBLIC_DIR}/sitemap-blog.xml`);
-    console.log(`  - ${PUBLIC_DIR}/sitemap-pages.xml`);
-    console.log(`  - ${PUBLIC_DIR}/robots.txt`);
-} catch (error) {
-    console.error('✗ Sitemap generation failed:', error.message);
-    process.exit(1);
-}
+        console.log('\n✓ All sitemaps generated successfully!');
+        console.log(`\nNext steps:`);
+        console.log(`1. Submit to Google Search Console: ${WEBSITE_URL}/sitemap.xml`);
+        console.log(`2. Submit to Bing Webmaster Tools: ${WEBSITE_URL}/sitemap.xml`);
+        console.log(`3. Verify robots.txt: ${WEBSITE_URL}/robots.txt`);
+        console.log(`\nFiles created:`);
+        console.log(`  - ${PUBLIC_DIR}/sitemap.xml`);
+        console.log(`  - ${PUBLIC_DIR}/sitemap-blog.xml`);
+        console.log(`  - ${PUBLIC_DIR}/sitemap-pages.xml`);
+        console.log(`  - ${PUBLIC_DIR}/robots.txt`);
+    } catch (error) {
+        console.error('✗ Sitemap generation failed:', error.message);
+        process.exit(1);
+    }
+})();

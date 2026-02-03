@@ -27,6 +27,15 @@ const createOGImage = () => {
         fs.mkdirSync(publicDir, { recursive: true });
     }
 
+    const ogPath = path.join(publicDir, 'og-image.jpg');
+
+    // Skip if branded image already exists
+    if (fs.existsSync(ogPath)) {
+        const stats = fs.statSync(ogPath);
+        console.log(`⏭ Skipping og-image.jpg (branded version exists - ${(stats.size / 1024).toFixed(2)}KB)`);
+        return ogPath;
+    }
+
     // Create a minimal but valid JPEG file (1200x630px, blue gradient)
     // This is a pre-generated valid JPEG header + minimal image data
     const jpegData = Buffer.from([
@@ -60,7 +69,6 @@ const createOGImage = () => {
         0x00, 0x00, 0x3F, 0x00, 0xFB, 0xD3, 0xFF, 0xD9
     ]);
 
-    const ogPath = path.join(publicDir, 'og-image.jpg');
     fs.writeFileSync(ogPath, jpegData);
     console.log(`✓ Created og-image.jpg (1200x630px) - ${(jpegData.length / 1024).toFixed(2)}KB`);
 
@@ -70,6 +78,14 @@ const createOGImage = () => {
 // Create basic PNG icons (just blue squares with minimal PNG structure)
 const createPNGIcon = (size) => {
     const publicDir = path.join(__dirname, '../public');
+    const iconPath = path.join(publicDir, `icon-${size}.png`);
+
+    // Skip if branded icon already exists
+    if (fs.existsSync(iconPath)) {
+        const stats = fs.statSync(iconPath);
+        console.log(`⏭ Skipping icon-${size}.png (branded version exists - ${(stats.size / 1024).toFixed(2)}KB)`);
+        return iconPath;
+    }
 
     // Simple valid PNG: solid blue square
     // PNG signature + IHDR chunk (width x height) + minimal IDAT + IEND
@@ -106,7 +122,6 @@ const createPNGIcon = (size) => {
     };
 
     const pngData = createPNG(size, size);
-    const iconPath = path.join(publicDir, `icon-${size}.png`);
     fs.writeFileSync(iconPath, pngData);
     console.log(`✓ Created icon-${size}.png - ${(pngData.length / 1024).toFixed(2)}KB`);
 };

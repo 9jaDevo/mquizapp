@@ -3,6 +3,14 @@
  * Run this in the browser console to verify GA4 is working
  */
 
+// TypeScript declarations for Google Analytics
+declare global {
+    interface Window {
+        gtag: (...args: any[]) => void;
+        dataLayer: any[];
+    }
+}
+
 // Check if GA is loaded
 console.log('=== Google Analytics 4 Verification ===\n');
 
