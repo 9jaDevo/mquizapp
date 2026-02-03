@@ -10,7 +10,7 @@ import { getBlogPosts, getBlogCategories } from '../api/blog';
 import type { BlogCategory } from '../api/blog';
 import { Loader2 } from 'lucide-react';
 import { trackAnalyticsEvent } from '../utils/analytics';
-import { generateBlogTitle, generateBlogDescription, generateBlogKeywords, getCategoryDisplayName } from '../utils/seoConfig';
+import { generateBlogTitle, generateBlogDescription, generateBlogKeywords } from '../utils/seoConfig';
 
 const Blog: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);

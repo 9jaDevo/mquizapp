@@ -7,6 +7,7 @@ import GlassButton from '../components/common/GlassButton';
 import { detectPlatform, getPlatformName, type Platform } from '../utils/platformDetection';
 import { STORE_URLS, APP_INFO } from '../config/stores';
 import { trackAnalyticsEvent } from '../utils/analytics';
+import { seoConfig } from '../utils/seoConfig';
 
 const Download: React.FC = () => {
   const [platform, setPlatform] = useState<Platform>('unknown');

@@ -96,9 +96,11 @@ const Features: React.FC = () => {
   return (
     <>
       <SEO
-        title="mQuiz Features - Discover What Makes Us Special"
-        description="Explore mQuiz's powerful features including gamified learning, quiz battles, progress tracking, and real rewards."
+        title={seoConfig.features.title}
+        description={seoConfig.features.description}
+        keywords={seoConfig.features.keywords}
         url="https://mquiz.uk/features"
+        type={seoConfig.features.type}
       />
       <div className="container-custom section-padding">
         {/* Hero Section */}

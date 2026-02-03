@@ -1,6 +1,6 @@
 # robots.txt for mQuiz
 # Generated for SEO optimization
-# Last updated: 2026-02-03T12:31:14.544Z
+# Last updated: 2026-02-03T12:35:56.585Z
 
 # Allow all bots
 User-agent: *
@@ -29,5 +29,5 @@ Sitemap: https://mquiz.uk/sitemap-pages.xml
 Request-rate: 30/60
 
 # Comments
-# Last updated: 2026-02-03T12:31:14.544Z
+# Last updated: 2026-02-03T12:35:56.585Z
 # Next update: automatic with each deploy
