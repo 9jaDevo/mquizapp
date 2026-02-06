@@ -188,6 +188,11 @@ class Api extends REST_Controller
                         $default_web_language = $get_web_default_language['name'];
                     }
 
+                    // Detect user's location from IP address
+                    $this->load->library('Geolocation');
+                    $user_ip = $this->geolocation->getUserIP();
+                    $location = $this->geolocation->detectCountryFromIP($user_ip);
+
                     $data = array(
                         'firebase_id' => $firebase_id,
                         'name' => $name,
@@ -202,7 +207,11 @@ class Api extends REST_Controller
                         'status' => $status,
                         'date_registered' => $this->toDateTime,
                         'app_language' => $default_app_language ?? 'english',
-                        'web_language' => $default_web_language ?? 'english'
+                        'web_language' => $default_web_language ?? 'english',
+                        'country_code' => $location['country_code'] ?? null,
+                        'country_name' => $location['country_name'] ?? null,
+                        'continent' => $location['continent'] ?? null,
+                        'region_auto_detected' => 1
                     );
                     $this->db->insert('tbl_users', $data);
                     $insert_id = $this->db->insert_id();
@@ -1516,14 +1525,24 @@ class Api extends REST_Controller
 
             $offset = ($this->post('offset')) ? $this->post('offset') : 0;
             $limit = ($this->post('limit')) ? $this->post('limit') : 25;
+            $scope = ($this->post('scope')) ? $this->post('scope') : 'world';
+            $filter_value = ($this->post('filter_value')) ? $this->post('filter_value') : '';
 
             $month = date('m', strtotime($this->toDate));
             $year = date('Y', strtotime($this->toDate));
 
+            // Build scope filter
+            $scope_where = "";
+            if ($scope === 'country' && !empty($filter_value)) {
+                $scope_where = "AND u.country_code = '" . $this->db->escape_str($filter_value) . "'";
+            } elseif ($scope === 'region' && !empty($filter_value)) {
+                $scope_where = "AND u.continent = '" . $this->db->escape_str($filter_value) . "'";
+            }
+
             $sort = 'r.user_rank';
             $order = 'ASC';
 
-            $sub_query = "SELECT s.*, @user_rank := @user_rank + 1 user_rank FROM ( SELECT m.id, user_id,u.email, u.name,u.profile, SUM(score) as score,date_created, MAX(last_updated) as last_updated FROM tbl_leaderboard_monthly m join tbl_users u on u.id = m.user_id WHERE u.status=1 AND YEAR(last_updated)=$year AND MONTH(last_updated)=$month AND u.status=1 GROUP BY user_id) s, (SELECT @user_rank := 0) init ORDER BY score DESC, last_updated ASC";
+            $sub_query = "SELECT s.*, @user_rank := @user_rank + 1 user_rank FROM ( SELECT m.id, user_id,u.email, u.name,u.profile, u.country_code, SUM(score) as score,date_created, MAX(last_updated) as last_updated FROM tbl_leaderboard_monthly m join tbl_users u on u.id = m.user_id WHERE u.status=1 AND YEAR(last_updated)=$year AND MONTH(last_updated)=$month {$scope_where} GROUP BY user_id) s, (SELECT @user_rank := 0) init ORDER BY score DESC, last_updated ASC";
 
             $this->db->reset_query();
             $this->db->from("($sub_query) r");
@@ -1586,6 +1605,7 @@ class Api extends REST_Controller
                             'email' => '',
                             'name' => '',
                             'profile' => '',
+                            'country_code' => '',
                         );
                         $user_rank = $my_rank;
                     }
@@ -1601,6 +1621,7 @@ class Api extends REST_Controller
                         'email' => '',
                         'name' => '',
                         'profile' => '',
+                        'country_code' => '',
                     ),
                     'other_users_rank' => $data,
                     'top_three_ranks' => $topThreeUsersData ?? array()
@@ -1749,11 +1770,21 @@ class Api extends REST_Controller
 
             $offset = ($this->post('offset')) ? $this->post('offset') : 0;
             $limit = ($this->post('limit')) ? $this->post('limit') : 25;
+            $scope = ($this->post('scope')) ? $this->post('scope') : 'world';
+            $filter_value = ($this->post('filter_value')) ? $this->post('filter_value') : '';
+
+            // Build scope filter
+            $scope_where = "";
+            if ($scope === 'country' && !empty($filter_value)) {
+                $scope_where = "AND u.country_code = '" . $this->db->escape_str($filter_value) . "'";
+            } elseif ($scope === 'region' && !empty($filter_value)) {
+                $scope_where = "AND u.continent = '" . $this->db->escape_str($filter_value) . "'";
+            }
 
             $sort = 'r.user_rank';
             $order = 'ASC';
 
-            $sub_query = "(SELECT s.*, @user_rank := @user_rank + 1 AS user_rank FROM (SELECT m.id, m.user_id,u.email, u.name,u.profile, SUM(m.score) AS score,MAX(m.last_updated) as last_updated FROM tbl_leaderboard_monthly m JOIN tbl_users u ON u.id = m.user_id WHERE u.status = 1 GROUP BY m.user_id) s, (SELECT @user_rank := 0) init ORDER BY s.score DESC, s.last_updated ASC)";
+            $sub_query = "(SELECT s.*, @user_rank := @user_rank + 1 AS user_rank FROM (SELECT m.id, m.user_id,u.email, u.name,u.profile,u.country_code, SUM(m.score) AS score,MAX(m.last_updated) as last_updated FROM tbl_leaderboard_monthly m JOIN tbl_users u ON u.id = m.user_id WHERE u.status = 1 {$scope_where} GROUP BY m.user_id) s, (SELECT @user_rank := 0) init ORDER BY s.score DESC, s.last_updated ASC)";
             $this->db->select('r.*');
             $this->db->from("$sub_query r", false);
 
@@ -1790,7 +1821,7 @@ class Api extends REST_Controller
                         }
                     }
 
-                    $my_rank = $this->myGlobalRank($user_id);
+                    $my_rank = $this->myGlobalRank($user_id, $scope, $filter_value);
 
                     if (!empty($my_rank)) {
                         if (filter_var($my_rank['profile'], FILTER_VALIDATE_URL) === false) {
@@ -1806,6 +1837,7 @@ class Api extends REST_Controller
                             'email' => '',
                             'name' => '',
                             'profile' => '',
+                            'country_code' => '',
                         );
                         $user_rank = $my_rank;
                     }
@@ -1820,6 +1852,7 @@ class Api extends REST_Controller
                         'email' => '',
                         'name' => '',
                         'profile' => '',
+                        'country_code' => '',
                     ),
                     'other_users_rank' => $data,
                     'top_three_ranks' => $topThreeUsersData ?? array()
@@ -6714,11 +6747,19 @@ class Api extends REST_Controller
         }
     }
 
-    function myGlobalRank($user_id)
+    function myGlobalRank($user_id, $scope = 'world', $filter_value = '')
     {
+        // Build scope filter
+        $scope_where = "";
+        if ($scope === 'country' && !empty($filter_value)) {
+            $scope_where = "AND u.country_code = '" . $this->db->escape_str($filter_value) . "'";
+        } elseif ($scope === 'region' && !empty($filter_value)) {
+            $scope_where = "AND u.continent = '" . $this->db->escape_str($filter_value) . "'";
+        }
+
         $this->db->reset_query();
         $this->db->select('r.*');
-        $this->db->from("(SELECT s.*, @user_rank := @user_rank + 1 AS user_rank FROM (SELECT m.id, m.user_id,u.email, u.name,u.status,u.profile, SUM(m.score) AS score,MAX(last_updated) as last_updated FROM tbl_leaderboard_monthly m JOIN tbl_users u ON u.id = m.user_id WHERE u.status=1 GROUP BY m.user_id) s, (SELECT @user_rank := 0) init ORDER BY s.score DESC,s.last_updated ASC) r", false);
+        $this->db->from("(SELECT s.*, @user_rank := @user_rank + 1 AS user_rank FROM (SELECT m.id, m.user_id,u.email, u.name,u.status,u.profile,u.country_code, SUM(m.score) AS score,MAX(last_updated) as last_updated FROM tbl_leaderboard_monthly m JOIN tbl_users u ON u.id = m.user_id WHERE u.status=1 {$scope_where} GROUP BY m.user_id) s, (SELECT @user_rank := 0) init ORDER BY s.score DESC,s.last_updated ASC) r", false);
         $this->db->where('r.user_id', $user_id);
         $this->db->limit(1);
         $my_rank_sql = $this->db->get();
@@ -7652,5 +7693,745 @@ class Api extends REST_Controller
         }
 
         $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    // ========================================
+    // ENGAGEMENT TIME TRACKING ENDPOINTS
+    // ========================================
+
+    /**
+     * Submit user session duration
+     * POST /Api/submit_session_duration
+     * 
+     * @param string access_token User's API token
+     * @param string session_start Session start datetime (Y-m-d H:i:s)
+     * @param string session_end Session end datetime (Y-m-d H:i:s)
+     * @param int duration_seconds Session duration in seconds
+     */
+    public function submit_session_duration_post()
+    {
+        try {
+            $is_user = $this->verify_token();
+            if (!$is_user['error']) {
+                $user_id = $is_user['user_id'];
+            } else {
+                $this->response($is_user, REST_Controller::HTTP_OK);
+                return false;
+            }
+
+            $session_start = $this->post('session_start');
+            $session_end = $this->post('session_end');
+            $duration_seconds = (int) $this->post('duration_seconds');
+
+            // Validation
+            if (empty($session_start) || empty($session_end) || $duration_seconds <= 0) {
+                $response['error'] = true;
+                $response['message'] = 'Invalid session data';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            // Prevent fraud: max 12 hours per session
+            if ($duration_seconds > 43200) {
+                $response['error'] = true;
+                $response['message'] = 'Session duration exceeds maximum limit';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            // Insert session record
+            $session_data = array(
+                'user_id' => $user_id,
+                'session_start' => $session_start,
+                'session_end' => $session_end,
+                'duration_seconds' => $duration_seconds,
+                'date_created' => date('Y-m-d', strtotime($session_end))
+            );
+            $this->db->insert('tbl_user_engagement', $session_data);
+
+            // Update engagement leaderboards
+            $this->update_engagement_leaderboards($user_id, $duration_seconds, $session_end);
+
+            $response['error'] = false;
+            $response['message'] = 'Session recorded successfully';
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = 'Failed to record session';
+            $response['error_msg'] = $e->getMessage();
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    /**
+     * Update user location manually
+     * POST /Api/update_user_location
+     * 
+     * @param string access_token User's API token
+     * @param string country_code ISO 3166-1 alpha-2 country code
+     */
+    public function update_user_location_post()
+    {
+        try {
+            $is_user = $this->verify_token();
+            if (!$is_user['error']) {
+                $user_id = $is_user['user_id'];
+            } else {
+                $this->response($is_user, REST_Controller::HTTP_OK);
+                return false;
+            }
+
+            $country_code = strtoupper($this->post('country_code'));
+
+            if (empty($country_code)) {
+                $response['error'] = true;
+                $response['message'] = 'Country code is required';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            // Validate country code and get info
+            $this->load->library('Geolocation');
+            $country_info = $this->geolocation->getCountryInfo($country_code);
+
+            if (!$country_info) {
+                $response['error'] = true;
+                $response['message'] = 'Invalid country code';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            // Update user location
+            $update_data = array(
+                'country_code' => $country_info->country_code,
+                'country_name' => $country_info->country_name,
+                'continent' => $country_info->continent,
+                'region_auto_detected' => 0
+            );
+
+            $this->db->where('id', $user_id)->update('tbl_users', $update_data);
+
+            $response['error'] = false;
+            $response['message'] = 'Location updated successfully';
+            $response['data'] = $update_data;
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = 'Failed to update location';
+            $response['error_msg'] = $e->getMessage();
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    /**
+     * Get weekly engagement leaderboard
+     * POST /Api/get_weekly_engagement_leaderboard
+     */
+    public function get_weekly_engagement_leaderboard_post()
+    {
+        try {
+            $is_user = $this->verify_token();
+            if (!$is_user['error']) {
+                $user_id = $is_user['user_id'];
+            } else {
+                $this->response($is_user, REST_Controller::HTTP_OK);
+                return false;
+            }
+
+            $offset = ($this->post('offset')) ? $this->post('offset') : 0;
+            $limit = ($this->post('limit')) ? $this->post('limit') : 25;
+            $scope = ($this->post('scope')) ? $this->post('scope') : 'world';
+            $filter_value = $this->post('filter_value');
+
+            $week_number = date('W');
+            $year = date('Y');
+
+            // Build scope filter
+            $scope_where = '';
+            if ($scope === 'country' && !empty($filter_value)) {
+                $scope_where = "AND u.country_code = '{$filter_value}'";
+            } elseif ($scope === 'region' && !empty($filter_value)) {
+                $scope_where = "AND u.continent = '{$filter_value}'";
+            }
+
+            $sub_query = "(SELECT s.*, @user_rank := @user_rank + 1 AS user_rank FROM (SELECT e.id, e.user_id, u.email, u.name, u.profile, u.country_code, u.continent, e.total_minutes, e.last_updated FROM tbl_leaderboard_engagement_weekly e JOIN tbl_users u ON u.id = e.user_id WHERE u.status = 1 AND e.week_number = {$week_number} AND e.year = {$year} {$scope_where} GROUP BY e.user_id) s, (SELECT @user_rank := 0) init ORDER BY s.total_minutes DESC, s.last_updated ASC)";
+
+            $this->db->select('r.*');
+            $this->db->from("$sub_query r", false);
+
+            $total = $this->db->count_all_results('', false);
+            $this->db->order_by('r.user_rank', 'ASC');
+            if ($limit) {
+                $this->db->limit($limit, $offset);
+            }
+
+            $result = $this->db->get();
+            $data = $result->result_array();
+
+            if (!empty($data)) {
+                for ($i = 0; $i < count($data); $i++) {
+                    if (filter_var($data[$i]['profile'], FILTER_VALIDATE_URL) === false) {
+                        $data[$i]['profile'] = ($data[$i]['profile']) ? base_url() . USER_IMG_PATH . $data[$i]['profile'] : '';
+                    }
+                }
+
+                // Get top 3
+                $this->db->reset_query();
+                $this->db->from("($sub_query) r");
+                $this->db->select('r.*');
+                $this->db->order_by('r.user_rank', 'ASC');
+                $this->db->limit(3);
+                $top_three_result = $this->db->get();
+                $topThreeUsersData = $top_three_result->result_array();
+
+                for ($i = 0; $i < count($topThreeUsersData); $i++) {
+                    if (filter_var($topThreeUsersData[$i]['profile'], FILTER_VALIDATE_URL) === false) {
+                        $topThreeUsersData[$i]['profile'] = ($topThreeUsersData[$i]['profile']) ? base_url() . USER_IMG_PATH . $topThreeUsersData[$i]['profile'] : '';
+                    }
+                }
+
+                // Get user's rank
+                $my_rank = $this->myEngagementRank($user_id, 'weekly', $scope, $filter_value);
+                if (!empty($my_rank)) {
+                    if (filter_var($my_rank['profile'], FILTER_VALIDATE_URL) === false) {
+                        $my_rank['profile'] = (!empty($my_rank['profile'])) ? base_url() . USER_IMG_PATH . $my_rank['profile'] : '';
+                    }
+                    $user_rank = $my_rank;
+                } else {
+                    $user_rank = array(
+                        'user_id' => $user_id,
+                        'total_minutes' => '0',
+                        'user_rank' => '0',
+                        'email' => '',
+                        'name' => '',
+                        'profile' => '',
+                    );
+                }
+
+                $response['error'] = false;
+                $response['total'] = "$total";
+                $response['data'] = array(
+                    'my_rank' => $user_rank,
+                    'other_users_rank' => $data,
+                    'top_three_ranks' => $topThreeUsersData ?? array()
+                );
+            } else {
+                $response['error'] = false;
+                $response['total'] = "0";
+                $response['data'] = array(
+                    'my_rank' => array(
+                        'user_id' => $user_id,
+                        'total_minutes' => '0',
+                        'user_rank' => '0',
+                        'email' => '',
+                        'name' => '',
+                        'profile' => '',
+                    ),
+                    'other_users_rank' => array(),
+                    'top_three_ranks' => array()
+                );
+            }
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = 'Failed to fetch leaderboard';
+            $response['error_msg'] = $e->getMessage();
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    /**
+     * Get monthly engagement leaderboard
+     * POST /Api/get_monthly_engagement_leaderboard
+     */
+    public function get_monthly_engagement_leaderboard_post()
+    {
+        try {
+            $is_user = $this->verify_token();
+            if (!$is_user['error']) {
+                $user_id = $is_user['user_id'];
+            } else {
+                $this->response($is_user, REST_Controller::HTTP_OK);
+                return false;
+            }
+
+            $offset = ($this->post('offset')) ? $this->post('offset') : 0;
+            $limit = ($this->post('limit')) ? $this->post('limit') : 25;
+            $scope = ($this->post('scope')) ? $this->post('scope') : 'world';
+            $filter_value = $this->post('filter_value');
+
+            $month = date('m');
+            $year = date('Y');
+
+            // Build scope filter
+            $scope_where = '';
+            if ($scope === 'country' && !empty($filter_value)) {
+                $scope_where = "AND u.country_code = '{$filter_value}'";
+            } elseif ($scope === 'region' && !empty($filter_value)) {
+                $scope_where = "AND u.continent = '{$filter_value}'";
+            }
+
+            $sub_query = "(SELECT s.*, @user_rank := @user_rank + 1 AS user_rank FROM (SELECT e.id, e.user_id, u.email, u.name, u.profile, u.country_code, u.continent, e.total_minutes, e.last_updated FROM tbl_leaderboard_engagement_monthly e JOIN tbl_users u ON u.id = e.user_id WHERE u.status = 1 AND e.month = {$month} AND e.year = {$year} {$scope_where} GROUP BY e.user_id) s, (SELECT @user_rank := 0) init ORDER BY s.total_minutes DESC, s.last_updated ASC)";
+
+            $this->db->select('r.*');
+            $this->db->from("$sub_query r", false);
+
+            $total = $this->db->count_all_results('', false);
+            $this->db->order_by('r.user_rank', 'ASC');
+            if ($limit) {
+                $this->db->limit($limit, $offset);
+            }
+
+            $result = $this->db->get();
+            $data = $result->result_array();
+
+            if (!empty($data)) {
+                for ($i = 0; $i < count($data); $i++) {
+                    if (filter_var($data[$i]['profile'], FILTER_VALIDATE_URL) === false) {
+                        $data[$i]['profile'] = ($data[$i]['profile']) ? base_url() . USER_IMG_PATH . $data[$i]['profile'] : '';
+                    }
+                }
+
+                // Get top 3
+                $this->db->reset_query();
+                $this->db->from("($sub_query) r");
+                $this->db->select('r.*');
+                $this->db->order_by('r.user_rank', 'ASC');
+                $this->db->limit(3);
+                $top_three_result = $this->db->get();
+                $topThreeUsersData = $top_three_result->result_array();
+
+                for ($i = 0; $i < count($topThreeUsersData); $i++) {
+                    if (filter_var($topThreeUsersData[$i]['profile'], FILTER_VALIDATE_URL) === false) {
+                        $topThreeUsersData[$i]['profile'] = ($topThreeUsersData[$i]['profile']) ? base_url() . USER_IMG_PATH . $topThreeUsersData[$i]['profile'] : '';
+                    }
+                }
+
+                // Get user's rank
+                $my_rank = $this->myEngagementRank($user_id, 'monthly', $scope, $filter_value);
+                if (!empty($my_rank)) {
+                    if (filter_var($my_rank['profile'], FILTER_VALIDATE_URL) === false) {
+                        $my_rank['profile'] = (!empty($my_rank['profile'])) ? base_url() . USER_IMG_PATH . $my_rank['profile'] : '';
+                    }
+                    $user_rank = $my_rank;
+                } else {
+                    $user_rank = array(
+                        'user_id' => $user_id,
+                        'total_minutes' => '0',
+                        'user_rank' => '0',
+                        'email' => '',
+                        'name' => '',
+                        'profile' => '',
+                    );
+                }
+
+                $response['error'] = false;
+                $response['total'] = "$total";
+                $response['data'] = array(
+                    'my_rank' => $user_rank,
+                    'other_users_rank' => $data,
+                    'top_three_ranks' => $topThreeUsersData ?? array()
+                );
+            } else {
+                $response['error'] = false;
+                $response['total'] = "0";
+                $response['data'] = array(
+                    'my_rank' => array(
+                        'user_id' => $user_id,
+                        'total_minutes' => '0',
+                        'user_rank' => '0',
+                        'email' => '',
+                        'name' => '',
+                        'profile' => '',
+                    ),
+                    'other_users_rank' => array(),
+                    'top_three_ranks' => array()
+                );
+            }
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = 'Failed to fetch leaderboard';
+            $response['error_msg'] = $e->getMessage();
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    /**
+     * Get all-time engagement leaderboard
+     * POST /Api/get_alltime_engagement_leaderboard
+     */
+    public function get_alltime_engagement_leaderboard_post()
+    {
+        try {
+            $is_user = $this->verify_token();
+            if (!$is_user['error']) {
+                $user_id = $is_user['user_id'];
+            } else {
+                $this->response($is_user, REST_Controller::HTTP_OK);
+                return false;
+            }
+
+            $offset = ($this->post('offset')) ? $this->post('offset') : 0;
+            $limit = ($this->post('limit')) ? $this->post('limit') : 25;
+            $scope = ($this->post('scope')) ? $this->post('scope') : 'world';
+            $filter_value = $this->post('filter_value');
+
+            // Build scope filter
+            $scope_where = '';
+            if ($scope === 'country' && !empty($filter_value)) {
+                $scope_where = "AND u.country_code = '{$filter_value}'";
+            } elseif ($scope === 'region' && !empty($filter_value)) {
+                $scope_where = "AND u.continent = '{$filter_value}'";
+            }
+
+            $sub_query = "(SELECT s.*, @user_rank := @user_rank + 1 AS user_rank FROM (SELECT e.id, e.user_id, u.email, u.name, u.profile, u.country_code, u.continent, e.total_minutes, e.last_updated FROM tbl_leaderboard_engagement_alltime e JOIN tbl_users u ON u.id = e.user_id WHERE u.status = 1 {$scope_where} GROUP BY e.user_id) s, (SELECT @user_rank := 0) init ORDER BY s.total_minutes DESC, s.last_updated ASC)";
+
+            $this->db->select('r.*');
+            $this->db->from("$sub_query r", false);
+
+            $total = $this->db->count_all_results('', false);
+            $this->db->order_by('r.user_rank', 'ASC');
+            if ($limit) {
+                $this->db->limit($limit, $offset);
+            }
+
+            $result = $this->db->get();
+            $data = $result->result_array();
+
+            if (!empty($data)) {
+                for ($i = 0; $i < count($data); $i++) {
+                    if (filter_var($data[$i]['profile'], FILTER_VALIDATE_URL) === false) {
+                        $data[$i]['profile'] = ($data[$i]['profile']) ? base_url() . USER_IMG_PATH . $data[$i]['profile'] : '';
+                    }
+                }
+
+                // Get top 3
+                $this->db->reset_query();
+                $this->db->from("($sub_query) r");
+                $this->db->select('r.*');
+                $this->db->order_by('r.user_rank', 'ASC');
+                $this->db->limit(3);
+                $top_three_result = $this->db->get();
+                $topThreeUsersData = $top_three_result->result_array();
+
+                for ($i = 0; $i < count($topThreeUsersData); $i++) {
+                    if (filter_var($topThreeUsersData[$i]['profile'], FILTER_VALIDATE_URL) === false) {
+                        $topThreeUsersData[$i]['profile'] = ($topThreeUsersData[$i]['profile']) ? base_url() . USER_IMG_PATH . $topThreeUsersData[$i]['profile'] : '';
+                    }
+                }
+
+                // Get user's rank
+                $my_rank = $this->myEngagementRank($user_id, 'alltime', $scope, $filter_value);
+                if (!empty($my_rank)) {
+                    if (filter_var($my_rank['profile'], FILTER_VALIDATE_URL) === false) {
+                        $my_rank['profile'] = (!empty($my_rank['profile'])) ? base_url() . USER_IMG_PATH . $my_rank['profile'] : '';
+                    }
+                    $user_rank = $my_rank;
+                } else {
+                    $user_rank = array(
+                        'user_id' => $user_id,
+                        'total_minutes' => '0',
+                        'user_rank' => '0',
+                        'email' => '',
+                        'name' => '',
+                        'profile' => '',
+                    );
+                }
+
+                $response['error'] = false;
+                $response['total'] = "$total";
+                $response['data'] = array(
+                    'my_rank' => $user_rank,
+                    'other_users_rank' => $data,
+                    'top_three_ranks' => $topThreeUsersData ?? array()
+                );
+            } else {
+                $response['error'] = false;
+                $response['total'] = "0";
+                $response['data'] = array(
+                    'my_rank' => array(
+                        'user_id' => $user_id,
+                        'total_minutes' => '0',
+                        'user_rank' => '0',
+                        'email' => '',
+                        'name' => '',
+                        'profile' => '',
+                    ),
+                    'other_users_rank' => array(),
+                    'top_three_ranks' => array()
+                );
+            }
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = 'Failed to fetch leaderboard';
+            $response['error_msg'] = $e->getMessage();
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    /**
+     * Get weekly score leaderboard with scope filtering
+     * Scope can be: world, country, or region (continent)
+     */
+    public function get_weekly_score_leaderboard_post()
+    {
+        try {
+            $is_user = $this->verify_token();
+            if (!$is_user['error']) {
+                $user_id = $is_user['user_id'];
+                $firebase_id = $is_user['firebase_id'];
+            } else {
+                $this->response($is_user, REST_Controller::HTTP_OK);
+                return false;
+            }
+
+            $offset = ($this->post('offset')) ? $this->post('offset') : 0;
+            $limit = ($this->post('limit')) ? $this->post('limit') : 25;
+            $scope = ($this->post('scope')) ? $this->post('scope') : 'world';
+            $filter_value = ($this->post('filter_value')) ? $this->post('filter_value') : '';
+
+            $week_number = date('W', strtotime($this->toDate));
+            $year = date('Y', strtotime($this->toDate));
+
+            // Build scope filter
+            $scope_where = "";
+            if ($scope === 'country' && !empty($filter_value)) {
+                $scope_where = "AND u.country_code = '" . $this->db->escape_str($filter_value) . "'";
+            } elseif ($scope === 'region' && !empty($filter_value)) {
+                $scope_where = "AND u.continent = '" . $this->db->escape_str($filter_value) . "'";
+            }
+
+            $sort = 'r.user_rank';
+            $order = 'ASC';
+
+            $sub_query = "SELECT s.*, @user_rank := @user_rank + 1 user_rank FROM ( SELECT w.id, user_id, u.email, u.name, u.profile, u.country_code, SUM(score) as score, date_created, MAX(last_updated) as last_updated FROM tbl_leaderboard_weekly w join tbl_users u on u.id = w.user_id WHERE u.status=1 AND w.week_number=$week_number AND w.year=$year {$scope_where} GROUP BY user_id) s, (SELECT @user_rank := 0) init ORDER BY score DESC, last_updated ASC";
+
+            $this->db->reset_query();
+            $this->db->from("($sub_query) r");
+
+            $total = $this->db->count_all_results('', false);
+
+            $this->db->select('r.*');
+            $this->db->order_by($sort, $order);
+
+            if ($limit) {
+                $this->db->limit($limit, $offset);
+            }
+
+            $other_user_rank_sql = $this->db->get();
+            $data = $other_user_rank_sql->result_array();
+
+            if ($user_id) {
+                if (!empty($data)) {
+                    for ($i = 0; $i < count($data); $i++) {
+                        if (filter_var($data[$i]['profile'], FILTER_VALIDATE_URL) === false) {
+                            $data[$i]['profile'] = ($data[$i]['profile']) ? base_url() . USER_IMG_PATH . $data[$i]['profile'] : '';
+                        }
+                    }
+
+                    $this->db->reset_query();
+                    $this->db->from("($sub_query) r");
+                    $this->db->select('r.*');
+                    $this->db->order_by($sort, $order);
+                    $this->db->limit(3);
+                    $topThree_sql = $this->db->get();
+                    $topThreeUsersData = $topThree_sql->result_array();
+
+                    for ($i = 0; $i < count($topThreeUsersData); $i++) {
+                        if (filter_var($topThreeUsersData[$i]['profile'], FILTER_VALIDATE_URL) === false) {
+                            $topThreeUsersData[$i]['profile'] = ($topThreeUsersData[$i]['profile']) ? base_url() . USER_IMG_PATH . $topThreeUsersData[$i]['profile'] : '';
+                        }
+                    }
+
+                    $this->db->reset_query();
+                    $this->db->from("($sub_query) r");
+                    $this->db->select('r.*');
+                    $this->db->where('r.user_id', $user_id);
+                    $this->db->limit(1);
+                    $user_rank_sql = $this->db->get();
+                    $my_rank = $user_rank_sql->row_array();
+
+                    if (!empty($my_rank)) {
+                        if (filter_var($my_rank['profile'], FILTER_VALIDATE_URL) === false) {
+                            $my_rank['profile'] = (!empty($my_rank['profile'])) ? base_url() . USER_IMG_PATH . $my_rank['profile'] : '';
+                        }
+                        $user_rank = $my_rank;
+                    } else {
+                        $my_rank = array(
+                            'user_id' => $user_id,
+                            'score' => '0',
+                            'user_rank' => '0',
+                            'email' => '',
+                            'name' => '',
+                            'profile' => '',
+                            'country_code' => '',
+                        );
+                        $user_rank = $my_rank;
+                    }
+                }
+                $response['error'] = false;
+                $response['total'] = "$total";
+                $response['data'] = array(
+                    'my_rank' => $user_rank ?? array(
+                        'user_id' => $user_id,
+                        'score' => '0',
+                        'user_rank' => '0',
+                        'email' => '',
+                        'name' => '',
+                        'profile' => '',
+                        'country_code' => '',
+                    ),
+                    'other_users_rank' => $data,
+                    'top_three_ranks' => $topThreeUsersData ?? array()
+                );
+            } else {
+                $response['error'] = true;
+                $response['message'] = "102";
+            }
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = "122";
+            $response['error_msg'] = $e->getMessage();
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    // ========================================
+    // HELPER METHODS FOR ENGAGEMENT TRACKING
+    // ========================================
+
+    /**
+     * Update all engagement leaderboards (weekly, monthly, all-time)
+     * 
+     * @param int $user_id User ID
+     * @param int $duration_seconds Session duration in seconds
+     * @param string $timestamp Session end timestamp
+     */
+    private function update_engagement_leaderboards($user_id, $duration_seconds, $timestamp)
+    {
+        $minutes = round($duration_seconds / 60, 2);
+        $week_number = date('W', strtotime($timestamp));
+        $year = date('Y', strtotime($timestamp));
+        $month = date('m', strtotime($timestamp));
+
+        // Update weekly engagement
+        $weekly_data = $this->db->where('user_id', $user_id)
+            ->where('week_number', $week_number)
+            ->where('year', $year)
+            ->get('tbl_leaderboard_engagement_weekly')
+            ->row_array();
+
+        if (!empty($weekly_data)) {
+            $new_total = $weekly_data['total_minutes'] + $minutes;
+            $this->db->where('id', $weekly_data['id'])
+                ->update('tbl_leaderboard_engagement_weekly', [
+                    'total_minutes' => $new_total,
+                    'last_updated' => $this->toDateTime
+                ]);
+        } else {
+            $this->db->insert('tbl_leaderboard_engagement_weekly', [
+                'user_id' => $user_id,
+                'total_minutes' => $minutes,
+                'week_number' => $week_number,
+                'year' => $year,
+                'last_updated' => $this->toDateTime,
+                'date_created' => $this->toDateTime
+            ]);
+        }
+
+        // Update monthly engagement
+        $monthly_data = $this->db->where('user_id', $user_id)
+            ->where('month', $month)
+            ->where('year', $year)
+            ->get('tbl_leaderboard_engagement_monthly')
+            ->row_array();
+
+        if (!empty($monthly_data)) {
+            $new_total = $monthly_data['total_minutes'] + $minutes;
+            $this->db->where('id', $monthly_data['id'])
+                ->update('tbl_leaderboard_engagement_monthly', [
+                    'total_minutes' => $new_total,
+                    'last_updated' => $this->toDateTime
+                ]);
+        } else {
+            $this->db->insert('tbl_leaderboard_engagement_monthly', [
+                'user_id' => $user_id,
+                'total_minutes' => $minutes,
+                'month' => $month,
+                'year' => $year,
+                'last_updated' => $this->toDateTime,
+                'date_created' => $this->toDateTime
+            ]);
+        }
+
+        // Update all-time engagement
+        $alltime_data = $this->db->where('user_id', $user_id)
+            ->get('tbl_leaderboard_engagement_alltime')
+            ->row_array();
+
+        if (!empty($alltime_data)) {
+            $new_total = $alltime_data['total_minutes'] + $minutes;
+            $this->db->where('id', $alltime_data['id'])
+                ->update('tbl_leaderboard_engagement_alltime', [
+                    'total_minutes' => $new_total,
+                    'last_updated' => $this->toDateTime
+                ]);
+        } else {
+            $this->db->insert('tbl_leaderboard_engagement_alltime', [
+                'user_id' => $user_id,
+                'total_minutes' => $minutes,
+                'last_updated' => $this->toDateTime,
+                'date_created' => $this->toDateTime
+            ]);
+        }
+    }
+
+    /**
+     * Get user's engagement rank
+     * 
+     * @param int $user_id User ID
+     * @param string $period Period: weekly, monthly, alltime
+     * @param string $scope Scope: world, country, region
+     * @param string $filter_value Filter value for scope
+     * @return array|null User's rank data
+     */
+    private function myEngagementRank($user_id, $period, $scope = 'world', $filter_value = null)
+    {
+        $week_number = date('W');
+        $year = date('Y');
+        $month = date('m');
+
+        // Build scope filter
+        $scope_where = '';
+        if ($scope === 'country' && !empty($filter_value)) {
+            $scope_where = "AND u.country_code = '{$filter_value}'";
+        } elseif ($scope === 'region' && !empty($filter_value)) {
+            $scope_where = "AND u.continent = '{$filter_value}'";
+        }
+
+        // Build period filter and table name
+        $period_where = '';
+        $table = '';
+        if ($period === 'weekly') {
+            $table = 'tbl_leaderboard_engagement_weekly';
+            $period_where = "AND e.week_number = {$week_number} AND e.year = {$year}";
+        } elseif ($period === 'monthly') {
+            $table = 'tbl_leaderboard_engagement_monthly';
+            $period_where = "AND e.month = {$month} AND e.year = {$year}";
+        } else {
+            $table = 'tbl_leaderboard_engagement_alltime';
+        }
+
+        $sub_query = "(SELECT s.*, @user_rank := @user_rank + 1 AS user_rank FROM (SELECT e.id, e.user_id, u.email, u.name, u.profile, u.country_code, u.continent, e.total_minutes, e.last_updated FROM {$table} e JOIN tbl_users u ON u.id = e.user_id WHERE u.status = 1 {$period_where} {$scope_where} GROUP BY e.user_id) s, (SELECT @user_rank := 0) init ORDER BY s.total_minutes DESC, s.last_updated ASC)";
+
+        $this->db->select('r.*');
+        $this->db->from("$sub_query r", false);
+        $this->db->where('r.user_id', $user_id);
+        $result = $this->db->get()->row_array();
+
+        return $result;
     }
 }

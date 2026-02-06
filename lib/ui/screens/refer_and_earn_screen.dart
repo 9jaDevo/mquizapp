@@ -1,6 +1,6 @@
-import 'package:dotted_border/dotted_border.dart';
+import 'dart:ui';
+
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -9,8 +9,6 @@ import 'package:flutterquiz/commons/widgets/custom_snackbar.dart';
 import 'package:flutterquiz/core/core.dart';
 import 'package:flutterquiz/features/profile_management/cubits/user_details_cubit.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
-import 'package:flutterquiz/ui/widgets/custom_back_button.dart';
-import 'package:flutterquiz/ui/widgets/custom_rounded_button.dart';
 import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 
@@ -32,354 +30,373 @@ class ReferAndEarnScreen extends StatelessWidget {
     final referText =
         '${context.tr('referText1')} ${sysConfig.refereeEarnCoin} ${context.tr('referText2')} $referCode\n ${context.tr('referText3')} ${sysConfig.appUrl}';
 
-    final size = context;
-
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: context.primaryColor,
-        leading: QBackButton(color: context.surfaceColor),
+        backgroundColor: Colors.transparent,
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: _GlassIconButton(
+            icon: Icons.arrow_back_rounded,
+            onTap: () => Navigator.pop(context),
+          ),
+        ),
       ),
-      body: SingleChildScrollView(
-        child: SizedBox(
-          width: size.width,
-          height: size.height * .8,
-          child: Stack(
-            children: [
-              Align(
-                alignment: Alignment.topCenter,
-                child: Container(
-                  height: size.height * .65,
-                  decoration: BoxDecoration(
-                    color: context.primaryColor,
-                    borderRadius: const BorderRadius.vertical(
-                      bottom: Radius.circular(10),
-                    ),
-                  ),
-                  width: size.width,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        context.tr(referAndEarn)!,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: context.surfaceColor,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: size.height * .01),
-                      SizedBox(
-                        height: size.height * 0.2,
-                        child: SvgPicture.asset(Assets.referFriends),
-                      ),
-
-                      Column(
-                        children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SvgPicture.asset(
-                                Assets.coin,
-                                width: 28,
-                                height: 28,
-                              ),
-                              const SizedBox(width: 10),
-                              Text(
-                                sysConfig.referrerEarnCoin,
-                                style: TextStyle(
-                                  fontWeight: FontWeights.bold,
-                                  fontSize: 32,
-                                  color: context.surfaceColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Text(
-                            'Instant Reward',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeights.semiBold,
-                              color: context.surfaceColor.withValues(alpha: 0.8),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: size.height * .02),
-                      // Bonus Rewards Section
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: context.surfaceColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: context.surfaceColor.withValues(alpha: 0.3),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFF6366F1),
+              const Color(0xFF8B5CF6),
+              const Color(0xFFEC4899),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 20),
+                  
+                  // Header Section
+                  _buildGlassCard(
+                    child: Column(
+                      children: [
+                        Text(
+                          context.tr(referAndEarn)!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
                           ),
                         ),
-                        child: Column(
-                          children: [
-                            Text(
-                              '✨ BONUS Rewards Available',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeights.bold,
-                                color: Colors.amber,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                Column(
-                                  children: [
-                                    Text(
-                                      '+${sysConfig.referrerEarnCoin}',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeights.bold,
-                                        color: Colors.amber,
-                                      ),
-                                    ),
-                                    Text(
-                                      'After 7 days + 10 quizzes',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: context.surfaceColor.withValues(alpha: 0.7),
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: size.height * .01),
-                      SizedBox(
-                        width: size.width * .8,
-                        child: Text(
-                          "${context.tr("referFrdLbl")!}\n"
-                          "🎯 ${context.tr(youWillGetKey)!}: ${sysConfig.referrerEarnCoin} coins (instant) + bonus later\n"
-                          "🎯 ${context.tr(theyWillGetKey)!}: ${sysConfig.refereeEarnCoin} coins (instant) + bonus later",
+                        const SizedBox(height: 8),
+                        Text(
+                          context.tr("referFrdLbl")!,
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 14,
-                            fontWeight: FontWeights.regular,
-                            color: context.surfaceColor,
+                            color: Colors.white.withValues(alpha: 0.9),
+                            fontWeight: FontWeight.w400,
                           ),
                         ),
-                      ),
-                      SizedBox(height: size.height * .04),
-                      DottedBorder(
-                        options: RoundedRectDottedBorderOptions(
-                          strokeWidth: 3,
-                          padding: EdgeInsets.zero,
-                          dashPattern: const [6, 4],
-                          color: context.surfaceColor.withValues(alpha: .5),
-                          radius: const Radius.circular(8),
-                        ),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            color: context.primaryTextColor.withValues(
-                              alpha: 0.8,
-                            ),
-                          ),
-                          height: 60,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const SizedBox(width: 25),
-                              Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    context.tr('yourRefCOdeLbl')!,
-                                    style: TextStyle(
-                                      color: context.surfaceColor.withValues(
-                                        alpha: .8,
-                                      ),
-                                      fontSize: 10,
-                                      fontWeight: FontWeights.semiBold,
-                                    ),
-                                  ),
-                                  Text(
-                                    referCode,
-                                    style: TextStyle(
-                                      color: context.surfaceColor,
-                                      fontSize: 18,
-                                      fontWeight: FontWeights.semiBold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(width: 5),
-                              VerticalDivider(
-                                color: context.surfaceColor.withValues(
-                                  alpha: .4,
-                                ),
-                                indent: 10,
-                                endIndent: 10,
-                              ),
-                              const SizedBox(width: 5),
-                              GestureDetector(
-                                onTap: () async {
-                                  await Clipboard.setData(
-                                    ClipboardData(text: referCode),
-                                  );
-                                  context.showSnack(
-                                    context.tr('referCodeCopyMsg')!,
-                                  );
-                                },
-                                child: Text(
-                                  context.tr('copyCodeLbl')!,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeights.semiBold,
-                                    color: context.surfaceColor,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 25),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Illustration
+                  Container(
+                    height: 200,
+                    padding: const EdgeInsets.all(20),
+                    child: SvgPicture.asset(
+                      Assets.referFriends,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Reward Cards
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildRewardCard(
+                          context: context,
+                          title: 'You Get',
+                          amount: sysConfig.referrerEarnCoin,
+                          subtitle: 'Per Referral',
+                          icon: Assets.coin,
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color(0xFFFBBF24),
+                              Color(0xFFF59E0B),
                             ],
                           ),
                         ),
                       ),
-                      SizedBox(height: size.height * .03),
-                      Text.rich(
-                        TextSpan(
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeights.regular,
-                            color: context.surfaceColor.withValues(alpha: .8),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildRewardCard(
+                          context: context,
+                          title: 'They Get',
+                          amount: sysConfig.refereeEarnCoin,
+                          subtitle: 'Sign-up Bonus',
+                          icon: Assets.coin,
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color(0xFF10B981),
+                              Color(0xFF059669),
+                            ],
                           ),
-                          children: [
-                            TextSpan(text: '${context.tr("howWorksLbl")!} '),
-                            TextSpan(
-                              text: context.tr('steps'),
-                              style: TextStyle(
-                                color: context.surfaceColor,
-                                decoration: TextDecoration.underline,
-                              ),
-                              recognizer: TapGestureRecognizer()
-                                ..onTap = () {
-                                  showModalBottomSheet<void>(
-                                    context: context,
-                                    isScrollControlled: true,
-                                    shape: const RoundedRectangleBorder(
-                                      borderRadius:
-                                          UiUtils.bottomSheetTopRadius,
-                                    ),
-                                    builder: (_) {
-                                      return Container(
-                                        decoration: BoxDecoration(
-                                          color:
-                                              context.scaffoldBackgroundColor,
-                                          borderRadius:
-                                              UiUtils.bottomSheetTopRadius,
-                                        ),
-                                        height: size.height * .7,
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal:
-                                              size.width * UiUtils.hzMarginPct +
-                                              10,
-                                        ),
-                                        child: Stack(
-                                          children: [
-                                            Align(
-                                              alignment: Alignment.topCenter,
-                                              child: Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  const SizedBox(height: 75),
-                                                  _buildStep(
-                                                    context,
-                                                    'step_1',
-                                                    'step_1_title',
-                                                    'step_1_desc',
-                                                  ),
-                                                  _vtDivider,
-                                                  _buildStep(
-                                                    context,
-                                                    'step_2',
-                                                    'step_2_title',
-                                                    'step_2_desc',
-                                                  ),
-                                                  _vtDivider,
-                                                  _buildStep(
-                                                    context,
-                                                    'step_3',
-                                                    'step_3_title',
-                                                    'step_3_desc',
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            Align(
-                                              alignment: Alignment.bottomCenter,
-                                              child: Padding(
-                                                padding: const EdgeInsets.only(
-                                                  bottom: 32,
-                                                ),
-                                                child: Builder(
-                                                  builder: (context) {
-                                                    return CustomRoundedButton(
-                                                      onTap: () =>
-                                                          UiUtils.share(
-                                                            referCode,
-                                                            context: context,
-                                                          ),
-                                                      widthPercentage: 1,
-                                                      backgroundColor:
-                                                          context.primaryColor,
-                                                      buttonTitle: context.tr(
-                                                        'inviteFriendsLbl',
-                                                      ),
-                                                      radius: 8,
-                                                      showBorder: false,
-                                                      height: 58,
-                                                    );
-                                                  },
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    },
-                                  );
-                                },
-                            ),
-                          ],
                         ),
                       ),
                     ],
                   ),
+
+                  const SizedBox(height: 24),
+
+                  // Bonus Section
+                  _buildGlassCard(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text(
+                              '✨',
+                              style: TextStyle(fontSize: 24),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'BONUS Rewards',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        _buildBonusItem(
+                          icon: '🎁',
+                          amount: '+${sysConfig.referrerEarnCoin}',
+                          description: 'After 7 days + 10 quizzes',
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Referral Code Section
+                  _buildGlassCard(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        Text(
+                          context.tr('yourRefCOdeLbl')!,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.8),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 16,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.3),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                referCode,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 4,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildCopyButton(context, referCode),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // How it works
+                  _buildGlassCard(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.info_outline_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'How it works',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        _buildHowItWorksStep(
+                          number: '1',
+                          title: context.tr('step_1_title')!,
+                          description: context.tr('step_1_desc')!,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildHowItWorksStep(
+                          number: '2',
+                          title: context.tr('step_2_title')!,
+                          description: context.tr('step_2_desc')!,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildHowItWorksStep(
+                          number: '3',
+                          title: context.tr('step_3_title')!,
+                          description: context.tr('step_3_desc')!,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // Share Button
+                  _buildShareButton(context, referText),
+
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlassCard({
+    required Widget child,
+    EdgeInsets padding = const EdgeInsets.all(16),
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          padding: padding,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.2),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRewardCard({
+    required BuildContext context,
+    required String title,
+    required String amount,
+    required String subtitle,
+    required String icon,
+    required Gradient gradient,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: gradient,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.3),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
                 ),
               ),
-
-              /// Share Now
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Builder(
-                  builder: (context) {
-                    return CustomRoundedButton(
-                      onTap: () => UiUtils.share(referText, context: context),
-                      widthPercentage: .9,
-                      backgroundColor: context.primaryColor,
-                      titleColor: context.surfaceColor,
-                      buttonTitle: context.tr('shareNowLbl'),
-                      radius: 8,
-                      textSize: 18,
-                      showBorder: false,
-                      fontWeight: FontWeights.semiBold,
-                      height: 60,
-                    );
-                  },
+              const SizedBox(height: 12),
+              SvgPicture.asset(
+                icon,
+                width: 32,
+                height: 32,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                amount,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
@@ -389,65 +406,261 @@ class ReferAndEarnScreen extends StatelessWidget {
     );
   }
 
-  static const _vtDivider = Row(
-    children: [
-      SizedBox(width: 22),
-      SizedBox(
-        width: 2,
-        height: 68,
-        child: ColoredBox(color: Color(0xFF22C274)),
+  Widget _buildBonusItem({
+    required String icon,
+    required String amount,
+    required String description,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.2),
+        ),
       ),
-      Spacer(),
-    ],
-  );
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              icon,
+              style: const TextStyle(fontSize: 24),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  amount,
+                  style: const TextStyle(
+                    color: Color(0xFFFBBF24),
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-  Row _buildStep(BuildContext context, String step, String title, String desc) {
-    final step0 = context.tr(step)!;
-    final title0 = context.tr(title)!;
-    final desc0 = context.tr(desc)!;
-
-    return Row(
-      children: [
-        Container(
-          width: 44,
-          height: 44,
+  Widget _buildCopyButton(BuildContext context, String referCode) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () async {
+          await Clipboard.setData(ClipboardData(text: referCode));
+          if (context.mounted) {
+            context.showSnack(context.tr('referCodeCopyMsg')!);
+          }
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: context.surfaceColor,
-            border: Border.all(color: const Color(0xff22C274), width: 2),
+            color: Colors.white.withValues(alpha: 0.25),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.copy_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                context.tr('copyCodeLbl')!,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(width: 14),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              step0,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeights.bold,
-                color: context.primaryTextColor,
+      ),
+    );
+  }
+
+  Widget _buildHowItWorksStep({
+    required String number,
+    required String title,
+    required String description,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF8B5CF6),
+                Color(0xFF6366F1),
+              ],
+            ),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.3),
+              width: 2,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              number,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            Text(
-              title0,
-              style: TextStyle(
-                fontWeight: FontWeights.bold,
-                fontSize: 22,
-                color: context.primaryTextColor,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            Text(
-              desc0,
-              style: TextStyle(
-                fontWeight: FontWeights.regular,
-                fontSize: 16,
-                color: context.primaryTextColor,
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  fontSize: 13,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
   }
+
+  Widget _buildShareButton(BuildContext context, String referText) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => UiUtils.share(referText, context: context),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white,
+                Color(0xFFF3F4F6),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.share_rounded,
+                color: Color(0xFF6366F1),
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                context.tr('shareNowLbl')!,
+                style: const TextStyle(
+                  color: Color(0xFF6366F1),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
+
+class _GlassIconButton extends StatelessWidget {
+  const _GlassIconButton({
+    required this.icon,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.3),
+                  width: 1.5,
+                ),
+              ),
+              child: Icon(
+                icon,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }

@@ -34,6 +34,16 @@ const getAllTimeLeaderboardUrl = '$_api/get_globle_leaderboard';
 const getDailyLeaderboardUrl = '$_api/get_daily_leaderboard';
 const getMonthlyLeaderboardUrl = '$_api/get_monthly_leaderboard';
 
+// Engagement Time Tracking & Leaderboards
+const submitSessionDurationUrl = '$_api/submit_session_duration';
+const getWeeklyEngagementLeaderboardUrl =
+    '$_api/get_weekly_engagement_leaderboard';
+const getMonthlyEngagementLeaderboardUrl =
+    '$_api/get_monthly_engagement_leaderboard';
+const getAllTimeEngagementLeaderboardUrl =
+    '$_api/get_alltime_engagement_leaderboard';
+const updateUserLocationUrl = '$_api/update_user_location';
+
 // Learning & Exam Modules
 const getExamModuleUrl = '$_api/get_exam_module';
 const getExamModuleQuestionsUrl = '$_api/get_exam_module_questions';

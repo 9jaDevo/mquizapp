@@ -1,21 +1,22 @@
-import 'dart:async';
-import 'dart:convert';
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutterquiz/commons/commons.dart';
 import 'package:flutterquiz/core/core.dart';
+import 'package:flutterquiz/features/engagement/cubit/engagement_alltime_cubit.dart';
+import 'package:flutterquiz/features/engagement/cubit/engagement_monthly_cubit.dart';
+import 'package:flutterquiz/features/engagement/cubit/engagement_weekly_cubit.dart';
 import 'package:flutterquiz/features/leaderboard/cubit/leaderboard_all_time_cubit.dart';
-import 'package:flutterquiz/features/leaderboard/cubit/leaderboard_daily_cubit.dart';
 import 'package:flutterquiz/features/leaderboard/cubit/leaderboard_monthly_cubit.dart';
+import 'package:flutterquiz/features/profile_management/cubits/user_details_cubit.dart';
 import 'package:flutterquiz/ui/widgets/already_logged_in_dialog.dart';
 import 'package:flutterquiz/ui/widgets/circular_progress_container.dart';
 import 'package:flutterquiz/ui/widgets/custom_appbar.dart';
 import 'package:flutterquiz/ui/widgets/error_container.dart';
-import 'package:flutterquiz/ui/widgets/skill_tier_badge.dart';
-import 'package:flutterquiz/utils/extensions.dart';
-import 'package:flutterquiz/utils/ui_utils.dart';
+import 'package:flutterquiz/ui/widgets/leaderboard/leaderboard_card_widget.dart';
+import 'package:flutterquiz/ui/widgets/leaderboard/metric_toggle_widget.dart';
+import 'package:flutterquiz/ui/widgets/leaderboard/scope_selector_widget.dart';
+import 'package:flutterquiz/ui/widgets/leaderboard/time_filter_widget.dart';
+import 'package:flutterquiz/ui/widgets/leaderboard/top_three_podium_widget.dart';
+import 'package:flutterquiz/ui/widgets/leaderboard/user_position_card_widget.dart';
 
 class LeaderBoardScreen extends StatefulWidget {
   const LeaderBoardScreen({super.key});
@@ -24,100 +25,191 @@ class LeaderBoardScreen extends StatefulWidget {
   State<LeaderBoardScreen> createState() => LeaderBoardScreenState();
 }
 
+enum LeaderboardScope { world, country, region }
+
+enum LeaderboardMetric { score, engagement }
+
+enum LeaderboardTimePeriod { week, month, allTime }
+
 class LeaderBoardScreenState extends State<LeaderBoardScreen>
-    with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
-  late final _tabController = TabController(length: 3, vsync: this);
+    with AutomaticKeepAliveClientMixin {
+  // Filter states
+  LeaderboardScope _selectedScope = LeaderboardScope.world;
+  LeaderboardMetric _selectedMetric = LeaderboardMetric.score;
+  LeaderboardTimePeriod _selectedTimePeriod = LeaderboardTimePeriod.allTime;
 
-  final _allTimeRefreshKey = GlobalKey<RefreshIndicatorState>();
-  final _monthlyRefreshKey = GlobalKey<RefreshIndicatorState>();
-  final _dailyRefreshKey = GlobalKey<RefreshIndicatorState>();
-
-  final controllerM = ScrollController();
-  final controllerA = ScrollController();
-  final controllerD = ScrollController();
+  final _scrollController = ScrollController();
 
   @override
   void initState() {
-    controllerM.addListener(scrollListenerM);
-    controllerA.addListener(scrollListenerA);
-    controllerD.addListener(scrollListenerD);
-
-    Future.delayed(Duration.zero, () {
-      context.read<LeaderBoardDailyCubit>().fetchLeaderBoard('20');
-      context.read<LeaderBoardMonthlyCubit>().fetchLeaderBoard('20');
-      context.read<LeaderBoardAllTimeCubit>().fetchLeaderBoard('20');
-    });
     super.initState();
+    _scrollController.addListener(_scrollListener);
+    // Initial data fetch
+    Future.delayed(Duration.zero, () {
+      _fetchLeaderboardData();
+    });
   }
 
   @override
   void dispose() {
-    controllerM.removeListener(scrollListenerM);
-    controllerA.removeListener(scrollListenerA);
-    controllerD.removeListener(scrollListenerD);
-    controllerM.dispose();
-    controllerA.dispose();
-    controllerD.dispose();
-
-    _tabController.dispose();
+    _scrollController.removeListener(_scrollListener);
+    _scrollController.dispose();
     super.dispose();
   }
 
-  void scrollListenerM() {
-    if (controllerM.position.maxScrollExtent == controllerM.offset) {
-      if (context.read<LeaderBoardMonthlyCubit>().hasMoreData()) {
-        context.read<LeaderBoardMonthlyCubit>().fetchMoreLeaderBoardData('20');
+  void _scrollListener() {
+    if (_scrollController.position.maxScrollExtent ==
+        _scrollController.offset) {
+      _fetchMoreData();
+    }
+  }
+
+  String _getScopeFilterValue() {
+    if (_selectedScope == LeaderboardScope.world) {
+      return 'world';
+    }
+
+    // Get user's country code or continent from profile
+    final userProfile = context.read<UserDetailsCubit>().getUserProfile();
+
+    if (_selectedScope == LeaderboardScope.country) {
+      // Return user's country code (will be added to UserProfile model)
+      return userProfile.userId ??
+          ''; // Placeholder until country_code is added
+    } else {
+      // Return user's continent (will be added to UserProfile model)
+      return userProfile.userId ?? ''; // Placeholder until continent is added
+    }
+  }
+
+  void _fetchLeaderboardData() {
+    final scope = _selectedScope == LeaderboardScope.world
+        ? 'world'
+        : _getScopeFilterValue();
+
+    if (_selectedMetric == LeaderboardMetric.engagement) {
+      // Fetch engagement leaderboard
+      if (_selectedTimePeriod == LeaderboardTimePeriod.week) {
+        context.read<EngagementWeeklyCubit>().fetchEngagementLeaderboard(
+          scope: _selectedScope == LeaderboardScope.world
+              ? 'world'
+              : _selectedScope == LeaderboardScope.country
+              ? 'country'
+              : 'region',
+          filterValue: scope,
+          limit: '20',
+        );
+      } else if (_selectedTimePeriod == LeaderboardTimePeriod.month) {
+        context.read<EngagementMonthlyCubit>().fetchEngagementLeaderboard(
+          scope: _selectedScope == LeaderboardScope.world
+              ? 'world'
+              : _selectedScope == LeaderboardScope.country
+              ? 'country'
+              : 'region',
+          filterValue: scope,
+          limit: '20',
+        );
+      } else {
+        context.read<EngagementAllTimeCubit>().fetchEngagementLeaderboard(
+          scope: _selectedScope == LeaderboardScope.world
+              ? 'world'
+              : _selectedScope == LeaderboardScope.country
+              ? 'country'
+              : 'region',
+          filterValue: scope,
+          limit: '20',
+        );
+      }
+    } else {
+      // Fetch score leaderboard
+      if (_selectedTimePeriod == LeaderboardTimePeriod.month) {
+        context.read<LeaderBoardMonthlyCubit>().fetchLeaderBoard('20');
+      } else {
+        context.read<LeaderBoardAllTimeCubit>().fetchLeaderBoard('20');
+      }
+      // Note: Weekly score leaderboard needs to be implemented in backend
+    }
+  }
+
+  void _fetchMoreData() {
+    final scope = _selectedScope == LeaderboardScope.world
+        ? 'world'
+        : _selectedScope == LeaderboardScope.country
+        ? 'country'
+        : 'region';
+    final filterValue = _getScopeFilterValue();
+
+    if (_selectedMetric == LeaderboardMetric.engagement) {
+      if (_selectedTimePeriod == LeaderboardTimePeriod.week) {
+        final cubit = context.read<EngagementWeeklyCubit>();
+        final state = cubit.state;
+        if (state is EngagementWeeklySuccess && state.hasMore) {
+          cubit.fetchMoreData(
+            scope: scope,
+            filterValue: scope == 'world' ? null : filterValue,
+            offset: state.leaderboardData.length.toString(),
+          );
+        }
+      } else if (_selectedTimePeriod == LeaderboardTimePeriod.month) {
+        final cubit = context.read<EngagementMonthlyCubit>();
+        final state = cubit.state;
+        if (state is EngagementMonthlySuccess && state.hasMore) {
+          cubit.fetchMoreData(
+            scope: scope,
+            filterValue: scope == 'world' ? null : filterValue,
+            offset: state.leaderboardData.length.toString(),
+          );
+        }
+      } else {
+        final cubit = context.read<EngagementAllTimeCubit>();
+        final state = cubit.state;
+        if (state is EngagementAllTimeSuccess && state.hasMore) {
+          cubit.fetchMoreData(
+            scope: scope,
+            filterValue: scope == 'world' ? null : filterValue,
+            offset: state.leaderboardData.length.toString(),
+          );
+        }
+      }
+    } else {
+      if (_selectedTimePeriod == LeaderboardTimePeriod.month) {
+        final cubit = context.read<LeaderBoardMonthlyCubit>();
+        if (cubit.hasMoreData()) {
+          cubit.fetchMoreLeaderBoardData('20');
+        }
+      } else {
+        final cubit = context.read<LeaderBoardAllTimeCubit>();
+        if (cubit.hasMoreData()) {
+          cubit.fetchMoreLeaderBoardData('20');
+        }
       }
     }
   }
 
-  void scrollListenerA() {
-    if (controllerA.position.maxScrollExtent == controllerA.offset) {
-      if (context.read<LeaderBoardAllTimeCubit>().hasMoreData()) {
-        context.read<LeaderBoardAllTimeCubit>().fetchMoreLeaderBoardData('20');
-      }
+  void _onScopeChanged(LeaderboardScope scope) {
+    if (_selectedScope != scope) {
+      setState(() {
+        _selectedScope = scope;
+      });
+      _fetchLeaderboardData();
     }
   }
 
-  void scrollListenerD() {
-    if (controllerD.position.maxScrollExtent == controllerD.offset) {
-      if (context.read<LeaderBoardDailyCubit>().hasMoreData()) {
-        context.read<LeaderBoardDailyCubit>().fetchMoreLeaderBoardData('20');
-      }
+  void _onMetricChanged(LeaderboardMetric metric) {
+    if (_selectedMetric != metric) {
+      setState(() {
+        _selectedMetric = metric;
+      });
+      _fetchLeaderboardData();
     }
   }
 
-  void onTapTab() {
-    if (_tabController.index == 0) {
-      if (controllerA.hasClients && controllerA.offset != 0) {
-        controllerA.animateTo(
-          0,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-        );
-      } else {
-        _allTimeRefreshKey.currentState?.show();
-      }
-    } else if (_tabController.index == 1) {
-      if (controllerM.hasClients && controllerM.offset != 0) {
-        controllerM.animateTo(
-          0,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-        );
-      } else {
-        _monthlyRefreshKey.currentState?.show();
-      }
-    } else if (_tabController.index == 2) {
-      if (controllerD.hasClients && controllerD.offset != 0) {
-        controllerD.animateTo(
-          0,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-        );
-      } else {
-        _dailyRefreshKey.currentState?.show();
-      }
+  void _onTimePeriodChanged(LeaderboardTimePeriod period) {
+    if (_selectedTimePeriod != period) {
+      setState(() {
+        _selectedTimePeriod = period;
+      });
+      _fetchLeaderboardData();
     }
   }
 
@@ -130,653 +222,576 @@ class LeaderBoardScreenState extends State<LeaderBoardScreen>
         noBottomRadius: true,
         title: Text(context.tr('leaderboardLbl')!),
         automaticallyImplyLeading: false,
-        bottom: TabBar(
-          controller: _tabController,
-          tabAlignment: TabAlignment.fill,
-          tabs: [
-            Tab(text: context.tr('allTimeLbl')),
-            Tab(text: context.tr('monthLbl')),
-            Tab(text: context.tr('dailyLbl')),
-          ],
-        ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        physics: const ClampingScrollPhysics(),
+      body: Column(
         children: [
-          allTimeLeaderBoard(),
-          monthlyLeaderBoard(),
-          dailyLeaderBoard(),
+          // Filter Section
+          Container(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                // Scope Selector (World/Country/Region)
+                ScopeSelectorWidget(
+                  selectedScope: _selectedScope == LeaderboardScope.world
+                      ? 'world'
+                      : _selectedScope == LeaderboardScope.country
+                      ? 'country'
+                      : 'region',
+                  onScopeChanged: (scope) {
+                    _onScopeChanged(
+                      scope == 'world'
+                          ? LeaderboardScope.world
+                          : scope == 'country'
+                          ? LeaderboardScope.country
+                          : LeaderboardScope.region,
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Metric Toggle (Score/Engagement)
+                MetricToggleWidget(
+                  selectedMetricIndex:
+                      _selectedMetric == LeaderboardMetric.score ? 0 : 1,
+                  onMetricChanged: (index) {
+                    _onMetricChanged(
+                      index == 0
+                          ? LeaderboardMetric.score
+                          : LeaderboardMetric.engagement,
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Time Filter (Week/Month/All Time)
+                TimeFilterWidget(
+                  selectedPeriod:
+                      _selectedTimePeriod == LeaderboardTimePeriod.week
+                      ? 'week'
+                      : _selectedTimePeriod == LeaderboardTimePeriod.month
+                      ? 'month'
+                      : 'alltime',
+                  onPeriodChanged: (period) {
+                    _onTimePeriodChanged(
+                      period == 'week'
+                          ? LeaderboardTimePeriod.week
+                          : period == 'month'
+                          ? LeaderboardTimePeriod.month
+                          : LeaderboardTimePeriod.allTime,
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          // Leaderboard Content
+          Expanded(
+            child: _buildLeaderboardContent(),
+          ),
         ],
       ),
     );
   }
 
-  void fetchMonthlyLeaderBoard() =>
-      context.read<LeaderBoardMonthlyCubit>().fetchLeaderBoard('20');
+  Widget _buildLeaderboardContent() {
+    if (_selectedMetric == LeaderboardMetric.engagement) {
+      return _buildEngagementLeaderboard();
+    } else {
+      return _buildScoreLeaderboard();
+    }
+  }
 
-  void fetchDailyLeaderBoard() =>
-      context.read<LeaderBoardDailyCubit>().fetchLeaderBoard('20');
+  Widget _buildEngagementLeaderboard() {
+    if (_selectedTimePeriod == LeaderboardTimePeriod.week) {
+      return _buildEngagementWeekly();
+    } else if (_selectedTimePeriod == LeaderboardTimePeriod.month) {
+      return _buildEngagementMonthly();
+    } else {
+      return _buildEngagementAllTime();
+    }
+  }
 
-  void fetchAllTimeLeaderBoard() =>
-      context.read<LeaderBoardAllTimeCubit>().fetchLeaderBoard('20');
+  Widget _buildScoreLeaderboard() {
+    if (_selectedTimePeriod == LeaderboardTimePeriod.month) {
+      return _buildScoreMonthly();
+    } else {
+      return _buildScoreAllTime();
+    }
+    // Note: Weekly score leaderboard not yet implemented
+  }
 
-  Widget noLeaderboard(VoidCallback onTapRetry) => Center(
+  Widget _buildEngagementWeekly() {
+    return BlocConsumer<EngagementWeeklyCubit, EngagementWeeklyState>(
+      listener: (context, state) {
+        if (state is EngagementWeeklyFailure) {
+          if (state.errorMessage == errorCodeUnauthorizedAccess) {
+            showAlreadyLoggedInDialog(context);
+          }
+        }
+      },
+      builder: (context, state) {
+        if (state is EngagementWeeklyFailure) {
+          return ErrorContainer(
+            showBackButton: false,
+            errorMessage: convertErrorCodeToLanguageKey(state.errorMessage),
+            onTapRetry: _fetchLeaderboardData,
+            showErrorImage: true,
+            errorMessageColor: const Color(0xFF1E90FF),
+          );
+        }
+
+        if (state is EngagementWeeklySuccess) {
+          if (state.leaderboardData.isEmpty) {
+            return _noLeaderboard();
+          }
+
+          // The leaderboardData contains all entries mixed together
+          // Filter out my_rank if it exists as a nested object
+          final allEntries = state.leaderboardData
+              .where(
+                (item) =>
+                    item.containsKey('user_id') && item['user_id'] != null,
+              )
+              .toList();
+
+          // Try to find my_rank data
+          Map<String, dynamic>? myRankData;
+          for (var item in state.leaderboardData) {
+            if (item.containsKey('my_rank') && item['my_rank'] is Map) {
+              myRankData = item['my_rank'] as Map<String, dynamic>;
+              break;
+            }
+          }
+
+          return _buildLeaderboardUI(
+            entries: allEntries,
+            myRank: myRankData,
+            hasMore: state.hasMore,
+            isEngagement: true,
+          );
+        }
+
+        return const Center(child: CircularProgressContainer());
+      },
+    );
+  }
+
+  Widget _buildEngagementMonthly() {
+    return BlocConsumer<EngagementMonthlyCubit, EngagementMonthlyState>(
+      listener: (context, state) {
+        if (state is EngagementMonthlyFailure) {
+          if (state.errorMessage == errorCodeUnauthorizedAccess) {
+            showAlreadyLoggedInDialog(context);
+          }
+        }
+      },
+      builder: (context, state) {
+        if (state is EngagementMonthlyFailure) {
+          return ErrorContainer(
+            showBackButton: false,
+            errorMessage: convertErrorCodeToLanguageKey(state.errorMessage),
+            onTapRetry: _fetchLeaderboardData,
+            showErrorImage: true,
+            errorMessageColor: const Color(0xFF1E90FF),
+          );
+        }
+
+        if (state is EngagementMonthlySuccess) {
+          if (state.leaderboardData.isEmpty) {
+            return _noLeaderboard();
+          }
+
+          final allEntries = state.leaderboardData
+              .where(
+                (item) =>
+                    item.containsKey('user_id') && item['user_id'] != null,
+              )
+              .toList();
+
+          Map<String, dynamic>? myRankData;
+          for (var item in state.leaderboardData) {
+            if (item.containsKey('my_rank') && item['my_rank'] is Map) {
+              myRankData = item['my_rank'] as Map<String, dynamic>;
+              break;
+            }
+          }
+
+          return _buildLeaderboardUI(
+            entries: allEntries,
+            myRank: myRankData,
+            hasMore: state.hasMore,
+            isEngagement: true,
+          );
+        }
+
+        return const Center(child: CircularProgressContainer());
+      },
+    );
+  }
+
+  Widget _buildEngagementAllTime() {
+    return BlocConsumer<EngagementAllTimeCubit, EngagementAllTimeState>(
+      listener: (context, state) {
+        if (state is EngagementAllTimeFailure) {
+          if (state.errorMessage == errorCodeUnauthorizedAccess) {
+            showAlreadyLoggedInDialog(context);
+          }
+        }
+      },
+      builder: (context, state) {
+        if (state is EngagementAllTimeFailure) {
+          return ErrorContainer(
+            showBackButton: false,
+            errorMessage: convertErrorCodeToLanguageKey(state.errorMessage),
+            onTapRetry: _fetchLeaderboardData,
+            showErrorImage: true,
+            errorMessageColor: const Color(0xFF1E90FF),
+          );
+        }
+
+        if (state is EngagementAllTimeSuccess) {
+          if (state.leaderboardData.isEmpty) {
+            return _noLeaderboard();
+          }
+
+          final allEntries = state.leaderboardData
+              .where(
+                (item) =>
+                    item.containsKey('user_id') && item['user_id'] != null,
+              )
+              .toList();
+
+          Map<String, dynamic>? myRankData;
+          for (var item in state.leaderboardData) {
+            if (item.containsKey('my_rank') && item['my_rank'] is Map) {
+              myRankData = item['my_rank'] as Map<String, dynamic>;
+              break;
+            }
+          }
+
+          return _buildLeaderboardUI(
+            entries: allEntries,
+            myRank: myRankData,
+            hasMore: state.hasMore,
+            isEngagement: true,
+          );
+        }
+
+        return const Center(child: CircularProgressContainer());
+      },
+    );
+  }
+
+  Widget _buildScoreMonthly() {
+    return BlocConsumer<LeaderBoardMonthlyCubit, LeaderBoardMonthlyState>(
+      listener: (context, state) {
+        if (state is LeaderBoardMonthlyFailure) {
+          if (state.errorMessage == errorCodeUnauthorizedAccess) {
+            showAlreadyLoggedInDialog(context);
+          }
+        }
+      },
+      builder: (context, state) {
+        if (state is LeaderBoardMonthlyFailure) {
+          return ErrorContainer(
+            showBackButton: false,
+            errorMessage: convertErrorCodeToLanguageKey(state.errorMessage),
+            onTapRetry: _fetchLeaderboardData,
+            showErrorImage: true,
+            errorMessageColor: const Color(0xFF1E90FF),
+          );
+        }
+
+        if (state is LeaderBoardMonthlySuccess) {
+          if (state.leaderBoardDetails.isEmpty) {
+            return _noLeaderboard();
+          }
+
+          return _buildScoreLeaderboardUI(
+            leaderboardList: state.leaderBoardDetails,
+            hasMore: state.hasMore,
+            rank: LeaderBoardMonthlyCubit.rankM,
+            profile: LeaderBoardMonthlyCubit.profileM,
+            score: LeaderBoardMonthlyCubit.scoreM,
+          );
+        }
+
+        return const Center(child: CircularProgressContainer());
+      },
+    );
+  }
+
+  Widget _buildScoreAllTime() {
+    return BlocConsumer<LeaderBoardAllTimeCubit, LeaderBoardAllTimeState>(
+      listener: (context, state) {
+        if (state is LeaderBoardAllTimeFailure) {
+          if (state.errorMessage == errorCodeUnauthorizedAccess) {
+            showAlreadyLoggedInDialog(context);
+          }
+        }
+      },
+      builder: (context, state) {
+        if (state is LeaderBoardAllTimeFailure) {
+          return ErrorContainer(
+            showBackButton: false,
+            errorMessage: convertErrorCodeToLanguageKey(state.errorMessage),
+            onTapRetry: _fetchLeaderboardData,
+            showErrorImage: true,
+            errorMessageColor: const Color(0xFF1E90FF),
+          );
+        }
+
+        if (state is LeaderBoardAllTimeSuccess) {
+          if (state.leaderBoardDetails.isEmpty) {
+            return _noLeaderboard();
+          }
+
+          return _buildScoreLeaderboardUI(
+            leaderboardList: state.leaderBoardDetails,
+            hasMore: state.hasMore,
+            rank: LeaderBoardAllTimeCubit.rankA,
+            profile: LeaderBoardAllTimeCubit.profileA,
+            score: LeaderBoardAllTimeCubit.scoreA,
+          );
+        }
+
+        return const Center(child: CircularProgressContainer());
+      },
+    );
+  }
+
+  Widget _noLeaderboard() => Center(
     child: ErrorContainer(
       topMargin: 0,
       errorMessage: 'noLeaderboardLbl',
-      onTapRetry: onTapRetry,
+      onTapRetry: _fetchLeaderboardData,
       showErrorImage: false,
     ),
   );
 
-  Widget dailyLeaderBoard() {
-    return BlocConsumer<LeaderBoardDailyCubit, LeaderBoardDailyState>(
-      bloc: context.read<LeaderBoardDailyCubit>(),
-      listener: (context, state) {
-        if (state is LeaderBoardDailyFailure) {
-          if (state.errorMessage == errorCodeUnauthorizedAccess) {
-            showAlreadyLoggedInDialog(context);
-
-            return;
-          }
-        }
-      },
-      builder: (context, state) {
-        if (state is LeaderBoardDailyFailure) {
-          return ErrorContainer(
-            showBackButton: false,
-            errorMessage: convertErrorCodeToLanguageKey(state.errorMessage),
-            onTapRetry: fetchDailyLeaderBoard,
-            showErrorImage: true,
-            errorMessageColor: Theme.of(context).primaryColor,
-          );
-        }
-
-        ///
-        if (state is LeaderBoardDailySuccess) {
-          final dailyList = state.leaderBoardDetails;
-          final hasMore = state.hasMore;
-
-          /// API returns empty list if there is no leaderboard data.
-          if (dailyList.isEmpty) {
-            return noLeaderboard(fetchDailyLeaderBoard);
-          }
-
-          log(name: 'Leaderboard Daily', jsonEncode(dailyList));
-          log(name: 'Leaderboard Daily', 'Has More: $hasMore');
-
-          return _buildLeaderboardWithSlivers(
-            leaderboardList: dailyList,
-            controller: controllerD,
-            hasMore: hasMore,
-            rank: LeaderBoardDailyCubit.rankD,
-            profile: LeaderBoardDailyCubit.profileD,
-            score: LeaderBoardDailyCubit.scoreD,
-            onRefresh: () async {
-              await Future.delayed(const Duration(seconds: 1), () async {
-                context.read<LeaderBoardDailyCubit>().fetchLeaderBoard('20');
-              });
-            },
-            refreshKey: _dailyRefreshKey,
-          );
-        }
-
-        return const Center(child: CircularProgressContainer());
-      },
-    );
-  }
-
-  Widget monthlyLeaderBoard() {
-    return BlocConsumer<LeaderBoardMonthlyCubit, LeaderBoardMonthlyState>(
-      bloc: context.read<LeaderBoardMonthlyCubit>(),
-      listener: (context, state) {
-        if (state is LeaderBoardMonthlyFailure) {
-          if (state.errorMessage == errorCodeUnauthorizedAccess) {
-            showAlreadyLoggedInDialog(context);
-
-            return;
-          }
-        }
-      },
-      builder: (context, state) {
-        if (state is LeaderBoardMonthlyFailure) {
-          return ErrorContainer(
-            showBackButton: false,
-            errorMessage: convertErrorCodeToLanguageKey(state.errorMessage),
-            onTapRetry: fetchMonthlyLeaderBoard,
-            showErrorImage: true,
-            errorMessageColor: Theme.of(context).primaryColor,
-          );
-        }
-
-        ///
-        if (state is LeaderBoardMonthlySuccess) {
-          final monthlyList = state.leaderBoardDetails;
-          final hasMore = state.hasMore;
-
-          /// API returns empty list if there is no leaderboard data.
-          if (monthlyList.isEmpty) {
-            return noLeaderboard(fetchMonthlyLeaderBoard);
-          }
-
-          log(name: 'Leaderboard Monthly', jsonEncode(monthlyList));
-          log(name: 'Leaderboard Monthly', 'Has More: $hasMore');
-
-          return _buildLeaderboardWithSlivers(
-            leaderboardList: monthlyList,
-            controller: controllerM,
-            hasMore: hasMore,
-            rank: LeaderBoardMonthlyCubit.rankM,
-            profile: LeaderBoardMonthlyCubit.profileM,
-            score: LeaderBoardMonthlyCubit.scoreM,
-            onRefresh: () async {
-              await Future.delayed(const Duration(seconds: 1), () async {
-                context.read<LeaderBoardMonthlyCubit>().fetchLeaderBoard('20');
-              });
-            },
-            refreshKey: _monthlyRefreshKey,
-          );
-        }
-
-        return const Center(child: CircularProgressContainer());
-      },
-    );
-  }
-
-  Widget allTimeLeaderBoard() {
-    return BlocConsumer<LeaderBoardAllTimeCubit, LeaderBoardAllTimeState>(
-      bloc: context.read<LeaderBoardAllTimeCubit>(),
-      listener: (context, state) {
-        if (state is LeaderBoardAllTimeFailure) {
-          if (state.errorMessage == errorCodeUnauthorizedAccess) {
-            showAlreadyLoggedInDialog(context);
-          }
-        }
-      },
-      builder: (context, state) {
-        if (state is LeaderBoardAllTimeFailure) {
-          return ErrorContainer(
-            showBackButton: false,
-            errorMessage: convertErrorCodeToLanguageKey(state.errorMessage),
-            onTapRetry: fetchAllTimeLeaderBoard,
-            showErrorImage: true,
-            errorMessageColor: Theme.of(context).primaryColor,
-          );
-        }
-
-        ///
-        if (state is LeaderBoardAllTimeSuccess) {
-          final allTimeList = state.leaderBoardDetails;
-          final hasMore = state.hasMore;
-
-          /// API returns empty list if there is no leaderboard data.
-          if (allTimeList.isEmpty) {
-            return noLeaderboard(fetchDailyLeaderBoard);
-          }
-
-          log(name: 'Leaderboard All Time', jsonEncode(allTimeList));
-          log(name: 'Leaderboard All Time', 'Has More: $hasMore');
-
-          return _buildLeaderboardWithSlivers(
-            leaderboardList: allTimeList,
-            controller: controllerA,
-            hasMore: hasMore,
-            rank: LeaderBoardAllTimeCubit.rankA,
-            profile: LeaderBoardAllTimeCubit.profileA,
-            score: LeaderBoardAllTimeCubit.scoreA,
-            onRefresh: () async {
-              await Future.delayed(const Duration(seconds: 1), () async {
-                context.read<LeaderBoardAllTimeCubit>().fetchLeaderBoard('20');
-              });
-            },
-            refreshKey: _allTimeRefreshKey,
-          );
-        }
-
-        return const Center(child: CircularProgressContainer());
-      },
-    );
-  }
-
-  Widget _buildLeaderboardWithSlivers({
-    required List<Map<String, dynamic>> leaderboardList,
-    required ScrollController controller,
+  Widget _buildLeaderboardUI({
+    required List<Map<String, dynamic>> entries,
+    required Map<String, dynamic>? myRank,
     required bool hasMore,
-    required String rank,
-    required String profile,
-    required String score,
-    required Future<void> Function() onRefresh,
-    required GlobalKey<RefreshIndicatorState> refreshKey,
+    required bool isEngagement,
   }) {
-    final height = context.height;
-    final showMyRank = score != '0' && int.parse(rank) > 3;
+    if (entries.isEmpty) {
+      return _noLeaderboard();
+    }
 
-    return Column(
-      children: [
-        Expanded(
-          child: RefreshIndicator(
-            key: refreshKey,
-            color: context.primaryColor,
-            backgroundColor: context.scaffoldBackgroundColor,
-            onRefresh: onRefresh,
+    final currentUserId = context
+        .read<UserDetailsCubit>()
+        .getUserProfile()
+        .userId;
+    final topThree = entries.take(3).toList();
+    final remainingEntries = entries.length > 3
+        ? entries.sublist(3)
+        : <Map<String, dynamic>>[];
+    final myRankInt = myRank != null
+        ? int.tryParse(myRank['user_rank']?.toString() ?? '0') ?? 0
+        : 0;
+    final showMyRank = myRank != null && myRankInt > 3;
+
+    return RefreshIndicator(
+      color: const Color(0xFF1E90FF),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      onRefresh: () async {
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+        _fetchLeaderboardData();
+      },
+      child: Column(
+        children: [
+          Expanded(
             child: CustomScrollView(
-              controller: controller,
+              controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
-                // Collapsible Top 3 Section
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _LeaderboardTopThreeDelegate(
-                    expandedHeight: height * 0.24,
-                    collapsedHeight: height * 0.10,
-                    leaderboardList: leaderboardList,
+                // Top 3 Podium
+                if (topThree.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
+                      child: TopThreePodiumWidget(
+                        topThree: topThree,
+                        isEngagement: isEngagement,
+                      ),
+                    ),
                   ),
-                ),
 
-                // Leaderboard List (items after top 3)
-                if (leaderboardList.length > 3)
+                // Remaining entries
+                if (remainingEntries.isNotEmpty)
                   SliverPadding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: context.width * 0.02,
-                      vertical: 5,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
                     ),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
-                          final actualIndex = index + 3;
-
-                          if (hasMore &&
-                              actualIndex == leaderboardList.length - 1) {
-                            return const Center(
-                              child: CircularProgressContainer(),
+                          if (hasMore && index == remainingEntries.length - 1) {
+                            return const Padding(
+                              padding: EdgeInsets.all(20),
+                              child: Center(child: CircularProgressContainer()),
                             );
                           }
 
-                          if (actualIndex >= leaderboardList.length) {
+                          if (index >= remainingEntries.length) {
                             return null;
                           }
 
-                          return Column(
-                            children: [
-                              _buildLeaderboardItem(
-                                leaderboardList[actualIndex],
-                              ),
-                              if (actualIndex < leaderboardList.length - 1)
-                                Divider(
-                                  color: Colors.black26,
-                                  thickness: 0.5,
-                                  indent: context.width * 0.03,
-                                  endIndent: context.width * 0.03,
-                                ),
-                            ],
+                          final entry = remainingEntries[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: LeaderboardCardWidget(
+                              rank: entry['user_rank']?.toString() ?? '0',
+                              name: entry['name']?.toString() ?? '',
+                              profile: entry['profile']?.toString() ?? '',
+                              value: entry['total_minutes']?.toString() ?? '0',
+                              isCurrentUser: entry['user_id'] == currentUserId,
+                              isEngagement: isEngagement,
+                              countryCode: entry['country_code']?.toString(),
+                            ),
                           );
                         },
-                        childCount: leaderboardList.length - 3,
+                        childCount: remainingEntries.length,
                       ),
                     ),
                   ),
 
-                // Add bottom padding for "My Rank" space
+                // Bottom padding for user position card
                 if (showMyRank)
-                  const SliverToBoxAdapter(child: SizedBox(height: 20)),
+                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
               ],
             ),
           ),
-        ),
 
-        // My Rank Section - Pinned at bottom, always visible
-        if (showMyRank) myRank(rank, profile, score),
-      ],
-    );
-  }
-
-  Widget _buildLeaderboardItem(Map<String, dynamic> item) {
-    final textStyle = TextStyle(
-      color: Theme.of(context).colorScheme.onTertiary,
-      fontSize: 16,
-    );
-    final width = context.width;
-    final height = context.height;
-
-    return Row(
-      children: [
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(item['user_rank'] as String, style: textStyle),
-        ),
-        Expanded(
-          flex: 9,
-          child: ListTile(
-            dense: true,
-            contentPadding: const EdgeInsets.only(right: 20),
-            title: Text(
-              item['name'] as String? ?? '...',
-              overflow: TextOverflow.ellipsis,
-              style: textStyle,
+          // User Position Card (sticky at bottom)
+          if (showMyRank)
+            UserPositionCardWidget(
+              rank: myRank['user_rank']?.toString() ?? '0',
+              name: myRank['name']?.toString() ?? '',
+              profile: myRank['profile']?.toString() ?? '',
+              value: myRank['total_minutes']?.toString() ?? '0',
+              isEngagement: isEngagement,
+              countryCode: myRank['country_code']?.toString(),
             ),
-            leading: Container(
-              width: width * 0.12,
-              height: height * 0.3,
-              decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor.withValues(alpha: 0.5),
-                shape: BoxShape.circle,
-              ),
-              child: QImage.circular(
-                imageUrl: item['profile'] as String? ?? '',
-                width: double.maxFinite,
-                height: double.maxFinite,
-              ),
-            ),
-            trailing: SizedBox(
-              width: width * 0.12,
-              child: Center(
-                child: Text(
-                  UiUtils.formatNumber(
-                    int.parse(item['score'] as String? ?? '0'),
-                  ),
-                  maxLines: 1,
-                  softWrap: false,
-                  style: textStyle,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget topThreeRanks(List<Map<String, dynamic>> circleList) {
-    final height = context.height;
-    final width = context.width;
-
-    Widget rank(double maxHeight, int idx) {
-      final imageSize = idx == 0 ? maxHeight * .40 : maxHeight * .35;
-
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        child: Column(
-          mainAxisAlignment: idx == 0
-              ? MainAxisAlignment.start
-              : MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              height: imageSize,
-              width: imageSize,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Align(
-                    alignment: Alignment.topCenter,
-                    child: Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: context.primaryTextColor.withValues(alpha: .3),
-                        ),
-                      ),
-                      child: QImage.circular(
-                        imageUrl: circleList[idx]['profile'] as String,
-                        width: double.maxFinite,
-                        height: double.maxFinite,
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: idx == 0 ? -12 : -10,
-                    left: 0,
-                    right: 0,
-                    child: rankCircle(
-                      (idx + 1).toString(),
-                      size: idx == 0 ? 30 : 25,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              circleList[idx]['name']!.toString().isNotEmpty
-                  ? circleList[idx]['name']!.toString()
-                  : '...',
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeights.regular,
-                color: context.primaryTextColor.withValues(alpha: .8),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              circleList[idx]['score'] as String? ?? '...',
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeights.bold,
-                color: context.primaryTextColor,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.only(top: 10, left: 10, right: 10),
-      width: width,
-      height: height * 0.24,
-      decoration: BoxDecoration(
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(10)),
-        color: context.surfaceColor,
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final maxHeight = constraints.maxHeight;
-
-          return Row(
-            children: [
-              /// Rank 2
-              Expanded(
-                flex: 2,
-                child: circleList.length > 1
-                    ? rank(maxHeight, 1)
-                    : const SizedBox.shrink(),
-              ),
-
-              /// Rank 1
-              Expanded(
-                flex: 3,
-                child: circleList.isNotEmpty
-                    ? rank(maxHeight, 0)
-                    : const SizedBox.shrink(),
-              ),
-
-              /// Rank 3
-              Expanded(
-                flex: 2,
-                child: circleList.length > 2
-                    ? rank(maxHeight, 2)
-                    : const SizedBox.shrink(),
-              ),
-            ],
-          );
-        },
+        ],
       ),
     );
   }
 
-  Widget rankCircle(String text, {double size = 25}) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        shape: BoxShape.circle,
-      ),
-      padding: const EdgeInsets.all(2),
-      alignment: Alignment.center,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).primaryColor,
-          shape: BoxShape.circle,
-        ),
-        alignment: Alignment.center,
-        child: Text(text, style: TextStyle(color: colorScheme.surface)),
-      ),
-    );
-  }
-
-  Widget leaderBoardList(
-    List<Map<String, dynamic>> leaderBoardList,
-    ScrollController controller, {
+  Widget _buildScoreLeaderboardUI({
+    required List<Map<String, dynamic>> leaderboardList,
     required bool hasMore,
+    required String rank,
+    required String profile,
+    required String score,
   }) {
-    if (leaderBoardList.length <= 3) return const SizedBox();
+    final currentUserId = context
+        .read<UserDetailsCubit>()
+        .getUserProfile()
+        .userId;
+    final topThree = leaderboardList.take(3).toList();
+    final remainingEntries = leaderboardList.length > 3
+        ? leaderboardList.sublist(3)
+        : <Map<String, dynamic>>[];
+    final showMyRank =
+        score != '0' && int.tryParse(rank) != null && int.parse(rank) > 3;
 
-    final textStyle = TextStyle(
-      color: Theme.of(context).colorScheme.onTertiary,
-      fontSize: 16,
-    );
-    final width = context.width;
-    final height = context.height;
-
-    return Expanded(
-      child: Container(
-        height: height * .45,
-        padding: EdgeInsets.only(top: 5, left: width * .02, right: width * .02),
-        child: ListView.separated(
-          controller: controller,
-          shrinkWrap: true,
-          itemCount: leaderBoardList.length,
-          separatorBuilder: (_, i) => i > 2
-              ? Divider(
-                  color: Colors.black26,
-                  thickness: .5,
-                  indent: width * 0.03,
-                  endIndent: width * 0.03,
-                )
-              : const SizedBox.shrink(),
-          itemBuilder: (context, index) {
-            final leaderBoard = leaderBoardList[index];
-
-            return index > 2
-                ? (hasMore && index == (leaderBoardList.length - 1))
-                      ? const Center(child: CircularProgressContainer())
-                      : Row(
-                          children: [
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                leaderBoard['user_rank'] as String,
-                                style: textStyle,
-                              ),
-                            ),
-                            Expanded(
-                              flex: 9,
-                              child: ListTile(
-                                dense: true,
-                                contentPadding: const EdgeInsets.only(
-                                  right: 20,
-                                ),
-                                title: Text(
-                                  leaderBoard['name'] as String? ?? '...',
-                                  overflow: TextOverflow.ellipsis,
-                                  style: textStyle,
-                                ),
-                                leading: Container(
-                                  width: width * .12,
-                                  height: height * .3,
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(
-                                      context,
-                                    ).primaryColor.withValues(alpha: 0.5),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: QImage.circular(
-                                    imageUrl:
-                                        leaderBoard['profile'] as String? ?? '',
-                                    width: double.maxFinite,
-                                    height: double.maxFinite,
-                                  ),
-                                ),
-                                trailing: SizedBox(
-                                  width: width * .12,
-                                  child: Center(
-                                    child: Text(
-                                      UiUtils.formatNumber(
-                                        int.parse(
-                                          leaderBoard['score'] as String? ??
-                                              '0',
-                                        ),
-                                      ),
-                                      maxLines: 1,
-                                      softWrap: false,
-                                      style: textStyle,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        )
-                : const SizedBox();
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget myRank(String rank, String profile, String score) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textStyle = TextStyle(color: colorScheme.onTertiary, fontSize: 16);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: context.surfaceColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      child: Row(
+    return RefreshIndicator(
+      color: const Color(0xFF1E90FF),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      onRefresh: () async {
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+        _fetchLeaderboardData();
+      },
+      child: Column(
         children: [
-          Center(child: Text(rank, style: textStyle)),
-          const SizedBox(width: 8),
-          Container(
-            height: context.width * .11,
-            width: context.width * .11,
-            decoration: const BoxDecoration(shape: BoxShape.circle),
-            child: QImage.circular(imageUrl: profile, fit: BoxFit.fill),
-          ),
-          const SizedBox(width: 8),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  context.tr(myRankKey)!,
-                  overflow: TextOverflow.ellipsis,
-                  style: textStyle,
-                ),
-                const SizedBox(height: 4),
-                const SkillTierBadge(),
+            child: CustomScrollView(
+              controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                // Top 3 Podium
+                if (topThree.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
+                      child: TopThreePodiumWidget(
+                        topThree: topThree,
+                        isEngagement: false,
+                      ),
+                    ),
+                  ),
+
+                // Remaining entries
+                if (remainingEntries.isNotEmpty)
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          if (hasMore && index == remainingEntries.length - 1) {
+                            return const Padding(
+                              padding: EdgeInsets.all(20),
+                              child: Center(child: CircularProgressContainer()),
+                            );
+                          }
+
+                          if (index >= remainingEntries.length) {
+                            return null;
+                          }
+
+                          final entry = remainingEntries[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: LeaderboardCardWidget(
+                              rank: entry['user_rank']?.toString() ?? '0',
+                              name: entry['name']?.toString() ?? '...',
+                              profile: entry['profile']?.toString() ?? '',
+                              value: entry['score']?.toString() ?? '0',
+                              isCurrentUser: entry['user_id'] == currentUserId,
+                              isEngagement: false,
+                              countryCode:
+                                  '', // Not available in current score API
+                            ),
+                          );
+                        },
+                        childCount: remainingEntries.length,
+                      ),
+                    ),
+                  ),
+
+                // Bottom padding for user position card
+                if (showMyRank)
+                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
               ],
             ),
           ),
-          Text(
-            score,
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
-            style: textStyle,
-          ),
+
+          // User Position Card (sticky at bottom)
+          if (showMyRank)
+            UserPositionCardWidget(
+              rank: rank,
+              name:
+                  context.read<UserDetailsCubit>().getUserProfile().name ??
+                  'You',
+              profile: profile,
+              value: score,
+              isEngagement: false,
+              countryCode: '', // Not available in current score API
+            ),
         ],
       ),
     );
@@ -784,334 +799,4 @@ class LeaderBoardScreenState extends State<LeaderBoardScreen>
 
   @override
   bool get wantKeepAlive => true;
-}
-
-/// Custom SliverPersistentHeaderDelegate for collapsible top 3 section
-class _LeaderboardTopThreeDelegate extends SliverPersistentHeaderDelegate {
-  _LeaderboardTopThreeDelegate({
-    required this.expandedHeight,
-    required this.collapsedHeight,
-    required this.leaderboardList,
-  });
-
-  final double expandedHeight;
-  final double collapsedHeight;
-  final List<Map<String, dynamic>> leaderboardList;
-
-  @override
-  double get minExtent => collapsedHeight;
-
-  @override
-  double get maxExtent => expandedHeight;
-
-  @override
-  bool shouldRebuild(covariant _LeaderboardTopThreeDelegate oldDelegate) {
-    return expandedHeight != oldDelegate.expandedHeight ||
-        collapsedHeight != oldDelegate.collapsedHeight ||
-        leaderboardList != oldDelegate.leaderboardList;
-  }
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    final progress = shrinkOffset / (maxExtent - minExtent);
-    final isCollapsed = progress > 0.5;
-
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(10)),
-        color: Theme.of(context).colorScheme.surface,
-      ),
-      child: _buildTopThreeContent(context, progress, isCollapsed),
-    );
-  }
-
-  Widget _buildTopThreeContent(
-    BuildContext context,
-    double progress,
-    bool isCollapsed,
-  ) {
-    final width = MediaQuery.sizeOf(context).width;
-    final primaryTextColor = Theme.of(context).colorScheme.onTertiary;
-
-    // Calculate scaling based on scroll progress
-    final scale = 1.0 - (progress * 0.35);
-    final opacity = 1.0 - (progress * 0.2);
-
-    if (isCollapsed) {
-      return _buildCollapsedView(context, width, primaryTextColor);
-    }
-
-    return Opacity(
-      opacity: opacity,
-      child: Transform.scale(
-        scale: scale,
-        child: _buildExpandedView(context, width, primaryTextColor),
-      ),
-    );
-  }
-
-  Widget _buildCollapsedView(
-    BuildContext context,
-    double width,
-    Color primaryTextColor,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          if (leaderboardList.isNotEmpty)
-            _buildCompactRankItem(context, 0, width * 0.28, primaryTextColor),
-          if (leaderboardList.length > 1)
-            _buildCompactRankItem(context, 1, width * 0.28, primaryTextColor),
-          if (leaderboardList.length > 2)
-            _buildCompactRankItem(context, 2, width * 0.28, primaryTextColor),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCompactRankItem(
-    BuildContext context,
-    int index,
-    double width,
-    Color primaryTextColor,
-  ) {
-    final item = leaderboardList[index];
-    return SizedBox(
-      width: width,
-      child: Row(
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: primaryTextColor.withValues(alpha: 0.3),
-                  ),
-                ),
-                child: QImage.circular(
-                  imageUrl: item['profile'] as String,
-                  width: double.maxFinite,
-                  height: double.maxFinite,
-                ),
-              ),
-              Positioned(
-                right: -4,
-                bottom: -4,
-                child: _rankCircle(context, (index + 1).toString(), size: 18),
-              ),
-            ],
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item['name']!.toString().isNotEmpty
-                      ? item['name']!.toString()
-                      : '...',
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeights.semiBold,
-                    color: primaryTextColor,
-                  ),
-                ),
-                Text(
-                  item['score'] as String? ?? '...',
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeights.regular,
-                    color: primaryTextColor.withValues(alpha: 0.6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildExpandedView(
-    BuildContext context,
-    double width,
-    Color primaryTextColor,
-  ) {
-    final height = MediaQuery.sizeOf(context).height;
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 10, left: 10, right: 10),
-      child: Row(
-        children: [
-          /// Rank 2
-          Expanded(
-            flex: 2,
-            child: leaderboardList.length > 1
-                ? _buildExpandedRankItem(context, 1, height, primaryTextColor)
-                : const SizedBox.shrink(),
-          ),
-
-          /// Rank 1
-          Expanded(
-            flex: 3,
-            child: leaderboardList.isNotEmpty
-                ? _buildExpandedRankItem(
-                    context,
-                    0,
-                    height,
-                    primaryTextColor,
-                    isFirst: true,
-                  )
-                : const SizedBox.shrink(),
-          ),
-
-          /// Rank 3
-          Expanded(
-            flex: 2,
-            child: leaderboardList.length > 2
-                ? _buildExpandedRankItem(context, 2, height, primaryTextColor)
-                : const SizedBox.shrink(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildExpandedRankItem(
-    BuildContext context,
-    int index,
-    double height,
-    Color primaryTextColor, {
-    bool isFirst = false,
-  }) {
-    final item = leaderboardList[index];
-    final maxHeight = expandedHeight;
-    final imageSize = isFirst ? maxHeight * 0.40 : maxHeight * 0.35;
-    final rankSize = isFirst ? 30.0 : 25.0;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SizedBox(
-          height: constraints.maxHeight,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Column(
-              mainAxisAlignment: isFirst
-                  ? MainAxisAlignment.start
-                  : MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  height: imageSize,
-                  width: imageSize,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Align(
-                        alignment: Alignment.topCenter,
-                        child: Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: primaryTextColor.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: QImage.circular(
-                            imageUrl: item['profile'] as String,
-                            width: double.maxFinite,
-                            height: double.maxFinite,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        bottom: isFirst ? -12 : -10,
-                        left: 0,
-                        right: 0,
-                        child: _rankCircle(
-                          context,
-                          (index + 1).toString(),
-                          size: rankSize,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  item['name']!.toString().isNotEmpty
-                      ? item['name']!.toString()
-                      : '...',
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeights.regular,
-                    color: primaryTextColor.withValues(alpha: 0.8),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  item['score'] as String? ?? '...',
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeights.bold,
-                    color: primaryTextColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _rankCircle(BuildContext context, String text, {double size = 25}) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        shape: BoxShape.circle,
-      ),
-      padding: const EdgeInsets.all(2),
-      alignment: Alignment.center,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).primaryColor,
-          shape: BoxShape.circle,
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          text,
-          style: TextStyle(
-            color: colorScheme.surface,
-            fontSize: size * 0.45,
-          ),
-        ),
-      ),
-    );
-  }
 }

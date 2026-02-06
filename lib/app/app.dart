@@ -36,7 +36,15 @@ import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.da
 import 'package:flutterquiz/features/system_config/system_config_repository.dart';
 import 'package:flutterquiz/features/wallet/cubit/monetization_cubit.dart';
 import 'package:flutterquiz/features/wallet/repos/monetization_remote_data_source.dart';
+import 'package:flutterquiz/features/engagement/services/engagement_tracker_service.dart';
+import 'package:flutterquiz/features/engagement/repositories/engagement_repository.dart';
+import 'package:flutterquiz/features/engagement/cubit/engagement_weekly_cubit.dart';
+import 'package:flutterquiz/features/engagement/cubit/engagement_monthly_cubit.dart';
+import 'package:flutterquiz/features/engagement/cubit/engagement_alltime_cubit.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+
+// Global instance of engagement tracker
+late EngagementTrackerService engagementTracker;
 
 Future<Widget> initializeApp() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,6 +73,10 @@ Future<Widget> initializeApp() async {
   await Hive.openBox<dynamic>(settingsBox);
   await Hive.openBox<dynamic>(userDetailsBox);
   await Hive.openBox<dynamic>(examBox);
+
+  // Initialize engagement tracker
+  engagementTracker = EngagementTrackerService();
+  await engagementTracker.initialize();
 
   return const MyApp();
 }
@@ -120,10 +132,13 @@ class MyApp extends StatelessWidget {
         BlocProvider<InterstitialAdCubit>(create: (_) => InterstitialAdCubit()),
         BlocProvider<RewardedAdCubit>(create: (_) => RewardedAdCubit()),
         BlocProvider<AppOpenAdCubit>(create: (_) => AppOpenAdCubit()),
-        BlocProvider<RewardedInterstitialAdCubit>(create: (_) => RewardedInterstitialAdCubit()),
+        BlocProvider<RewardedInterstitialAdCubit>(
+          create: (_) => RewardedInterstitialAdCubit(),
+        ),
         BlocProvider<ExamCubit>(create: (_) => ExamCubit(ExamRepository())),
         BlocProvider<MonetizationCubit>(
-          create: (_) => MonetizationCubit(const MonetizationRemoteDataSource()),
+          create: (_) =>
+              MonetizationCubit(const MonetizationRemoteDataSource()),
         ),
         BlocProvider<ComprehensionCubit>(
           create: (_) => ComprehensionCubit(QuizRepository()),
@@ -145,6 +160,16 @@ class MyApp extends StatelessWidget {
           create: (_) => UnlockPremiumCategoryCubit(QuizRepository()),
         ),
         BlocProvider<BannerAdCubit>(create: (_) => BannerAdCubit()),
+        // Engagement Time Tracking Cubits
+        BlocProvider<EngagementWeeklyCubit>(
+          create: (_) => EngagementWeeklyCubit(EngagementRepository()),
+        ),
+        BlocProvider<EngagementMonthlyCubit>(
+          create: (_) => EngagementMonthlyCubit(EngagementRepository()),
+        ),
+        BlocProvider<EngagementAllTimeCubit>(
+          create: (_) => EngagementAllTimeCubit(EngagementRepository()),
+        ),
       ],
       child: Builder(
         builder: (context) {

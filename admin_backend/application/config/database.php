@@ -1,6 +1,6 @@
 <?php
 
-defined('BASEPATH') OR exit('No direct script access allowed');
+defined('BASEPATH') or exit('No direct script access allowed');
 
 /*
   | -------------------------------------------------------------------
@@ -77,9 +77,9 @@ $query_builder = TRUE;
 $db['default'] = array(
     'dsn' => '',
     'hostname' => 'localhost',
-    'username' => 'mquiz_ru2ndi4',
-    'password' => 'yZ#r$N43NvXr',
-    'database' => 'mquiz_d5bueportal',
+    'username' => 'root',
+    'password' => '',
+    'database' => 'mquiz_app',
     'dbdriver' => 'mysqli',
     'dbprefix' => '',
     'pconnect' => FALSE,
