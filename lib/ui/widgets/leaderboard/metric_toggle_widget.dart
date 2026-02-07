@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 /// Widget for toggling between Score and Engagement metrics
 class MetricToggleWidget extends StatelessWidget {
   final int selectedMetricIndex; // 0 for Score, 1 for Engagement
-  final Function(int) onMetricChanged;
+  final void Function(int) onMetricChanged;
   final Color activeColor;
   final Color inactiveColor;
 

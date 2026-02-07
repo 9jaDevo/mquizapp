@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 /// Widget for selecting scope filter: World, Country, or Region
 class ScopeSelectorWidget extends StatelessWidget {
   final String selectedScope; // 'world', 'country', or 'region'
-  final Function(String) onScopeChanged;
+  final void Function(String) onScopeChanged;
   final Color activeColor;
   final Color inactiveColor;
 

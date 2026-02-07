@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import '../../../core/utils/api_utils.dart';
+import '../../../utils/api_utils.dart';
 import '../../../core/constants/api_endpoints_constants.dart';
 
 /// Service to track user engagement time in the app
@@ -185,7 +185,9 @@ class EngagementTrackerService with WidgetsBindingObserver {
       final stillPending = <String>[];
 
       for (final sessionJson in pendingList) {
-        final sessionData = Map<String, String>.from(json.decode(sessionJson));
+        final sessionData = Map<String, String>.from(
+          json.decode(sessionJson) as Map,
+        );
         final success = await _sendSessionToAPI(sessionData);
 
         if (!success) {

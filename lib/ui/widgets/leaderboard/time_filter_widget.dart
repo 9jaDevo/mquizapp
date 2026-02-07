@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 /// Widget for selecting time period: Week, Month, or All Time
 class TimeFilterWidget extends StatelessWidget {
   final String selectedPeriod; // 'week', 'month', or 'alltime'
-  final Function(String) onPeriodChanged;
+  final void Function(String) onPeriodChanged;
   final Color activeColor;
   final Color inactiveColor;
 

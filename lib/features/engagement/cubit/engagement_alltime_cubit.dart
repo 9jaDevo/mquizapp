@@ -51,11 +51,12 @@ class EngagementAllTimeCubit extends Cubit<EngagementAllTimeState> {
 
       if (result['error'] == false) {
         final data = result['data'] as Map<String, dynamic>;
-        final List<dynamic> otherUsersRank = data['other_users_rank'] ?? [];
+        final otherUsersRank =
+            (data['other_users_rank'] ?? <dynamic>[]) as List<dynamic>;
         final total = int.tryParse(result['total']?.toString() ?? '0') ?? 0;
 
-        final leaderboardData = [
-          data['my_rank'] ?? {},
+        final leaderboardData = <Map<String, dynamic>>[
+          (data['my_rank'] ?? <String, dynamic>{}) as Map<String, dynamic>,
           ...otherUsersRank.map((e) => e as Map<String, dynamic>),
           if (data['top_three_ranks'] != null)
             ...(data['top_three_ranks'] as List).map(
@@ -73,7 +74,7 @@ class EngagementAllTimeCubit extends Cubit<EngagementAllTimeState> {
       } else {
         emit(
           EngagementAllTimeFailure(
-            result['message'] ?? 'Failed to fetch leaderboard',
+            (result['message'] ?? 'Failed to fetch leaderboard').toString(),
           ),
         );
       }
@@ -103,7 +104,8 @@ class EngagementAllTimeCubit extends Cubit<EngagementAllTimeState> {
 
         if (result['error'] == false) {
           final data = result['data'] as Map<String, dynamic>;
-          final List<dynamic> otherUsersRank = data['other_users_rank'] ?? [];
+          final otherUsersRank =
+              (data['other_users_rank'] ?? <dynamic>[]) as List<dynamic>;
 
           final updatedData = [
             ...currentState.leaderboardData,

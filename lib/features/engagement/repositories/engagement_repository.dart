@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../../../core/constants/api_endpoints_constants.dart';
-import '../../../core/utils/api_utils.dart';
+import '../../../utils/api_utils.dart';
 
 /// Repository for engagement-related API calls
 class EngagementRepository {
@@ -35,14 +35,15 @@ class EngagementRepository {
         headers: await ApiUtils.getHeaders(),
       );
 
-      final responseJson = jsonDecode(response.body);
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
 
       if (response.statusCode == 200) {
         return responseJson;
       } else {
         throw EngagementException(
           errorMessageCode:
-              responseJson['message'] ?? 'Failed to fetch leaderboard',
+              (responseJson['message'] ?? 'Failed to fetch leaderboard')
+                  .toString(),
         );
       }
     } on SocketException catch (_) {
@@ -80,14 +81,15 @@ class EngagementRepository {
         headers: await ApiUtils.getHeaders(),
       );
 
-      final responseJson = jsonDecode(response.body);
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
 
       if (response.statusCode == 200) {
         return responseJson;
       } else {
         throw EngagementException(
           errorMessageCode:
-              responseJson['message'] ?? 'Failed to fetch leaderboard',
+              (responseJson['message'] ?? 'Failed to fetch leaderboard')
+                  .toString(),
         );
       }
     } on SocketException catch (_) {
@@ -125,14 +127,15 @@ class EngagementRepository {
         headers: await ApiUtils.getHeaders(),
       );
 
-      final responseJson = jsonDecode(response.body);
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
 
       if (response.statusCode == 200) {
         return responseJson;
       } else {
         throw EngagementException(
           errorMessageCode:
-              responseJson['message'] ?? 'Failed to fetch leaderboard',
+              (responseJson['message'] ?? 'Failed to fetch leaderboard')
+                  .toString(),
         );
       }
     } on SocketException catch (_) {
@@ -159,14 +162,15 @@ class EngagementRepository {
         headers: await ApiUtils.getHeaders(),
       );
 
-      final responseJson = jsonDecode(response.body);
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
 
       if (response.statusCode == 200) {
         return responseJson;
       } else {
         throw EngagementException(
           errorMessageCode:
-              responseJson['message'] ?? 'Failed to update location',
+              (responseJson['message'] ?? 'Failed to update location')
+                  .toString(),
         );
       }
     } on SocketException catch (_) {

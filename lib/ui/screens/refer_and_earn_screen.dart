@@ -64,7 +64,7 @@ class ReferAndEarnScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 20),
-                  
+
                   // Header Section
                   _buildGlassCard(
                     child: Column(
@@ -664,3 +664,4 @@ class _GlassIconButton extends StatelessWidget {
       ),
     );
   }
+}
