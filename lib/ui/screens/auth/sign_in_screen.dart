@@ -73,25 +73,31 @@ class _SignInScreenState extends State<SignInScreen> {
       listener: (context, state) {
         if (state is SignInSuccess &&
             state.authProvider != AuthProviders.email) {
-          context.read<AuthCubit>().updateAuthDetails(
-            authProvider: state.authProvider,
-            firebaseId: state.user.uid,
-            authStatus: true,
-            isNewUser: state.isNewUser,
-          );
-          if (state.isNewUser) {
-            context.read<UserDetailsCubit>().fetchUserDetails();
-            context.pushReplacementNamed(
-              Routes.selectProfile,
-              arguments: const CreateOrEditProfileScreenArgs(isNewUser: true),
-            );
-          } else {
-            context.read<UserDetailsCubit>().fetchUserDetails();
-            context.pushNamedAndRemoveUntil(
-              Routes.home,
-              predicate: (_) => false,
-            );
-          }
+          context
+              .read<AuthCubit>()
+              .updateAuthDetails(
+                authProvider: state.authProvider,
+                firebaseId: state.user.uid,
+                authStatus: true,
+                isNewUser: state.isNewUser,
+              )
+              .then((_) {
+                if (state.isNewUser) {
+                  context.read<UserDetailsCubit>().fetchUserDetails();
+                  context.pushReplacementNamed(
+                    Routes.selectProfile,
+                    arguments: const CreateOrEditProfileScreenArgs(
+                      isNewUser: true,
+                    ),
+                  );
+                } else {
+                  context.read<UserDetailsCubit>().fetchUserDetails();
+                  context.pushNamedAndRemoveUntil(
+                    Routes.home,
+                    predicate: (_) => false,
+                  );
+                }
+              });
         } else if (state is SignInFailure &&
             state.authProvider != AuthProviders.email) {
           context.showSnack(
@@ -295,8 +301,8 @@ class _SignInScreenState extends State<SignInScreen> {
           //Exceuting only if authProvider is email
           if (state is SignInSuccess &&
               state.authProvider == AuthProviders.email) {
-            //to update authdetails after successfull sign in
-            context.read<AuthCubit>().updateAuthDetails(
+            //to update authdetails FIRST before any API calls
+            await context.read<AuthCubit>().updateAuthDetails(
               authProvider: state.authProvider,
               firebaseId: state.user.uid,
               authStatus: true,
@@ -515,12 +521,16 @@ class _SignInScreenState extends State<SignInScreen> {
           ),
         ),
         const SizedBox(width: 12),
-        Text(
-          context.tr('loginSocialMediaLbl') ?? 'or continue with',
-          style: TextStyle(
-            fontWeight: FontWeights.semiBold,
-            color: Theme.of(context).primaryColor.withValues(alpha: 0.6),
-            fontSize: 14,
+        Flexible(
+          child: Text(
+            context.tr('loginSocialMediaLbl') ?? 'or continue with',
+            style: TextStyle(
+              fontWeight: FontWeights.semiBold,
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.6),
+              fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
         const SizedBox(width: 12),

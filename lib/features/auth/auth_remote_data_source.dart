@@ -29,6 +29,11 @@ class AuthRemoteDataSource {
   }) async {
     try {
       final fcmToken = await getFCMToken();
+
+      print(
+        '[DEBUG] addUser called - firebase_id: $firebaseId, email: $email, fcm_token: ${fcmToken.substring(0, 20)}...',
+      );
+
       //body of post request
       final body = <String, String>{
         firebaseIdKey: firebaseId,
@@ -39,21 +44,44 @@ class AuthRemoteDataSource {
         mobileKey: mobile ?? '',
         fcmIdKey: fcmToken,
         friendCodeKey: friendCode ?? '',
-        'app_language': ?appLanguage,
+        if (appLanguage != null) 'app_language': appLanguage,
       };
 
       final response = await http.post(Uri.parse(addUserUrl), body: body);
+      print(
+        '[DEBUG] addUser HTTP response status: ${response.statusCode}, body length: ${response.body.length}',
+      );
+      print(
+        '[DEBUG] addUser response body: ${response.body.substring(0, response.body.length > 500 ? 500 : response.body.length)}...',
+      );
+
       final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
 
+      print(
+        '[DEBUG] addUser response - error: ${responseJson['error']}, has data: ${responseJson.containsKey('data')}',
+      );
+      if (responseJson.containsKey('data') && responseJson['data'] != null) {
+        final userData = responseJson['data'] as Map<String, dynamic>;
+        print(
+          '[DEBUG] addUser data - id: ${userData['id']}, firebase_id: ${userData['firebase_id']}, email: ${userData['email']}, api_token exists: ${userData.containsKey('api_token')}',
+        );
+      }
+
       if (responseJson['error'] as bool) {
+        print('[DEBUG] addUser error response: ${responseJson['message']}');
         throw ApiException(responseJson['message'].toString());
       }
+
+      print('[DEBUG] addUser returning data with ${responseJson['data']}');
       return responseJson['data'] as Map<String, dynamic>;
     } on SocketException {
+      print('[DEBUG] addUser SocketException - no internet');
       throw const ApiException(errorCodeNoInternet);
     } on ApiException {
+      print('[DEBUG] addUser ApiException - rethrowing');
       rethrow;
-    } on Exception {
+    } on Exception catch (e) {
+      print('[DEBUG] addUser generic Exception: $e');
       throw const ApiException(errorCodeDefaultMessage);
     }
   }
@@ -247,7 +275,12 @@ class AuthRemoteDataSource {
       email: email,
       password: password,
     );
-    if (userCredential.user!.emailVerified) {
+
+    // Reload user to get latest email verification status from server
+    await userCredential.user!.reload();
+    final currentUser = _firebaseAuth.currentUser;
+
+    if (currentUser!.emailVerified) {
       return userCredential;
     } else {
       throw const ApiException('135');

@@ -30,17 +30,16 @@ class AuthRepository {
     };
   }
 
-  void setLocalAuthDetails({
+  Future<void> setLocalAuthDetails({
     String? jwtToken,
     String? firebaseId,
     String? authType,
     bool? authStatus,
     bool? isNewUser,
-  }) {
-    _authLocalDataSource
-      ..changeAuthStatus(authStatus: authStatus)
-      ..setUserFirebaseId(firebaseId)
-      ..setAuthType(authType);
+  }) async {
+    await _authLocalDataSource.changeAuthStatus(authStatus: authStatus);
+    await _authLocalDataSource.setUserFirebaseId(firebaseId);
+    await _authLocalDataSource.setAuthType(authType);
   }
 
   //First we signing user with given provider then add user details
@@ -90,11 +89,16 @@ class AuthRepository {
       var userExists = !isNewUser;
 
       if (authProvider == AuthProviders.email) {
+        print('[DEBUG] Checking if user exists for firebase_id: $userUid');
         userExists = await _authRemoteDataSource.isUserExist(userUid);
+        print('[DEBUG] User exists in backend: $userExists');
       }
 
       if (!userExists) {
         isNewUser = true;
+        print(
+          '[DEBUG] Creating new user with firebase_id: $userUid, email: $userEmail',
+        );
         final registeredUser = await _authRemoteDataSource.addUser(
           email: userEmail,
           firebaseId: userUid,
@@ -105,14 +109,21 @@ class AuthRepository {
           appLanguage: appLanguage,
         );
 
+        print(
+          '[DEBUG] Received user data - firebase_id: ${registeredUser['firebase_id']}, has api_token: ${registeredUser.containsKey('api_token')}',
+        );
+
         await AuthLocalDataSource.setJwtToken(
           registeredUser['api_token'].toString(),
         );
+        print('[DEBUG] Saved JWT token for new user');
       } else {
+        print('[DEBUG] User exists, getting JWT for firebase_id: $userUid');
         final jwtToken = await _authRemoteDataSource.getJWTTokenOfUser(
           firebaseId: userUid,
           type: authProvider.name,
         );
+        print('[DEBUG] Got JWT token: ${jwtToken.substring(0, 50)}...');
 
         await AuthLocalDataSource.setJwtToken(jwtToken);
         await _authRemoteDataSource.updateFcmId(
@@ -148,7 +159,7 @@ class AuthRepository {
         userLoggingOut: true,
       );
       await _authRemoteDataSource.signOut(authProvider);
-      setLocalAuthDetails(
+      await setLocalAuthDetails(
         authStatus: false,
         authType: '',
         jwtToken: '',

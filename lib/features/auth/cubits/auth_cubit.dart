@@ -49,14 +49,14 @@ class AuthCubit extends Cubit<AuthState> {
   }
 
   //to update auth status
-  void updateAuthDetails({
+  Future<void> updateAuthDetails({
     String? firebaseId,
     AuthProviders? authProvider,
     bool? authStatus,
     bool? isNewUser,
-  }) {
+  }) async {
     //updating authDetails locally
-    _authRepository.setLocalAuthDetails(
+    await _authRepository.setLocalAuthDetails(
       jwtToken: '',
       firebaseId: firebaseId,
       authType: authProvider!.name,

@@ -9,8 +9,12 @@ class ApiUtils {
 
     if (jwtToken.isEmpty) {
       try {
+        final storedFirebaseId = AuthLocalDataSource.getUserFirebaseId();
+        print(
+          '[DEBUG] getHeaders: JWT empty, fetching with stored firebase_id: $storedFirebaseId',
+        );
         jwtToken = await AuthRemoteDataSource().getJWTTokenOfUser(
-          firebaseId: AuthLocalDataSource.getUserFirebaseId(),
+          firebaseId: storedFirebaseId,
           type: AuthLocalDataSource.getAuthType(),
         );
         if (jwtToken.isNotEmpty) {

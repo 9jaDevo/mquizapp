@@ -289,25 +289,30 @@ class Geolocation
      */
     private function getCachedLocation($ip_address)
     {
-        $cache_key = 'geo_' . md5($ip_address);
+        try {
+            $cache_key = 'geo_' . md5($ip_address);
 
-        // Using CodeIgniter's cache driver if available
-        if (method_exists($this->CI, 'cache')) {
-            $cached = $this->CI->cache->get($cache_key);
-            if ($cached !== false) {
-                return $cached;
+            // Using CodeIgniter's cache driver if available
+            if (method_exists($this->CI, 'cache')) {
+                $cached = $this->CI->cache->get($cache_key);
+                if ($cached !== false) {
+                    return $cached;
+                }
             }
-        }
 
-        // Fallback to database cache
-        $query = $this->CI->db->select('cache_data')
-            ->from('tbl_cache')
-            ->where('cache_key', $cache_key)
-            ->where('cache_expiry >', time())
-            ->get();
+            // Fallback to database cache
+            $query = $this->CI->db->select('cache_data')
+                ->from('tbl_cache')
+                ->where('cache_key', $cache_key)
+                ->where('cache_expiry >', time())
+                ->get();
 
-        if ($query && $query->num_rows() > 0) {
-            return json_decode($query->row()->cache_data, true);
+            if ($query && $query->num_rows() > 0) {
+                return json_decode($query->row()->cache_data, true);
+            }
+        } catch (Exception $e) {
+            // Cache read failed, continue without cache
+            error_log('Geolocation cache read failed: ' . $e->getMessage());
         }
 
         return null;
@@ -321,42 +326,47 @@ class Geolocation
      */
     private function cacheLocation($ip_address, $location)
     {
-        $cache_key = 'geo_' . md5($ip_address);
+        try {
+            $cache_key = 'geo_' . md5($ip_address);
 
-        // Using CodeIgniter's cache driver if available
-        if (method_exists($this->CI, 'cache')) {
-            $this->CI->cache->save($cache_key, $location, $this->cache_duration);
-            return;
-        }
+            // Using CodeIgniter's cache driver if available
+            if (method_exists($this->CI, 'cache')) {
+                $this->CI->cache->save($cache_key, $location, $this->cache_duration);
+                return;
+            }
 
-        // Fallback to database cache
-        // Create cache table if it doesn't exist
-        if (!$this->CI->db->table_exists('tbl_cache')) {
-            $this->CI->db->query("
-                CREATE TABLE IF NOT EXISTS `tbl_cache` (
-                    `id` int NOT NULL AUTO_INCREMENT,
-                    `cache_key` varchar(255) NOT NULL,
-                    `cache_data` text NOT NULL,
-                    `cache_expiry` int NOT NULL,
-                    PRIMARY KEY (`id`),
-                    UNIQUE KEY `cache_key` (`cache_key`),
-                    KEY `cache_expiry` (`cache_expiry`)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-            ");
-        }
+            // Fallback to database cache
+            // Create cache table if it doesn't exist
+            if (!$this->CI->db->table_exists('tbl_cache')) {
+                $this->CI->db->query("
+                    CREATE TABLE IF NOT EXISTS `tbl_cache` (
+                        `id` int NOT NULL AUTO_INCREMENT,
+                        `cache_key` varchar(255) NOT NULL,
+                        `cache_data` text NOT NULL,
+                        `cache_expiry` int NOT NULL,
+                        PRIMARY KEY (`id`),
+                        UNIQUE KEY `cache_key` (`cache_key`),
+                        KEY `cache_expiry` (`cache_expiry`)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                ");
+            }
 
-        $data = [
-            'cache_key' => $cache_key,
-            'cache_data' => json_encode($location),
-            'cache_expiry' => time() + $this->cache_duration
-        ];
+            $data = [
+                'cache_key' => $cache_key,
+                'cache_data' => json_encode($location),
+                'cache_expiry' => time() + $this->cache_duration
+            ];
 
-        // Insert or update
-        $existing = $this->CI->db->where('cache_key', $cache_key)->get('tbl_cache');
-        if ($existing->num_rows() > 0) {
-            $this->CI->db->where('cache_key', $cache_key)->update('tbl_cache', $data);
-        } else {
-            $this->CI->db->insert('tbl_cache', $data);
+            // Insert or update
+            $existing = $this->CI->db->where('cache_key', $cache_key)->get('tbl_cache');
+            if ($existing->num_rows() > 0) {
+                $this->CI->db->where('cache_key', $cache_key)->update('tbl_cache', $data);
+            } else {
+                $this->CI->db->insert('tbl_cache', $data);
+            }
+        } catch (Exception $e) {
+            // Cache write failed, continue without caching
+            error_log('Geolocation cache write failed: ' . $e->getMessage());
         }
     }
 

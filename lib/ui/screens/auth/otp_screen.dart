@@ -406,10 +406,10 @@ class _OtpScreen extends State<OtpScreen> {
           ),
         );
       },
-      listener: (context, state) {
+      listener: (context, state) async {
         if (state is SignInSuccess) {
-          //update auth details
-          context.read<AuthCubit>().updateAuthDetails(
+          //update auth details FIRST before any API calls
+          await context.read<AuthCubit>().updateAuthDetails(
             authProvider: AuthProviders.mobile,
             authStatus: true,
             firebaseId: state.user.uid,
@@ -417,14 +417,14 @@ class _OtpScreen extends State<OtpScreen> {
           );
 
           if (state.isNewUser) {
-            context.read<UserDetailsCubit>().fetchUserDetails();
+            await context.read<UserDetailsCubit>().fetchUserDetails();
             Navigator.of(context).pop();
             context.pushReplacementNamed(
               Routes.selectProfile,
               arguments: const CreateOrEditProfileScreenArgs(isNewUser: true),
             );
           } else {
-            context.read<UserDetailsCubit>().fetchUserDetails();
+            await context.read<UserDetailsCubit>().fetchUserDetails();
             Navigator.of(context).pop();
             context.pushNamedAndRemoveUntil(
               Routes.home,

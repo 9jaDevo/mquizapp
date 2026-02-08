@@ -79,8 +79,11 @@ class Api extends REST_Controller
     public function user_signup_post()
     {
 
+        error_log('[BACKEND user_signup_post] Received POST data - firebase_id: ' . $this->post('firebase_id') . ', email: ' . $this->post('email') . ', name: ' . $this->post('name'));
+
         if ($this->post('firebase_id') && $this->post('type') && ($this->post('firebase_id') != 'null') && ($this->post('firebase_id') != 'NULL')) {
             $firebase_id = $this->post('firebase_id');
+            error_log('[BACKEND user_signup_post] Processing firebase_id: ' . $firebase_id);
 
             // ------- Should be Enabled for server  ----------
             $is_verify = $this->verify_user($firebase_id);
@@ -101,6 +104,8 @@ class Api extends REST_Controller
                 $refer_coin = is_settings('refer_coin');
                 $earn_coin = is_settings('earn_coin');
 
+                error_log('[BACKEND] user_signup_post - firebase_id: ' . $firebase_id . ', email: ' . $email);
+
                 if (!empty($friends_code)) {
                     $code = valid_friends_refer_code($friends_code);
                     if (!$code['is_valid']) {
@@ -108,6 +113,7 @@ class Api extends REST_Controller
                     }
                 }
                 $res = $this->db->where('firebase_id', $firebase_id)->get('tbl_users')->row_array();
+                error_log('[BACKEND] Existing user check - found: ' . (!empty($res) ? 'YES (id=' . $res['id'] . ')' : 'NO'));
                 if (!empty($res)) {
                     // login
                     if ($res['status'] == 1) {
@@ -215,6 +221,7 @@ class Api extends REST_Controller
                     );
                     $this->db->insert('tbl_users', $data);
                     $insert_id = $this->db->insert_id();
+                    error_log('[BACKEND] Created new user - insert_id: ' . $insert_id . ', firebase_id: ' . $firebase_id);
 
                     // get the welcome bonus result from settings 
                     $welcome_bonus_query = $this->db->select('message')->where('type', 'welcome_bonus_coin')->get('tbl_settings')->row_array();
@@ -230,6 +237,7 @@ class Api extends REST_Controller
 
                     //generate token
                     $api_token = $this->generate_token($insert_id, $firebase_id);
+                    error_log('[BACKEND] Generated token for user_id: ' . $insert_id . ', firebase_id: ' . $firebase_id);
                     $this->db->where('id', $insert_id)->update('tbl_users', ['api_token' => $api_token]);
 
                     $counter = 0;
@@ -288,6 +296,7 @@ class Api extends REST_Controller
                     }
 
                     $res1 = $this->db->where('id', $insert_id)->get('tbl_users')->row_array();
+                    error_log('[BACKEND] Fetched user data - id: ' . $res1['id'] . ', firebase_id: ' . $res1['firebase_id'] . ', api_token firebase_id: ' . (isset($res1['api_token']) ? substr($res1['api_token'], 0, 50) : 'none'));
 
                     if (filter_var($res1['profile'], FILTER_VALIDATE_URL) === false) {
                         $res1['profile'] = ($res1['profile']) ? base_url() . USER_IMG_PATH . $res1['profile'] : '';
@@ -829,7 +838,9 @@ class Api extends REST_Controller
         try {
             if ($this->post('firebase_id')) {
                 $firebase_id = $this->post('firebase_id');
+                error_log('[BACKEND] check_user_exists - firebase_id: ' . $firebase_id);
                 $res = $this->db->where('firebase_id', $firebase_id)->get('tbl_users')->row_array();
+                error_log('[BACKEND] check_user_exists - found: ' . ($res ? 'YES (id=' . $res['id'] . ')' : 'NO'));
                 if ($res) {
                     $response['error'] = false;
                     $response['message'] = "130";
