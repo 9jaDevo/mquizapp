@@ -76,6 +76,14 @@ $route['monthly-leaderboard'] = 'Dashboard/monthly_leaderboard';
 $route['monthly-leaderboard/(:num)'] = 'Dashboard/monthly_leaderboard/$1';
 $route['daily-leaderboard'] = 'Dashboard/daily_leaderboard';
 
+// Engagement Tracking Routes
+$route['engagement-dashboard'] = 'Dashboard/engagement_dashboard';
+$route['engagement-analytics'] = 'Dashboard/engagement_analytics';
+$route['engagement-leaderboard/weekly'] = 'Dashboard/engagement_leaderboard_weekly';
+$route['engagement-leaderboard/monthly'] = 'Dashboard/engagement_leaderboard_monthly';
+$route['engagement-leaderboard/alltime'] = 'Dashboard/engagement_leaderboard_alltime';
+$route['user-engagement-detail/(:num)'] = 'Dashboard/user_engagement_detail/$1';
+
 $route['delete_multiple'] = 'Dashboard/delete_multiple';
 
 $route['get_categories_of_language'] = 'Dashboard/get_categories_of_language';

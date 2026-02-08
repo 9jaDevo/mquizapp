@@ -329,6 +329,19 @@
                     </ul>
                 </li>
             <?php } ?>
+            <?php if (has_permissions('read', 'engagement_tracking')) { ?>
+                <li class="nav-item dropdown">
+                    <a href="javascript:void(0)" class="nav-link has-dropdown"><em class="fas fa-chart-line"></em><span>Engagement</span></a>
+                    <ul class="dropdown-menu">
+                        <li><a class="nav-link" href="<?= base_url(); ?>engagement-dashboard"><em class="fas fa-tachometer-alt"></em> Dashboard</a></li>
+                        <li><a class="nav-link" href="<?= base_url(); ?>engagement-analytics"><em class="fas fa-chart-bar"></em> Analytics</a></li>
+                        <li class="dropdown-divider"></li>
+                        <li><a class="nav-link" href="<?= base_url(); ?>engagement-leaderboard/weekly"><em class="fas fa-calendar-week"></em> Weekly Leaderboard</a></li>
+                        <li><a class="nav-link" href="<?= base_url(); ?>engagement-leaderboard/monthly"><em class="fas fa-calendar-alt"></em> Monthly Leaderboard</a></li>
+                        <li><a class="nav-link" href="<?= base_url(); ?>engagement-leaderboard/alltime"><em class="fas fa-star"></em> All-Time Leaderboard</a></li>
+                    </ul>
+                </li>
+            <?php } ?>
             <?php if (is_language_mode_enabled()) { ?>
                 <?php if (has_permissions('read', 'languages')) { ?>
                     <li>

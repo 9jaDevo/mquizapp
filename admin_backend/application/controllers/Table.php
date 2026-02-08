@@ -2600,4 +2600,351 @@ class Table extends REST_Controller
 
         echo json_encode($bulkData, JSON_UNESCAPED_UNICODE);
     }
+
+    // Engagement Tracking - Dashboard Stats
+    public function engagement_stats_get()
+    {
+        $sort = $this->get('sort') ?? 'total_minutes';
+        $order = $this->get('order') ?? 'DESC';
+
+        // Get top engaged users with their details
+        $this->db->select('e.user_id, e.total_minutes, u.name, u.email, u.profile, u.country_name, u.continent');
+        $this->db->from('tbl_leaderboard_engagement_alltime as e');
+        $this->db->join('tbl_users as u', 'u.id = e.user_id', 'left');
+        $this->db->where('u.status', 1);
+
+        if ($this->get('search')) {
+            $search = $this->db->escape_like_str($this->get('search'));
+            $this->db->group_start()
+                ->like('u.name', $search)
+                ->or_like('u.email', $search)
+                ->or_like('u.country_name', $search)
+                ->group_end();
+        }
+
+        $total = $this->db->count_all_results('', false);
+        $this->db->order_by($sort, $order);
+
+        if ($this->get('limit')) {
+            $offset = $this->get('offset');
+            $limit = $this->get('limit');
+            $this->db->limit($limit, $offset);
+        }
+
+        $query = $this->db->get();
+        $res = $query->result();
+
+        $bulkData = [
+            'total' => $total,
+            'rows' => []
+        ];
+
+        foreach ($res as $row) {
+            $hours = floor($row->total_minutes / 60);
+            $minutes = $row->total_minutes % 60;
+
+            $bulkData['rows'][] = [
+                'user_id' => $row->user_id,
+                'name' => $row->name,
+                'email' => $row->email,
+                'profile' => $row->profile,
+                'country_name' => $row->country_name ?? 'N/A',
+                'continent' => $row->continent ?? 'N/A',
+                'total_minutes' => $row->total_minutes,
+                'formatted_time' => $hours . 'h ' . $minutes . 'm',
+            ];
+        }
+
+        echo json_encode($bulkData, JSON_UNESCAPED_UNICODE);
+    }
+
+    // Engagement Tracking - Weekly Leaderboard
+    public function engagement_weekly_get()
+    {
+        $sort = $this->get('sort') ?? 'r.user_rank';
+        $order = $this->get('order') ?? 'ASC';
+
+        $year = $this->get('year') ?? date('Y');
+        $week = $this->get('week') ?? date('W');
+        $scope = $this->get('scope') ?? 'world';
+
+        $sub_query = "SELECT e.*, u.name, u.email, u.profile, u.country_name, u.continent, u.country_code, 
+                      @user_rank := @user_rank + 1 user_rank 
+                      FROM tbl_leaderboard_engagement_weekly e 
+                      JOIN tbl_users u ON u.id = e.user_id 
+                      WHERE u.status=1 AND e.year=$year AND e.week_number=$week ";
+
+        if ($scope == 'country' && $this->get('country_code')) {
+            $country_code = $this->db->escape_str($this->get('country_code'));
+            $sub_query .= " AND u.country_code='$country_code'";
+        } elseif ($scope == 'region' && $this->get('region')) {
+            $region = $this->db->escape_str($this->get('region'));
+            $sub_query .= " AND u.continent='$region'";
+        }
+
+        $sub_query .= " ORDER BY e.total_minutes DESC, e.last_updated ASC";
+        $sub_query = "SELECT s.* FROM ($sub_query) s, (SELECT @user_rank := 0) init";
+
+        $this->db->select('r.*');
+        $this->db->from("($sub_query) r");
+
+        if ($this->get('search')) {
+            $search = $this->db->escape_like_str($this->get('search'));
+            $this->db->group_start()
+                ->like('r.name', $search)
+                ->or_like('r.email', $search)
+                ->or_like('r.country_name', $search)
+                ->group_end();
+        }
+
+        $total = $this->db->count_all_results('', false);
+        $this->db->order_by($sort, $order);
+
+        if ($this->get('limit')) {
+            $offset = $this->get('offset');
+            $limit = $this->get('limit');
+            $this->db->limit($limit, $offset);
+        }
+
+        $query = $this->db->get();
+        $res = $query->result();
+
+        $bulkData = [
+            'total' => $total,
+            'rows' => []
+        ];
+
+        foreach ($res as $row) {
+            $hours = floor($row->total_minutes / 60);
+            $minutes = $row->total_minutes % 60;
+
+            $bulkData['rows'][] = [
+                'user_rank' => $row->user_rank,
+                'user_id' => $row->user_id,
+                'name' => $row->name,
+                'email' => $row->email,
+                'profile' => $row->profile,
+                'country_name' => $row->country_name ?? 'N/A',
+                'continent' => $row->continent ?? 'N/A',
+                'total_minutes' => $row->total_minutes,
+                'formatted_time' => $hours . 'h ' . $minutes . 'm',
+                'last_updated' => date("d-m-Y H:i:s", strtotime($row->last_updated)),
+            ];
+        }
+
+        echo json_encode($bulkData, JSON_UNESCAPED_UNICODE);
+    }
+
+    // Engagement Tracking - Monthly Leaderboard
+    public function engagement_monthly_get()
+    {
+        $sort = $this->get('sort') ?? 'r.user_rank';
+        $order = $this->get('order') ?? 'ASC';
+
+        $year = $this->get('year') ?? date('Y');
+        $month = $this->get('month') ?? date('n');
+        $scope = $this->get('scope') ?? 'world';
+
+        $sub_query = "SELECT e.*, u.name, u.email, u.profile, u.country_name, u.continent, u.country_code, 
+                      @user_rank := @user_rank + 1 user_rank 
+                      FROM tbl_leaderboard_engagement_monthly e 
+                      JOIN tbl_users u ON u.id = e.user_id 
+                      WHERE u.status=1 AND e.year=$year AND e.month=$month ";
+
+        if ($scope == 'country' && $this->get('country_code')) {
+            $country_code = $this->db->escape_str($this->get('country_code'));
+            $sub_query .= " AND u.country_code='$country_code'";
+        } elseif ($scope == 'region' && $this->get('region')) {
+            $region = $this->db->escape_str($this->get('region'));
+            $sub_query .= " AND u.continent='$region'";
+        }
+
+        $sub_query .= " ORDER BY e.total_minutes DESC, e.last_updated ASC";
+        $sub_query = "SELECT s.* FROM ($sub_query) s, (SELECT @user_rank := 0) init";
+
+        $this->db->select('r.*');
+        $this->db->from("($sub_query) r");
+
+        if ($this->get('search')) {
+            $search = $this->db->escape_like_str($this->get('search'));
+            $this->db->group_start()
+                ->like('r.name', $search)
+                ->or_like('r.email', $search)
+                ->or_like('r.country_name', $search)
+                ->group_end();
+        }
+
+        $total = $this->db->count_all_results('', false);
+        $this->db->order_by($sort, $order);
+
+        if ($this->get('limit')) {
+            $offset = $this->get('offset');
+            $limit = $this->get('limit');
+            $this->db->limit($limit, $offset);
+        }
+
+        $query = $this->db->get();
+        $res = $query->result();
+
+        $bulkData = [
+            'total' => $total,
+            'rows' => []
+        ];
+
+        foreach ($res as $row) {
+            $hours = floor($row->total_minutes / 60);
+            $minutes = $row->total_minutes % 60;
+
+            $bulkData['rows'][] = [
+                'user_rank' => $row->user_rank,
+                'user_id' => $row->user_id,
+                'name' => $row->name,
+                'email' => $row->email,
+                'profile' => $row->profile,
+                'country_name' => $row->country_name ?? 'N/A',
+                'continent' => $row->continent ?? 'N/A',
+                'total_minutes' => $row->total_minutes,
+                'formatted_time' => $hours . 'h ' . $minutes . 'm',
+                'last_updated' => date("d-m-Y H:i:s", strtotime($row->last_updated)),
+            ];
+        }
+
+        echo json_encode($bulkData, JSON_UNESCAPED_UNICODE);
+    }
+
+    // Engagement Tracking - All-Time Leaderboard
+    public function engagement_alltime_get()
+    {
+        $sort = $this->get('sort') ?? 'r.user_rank';
+        $order = $this->get('order') ?? 'ASC';
+        $scope = $this->get('scope') ?? 'world';
+
+        $sub_query = "SELECT e.*, u.name, u.email, u.profile, u.country_name, u.continent, u.country_code, 
+                      @user_rank := @user_rank + 1 user_rank 
+                      FROM tbl_leaderboard_engagement_alltime e 
+                      JOIN tbl_users u ON u.id = e.user_id 
+                      WHERE u.status=1 ";
+
+        if ($scope == 'country' && $this->get('country_code')) {
+            $country_code = $this->db->escape_str($this->get('country_code'));
+            $sub_query .= " AND u.country_code='$country_code'";
+        } elseif ($scope == 'region' && $this->get('region')) {
+            $region = $this->db->escape_str($this->get('region'));
+            $sub_query .= " AND u.continent='$region'";
+        }
+
+        $sub_query .= " ORDER BY e.total_minutes DESC, e.last_updated ASC";
+        $sub_query = "SELECT s.* FROM ($sub_query) s, (SELECT @user_rank := 0) init";
+
+        $this->db->select('r.*');
+        $this->db->from("($sub_query) r");
+
+        if ($this->get('search')) {
+            $search = $this->db->escape_like_str($this->get('search'));
+            $this->db->group_start()
+                ->like('r.name', $search)
+                ->or_like('r.email', $search)
+                ->or_like('r.country_name', $search)
+                ->group_end();
+        }
+
+        $total = $this->db->count_all_results('', false);
+        $this->db->order_by($sort, $order);
+
+        if ($this->get('limit')) {
+            $offset = $this->get('offset');
+            $limit = $this->get('limit');
+            $this->db->limit($limit, $offset);
+        }
+
+        $query = $this->db->get();
+        $res = $query->result();
+
+        $bulkData = [
+            'total' => $total,
+            'rows' => []
+        ];
+
+        foreach ($res as $row) {
+            $hours = floor($row->total_minutes / 60);
+            $minutes = $row->total_minutes % 60;
+
+            $bulkData['rows'][] = [
+                'user_rank' => $row->user_rank,
+                'user_id' => $row->user_id,
+                'name' => $row->name,
+                'email' => $row->email,
+                'profile' => $row->profile,
+                'country_name' => $row->country_name ?? 'N/A',
+                'continent' => $row->continent ?? 'N/A',
+                'total_minutes' => $row->total_minutes,
+                'formatted_time' => $hours . 'h ' . $minutes . 'm',
+                'last_updated' => date("d-m-Y H:i:s", strtotime($row->last_updated)),
+            ];
+        }
+
+        echo json_encode($bulkData, JSON_UNESCAPED_UNICODE);
+    }
+
+    // Engagement Tracking - User Session History
+    public function user_engagement_sessions_get()
+    {
+        $user_id = $this->get('user_id');
+        if (!$user_id) {
+            echo json_encode(['total' => 0, 'rows' => []]);
+            return;
+        }
+
+        $sort = $this->get('sort') ?? 'session_start';
+        $order = $this->get('order') ?? 'DESC';
+
+        $this->db->select('id, user_id, session_start, session_end, duration_seconds, date_created');
+        $this->db->from('tbl_user_engagement');
+        $this->db->where('user_id', $user_id);
+
+        if ($this->get('search')) {
+            $search = $this->db->escape_like_str($this->get('search'));
+            $this->db->group_start()
+                ->like('session_start', $search)
+                ->or_like('session_end', $search)
+                ->group_end();
+        }
+
+        $total = $this->db->count_all_results('', false);
+        $this->db->order_by($sort, $order);
+
+        if ($this->get('limit')) {
+            $offset = $this->get('offset');
+            $limit = $this->get('limit');
+            $this->db->limit($limit, $offset);
+        }
+
+        $query = $this->db->get();
+        $res = $query->result();
+
+        $bulkData = [
+            'total' => $total,
+            'rows' => []
+        ];
+
+        foreach ($res as $row) {
+            $hours = floor($row->duration_seconds / 3600);
+            $minutes = floor(($row->duration_seconds % 3600) / 60);
+            $seconds = $row->duration_seconds % 60;
+
+            $is_suspicious = $row->duration_seconds > 43200; // > 12 hours
+
+            $bulkData['rows'][] = [
+                'id' => $row->id,
+                'session_start' => date("d-m-Y H:i:s", strtotime($row->session_start)),
+                'session_end' => date("d-m-Y H:i:s", strtotime($row->session_end)),
+                'duration_seconds' => $row->duration_seconds,
+                'formatted_duration' => $hours . 'h ' . $minutes . 'm ' . $seconds . 's',
+                'is_suspicious' => $is_suspicious,
+                'date_created' => date("d-m-Y H:i:s", strtotime($row->date_created)),
+            ];
+        }
+
+        echo json_encode($bulkData, JSON_UNESCAPED_UNICODE);
+    }
 }

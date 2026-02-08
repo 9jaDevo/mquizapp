@@ -328,4 +328,114 @@ class Dashboard extends CI_Controller
 
         echo $options;
     }
+
+    // Engagement Tracking Dashboard
+    public function engagement_dashboard()
+    {
+        if (!$this->session->userdata('isLoggedIn')) {
+            redirect('/');
+        }
+        if (!has_permissions('read', 'engagement_tracking')) {
+            redirect('/');
+        } else {
+            $this->load->view('engagement_dashboard');
+        }
+    }
+
+    // Engagement Analytics Page
+    public function engagement_analytics()
+    {
+        if (!$this->session->userdata('isLoggedIn')) {
+            redirect('/');
+        }
+        if (!has_permissions('read', 'engagement_tracking')) {
+            redirect('/');
+        } else {
+            $this->load->view('engagement_analytics');
+        }
+    }
+
+    // Engagement Weekly Leaderboard
+    public function engagement_leaderboard_weekly()
+    {
+        if (!$this->session->userdata('isLoggedIn')) {
+            redirect('/');
+        }
+        if (!has_permissions('read', 'engagement_tracking')) {
+            redirect('/');
+        } else {
+            $this->load->view('engagement_leaderboard_weekly');
+        }
+    }
+
+    // Engagement Monthly Leaderboard
+    public function engagement_leaderboard_monthly()
+    {
+        if (!$this->session->userdata('isLoggedIn')) {
+            redirect('/');
+        }
+        if (!has_permissions('read', 'engagement_tracking')) {
+            redirect('/');
+        } else {
+            $this->load->view('engagement_leaderboard_monthly');
+        }
+    }
+
+    // Engagement All-Time Leaderboard
+    public function engagement_leaderboard_alltime()
+    {
+        if (!$this->session->userdata('isLoggedIn')) {
+            redirect('/');
+        }
+        if (!has_permissions('read', 'engagement_tracking')) {
+            redirect('/');
+        } else {
+            $this->load->view('engagement_leaderboard_alltime');
+        }
+    }
+
+    // User Engagement Detail
+    public function user_engagement_detail($user_id = null)
+    {
+        if (!$this->session->userdata('isLoggedIn')) {
+            redirect('/');
+        }
+        if (!has_permissions('read', 'engagement_tracking')) {
+            redirect('/');
+        }
+        if (!$user_id) {
+            redirect('engagement-dashboard');
+        }
+
+        // Fetch user details
+        $data['user'] = $this->db->select('id, name, email, profile, country_name, country_code, continent')
+            ->where('id', $user_id)
+            ->get('tbl_users')
+            ->row();
+
+        if (!$data['user']) {
+            redirect('engagement-dashboard');
+        }
+
+        // Fetch engagement stats
+        $data['engagement'] = $this->db->select('total_minutes, last_updated')
+            ->where('user_id', $user_id)
+            ->get('tbl_leaderboard_engagement_alltime')
+            ->row();
+
+        // Fetch session statistics
+        $sessions = $this->db->select('COUNT(*) as total_sessions, 
+                                       AVG(duration_seconds) as avg_duration,
+                                       MAX(duration_seconds) as max_duration,
+                                       MIN(session_start) as first_session,
+                                       MAX(session_end) as last_session')
+            ->where('user_id', $user_id)
+            ->get('tbl_user_engagement')
+            ->row();
+
+        $data['sessions'] = $sessions;
+        $data['user_id'] = $user_id;
+
+        $this->load->view('user_engagement_detail', $data);
+    }
 }

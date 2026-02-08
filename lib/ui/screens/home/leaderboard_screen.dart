@@ -225,11 +225,34 @@ class LeaderBoardScreenState extends State<LeaderBoardScreen>
       ),
       body: Column(
         children: [
-          // Filter Section
+          // Compact Filter Section with Liquid Glass Effect
           Container(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white.withOpacity(0.15),
+                  Colors.white.withOpacity(0.05),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.2),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 // Scope Selector (World/Country/Region)
                 ScopeSelectorWidget(
@@ -248,7 +271,7 @@ class LeaderBoardScreenState extends State<LeaderBoardScreen>
                     );
                   },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 10),
 
                 // Metric Toggle (Score/Engagement)
                 MetricToggleWidget(
@@ -262,7 +285,7 @@ class LeaderBoardScreenState extends State<LeaderBoardScreen>
                     );
                   },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 10),
 
                 // Time Filter (Week/Month/All Time)
                 TimeFilterWidget(

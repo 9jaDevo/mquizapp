@@ -18,37 +18,38 @@ class MetricToggleWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Container(
-        decoration: BoxDecoration(
-          color: inactiveColor.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(16),
+      decoration: BoxDecoration(
+        color: inactiveColor.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: Colors.grey.withOpacity(0.2),
+          width: 1,
         ),
-        padding: const EdgeInsets.all(4),
-        child: Row(
-          children: [
-            Expanded(
-              child: _MetricTab(
-                label: 'Top Scorers',
-                icon: Icons.emoji_events,
-                isSelected: selectedMetricIndex == 0,
-                onTap: () => onMetricChanged(0),
-                activeColor: activeColor,
-                inactiveColor: inactiveColor,
-              ),
+      ),
+      padding: const EdgeInsets.all(3),
+      child: Row(
+        children: [
+          Expanded(
+            child: _MetricTab(
+              label: 'Top Scorers',
+              icon: Icons.emoji_events,
+              isSelected: selectedMetricIndex == 0,
+              onTap: () => onMetricChanged(0),
+              activeColor: activeColor,
+              inactiveColor: inactiveColor,
             ),
-            Expanded(
-              child: _MetricTab(
-                label: 'Most Active',
-                icon: Icons.schedule,
-                isSelected: selectedMetricIndex == 1,
-                onTap: () => onMetricChanged(1),
-                activeColor: activeColor,
-                inactiveColor: inactiveColor,
-              ),
+          ),
+          Expanded(
+            child: _MetricTab(
+              label: 'Most Active',
+              icon: Icons.schedule,
+              isSelected: selectedMetricIndex == 1,
+              onTap: () => onMetricChanged(1),
+              activeColor: activeColor,
+              inactiveColor: inactiveColor,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -75,18 +76,18 @@ class _MetricTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(11),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 8),
         decoration: BoxDecoration(
           color: isSelected ? activeColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(11),
           boxShadow: isSelected
               ? [
                   BoxShadow(
                     color: activeColor.withOpacity(0.3),
-                    blurRadius: 8,
+                    blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
                 ]
@@ -98,7 +99,7 @@ class _MetricTab extends StatelessWidget {
             Icon(
               icon,
               color: isSelected ? Colors.white : Colors.grey[600],
-              size: 18,
+              size: 16,
             ),
             const SizedBox(width: 6),
             Flexible(
@@ -106,8 +107,8 @@ class _MetricTab extends StatelessWidget {
                 label,
                 style: TextStyle(
                   color: isSelected ? Colors.white : Colors.grey[700],
-                  fontSize: 13,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),

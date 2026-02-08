@@ -31,6 +31,7 @@ $config['system_modules'] = [
     'coin_store_settings' => array('create', 'read', 'update', 'delete'),
     'users_accounts_rights' => array('create', 'read', 'update', 'delete'),
     'leaderboard' => array('read'),
+    'engagement_tracking' => array('read', 'update', 'delete'),
     'profile' => array('read'),
     'reset_password' => array('read'),
     'activity_tracker' => array('read'),

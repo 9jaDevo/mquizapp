@@ -17,38 +17,33 @@ class TimeFilterWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            _TimeChip(
-              label: 'Week',
-              isSelected: selectedPeriod == 'week',
-              onTap: () => onPeriodChanged('week'),
-              activeColor: activeColor,
-              inactiveColor: inactiveColor,
-            ),
-            const SizedBox(width: 8),
-            _TimeChip(
-              label: 'Month',
-              isSelected: selectedPeriod == 'month',
-              onTap: () => onPeriodChanged('month'),
-              activeColor: activeColor,
-              inactiveColor: inactiveColor,
-            ),
-            const SizedBox(width: 8),
-            _TimeChip(
-              label: 'All Time',
-              isSelected: selectedPeriod == 'alltime',
-              onTap: () => onPeriodChanged('alltime'),
-              activeColor: activeColor,
-              inactiveColor: inactiveColor,
-            ),
-          ],
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _TimeChip(
+          label: 'Week',
+          isSelected: selectedPeriod == 'week',
+          onTap: () => onPeriodChanged('week'),
+          activeColor: activeColor,
+          inactiveColor: inactiveColor,
         ),
-      ),
+        const SizedBox(width: 8),
+        _TimeChip(
+          label: 'Month',
+          isSelected: selectedPeriod == 'month',
+          onTap: () => onPeriodChanged('month'),
+          activeColor: activeColor,
+          inactiveColor: inactiveColor,
+        ),
+        const SizedBox(width: 8),
+        _TimeChip(
+          label: 'All Time',
+          isSelected: selectedPeriod == 'alltime',
+          onTap: () => onPeriodChanged('alltime'),
+          activeColor: activeColor,
+          inactiveColor: inactiveColor,
+        ),
+      ],
     );
   }
 }
@@ -75,30 +70,21 @@ class _TimeChip extends StatelessWidget {
       borderRadius: BorderRadius.circular(20),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? activeColor : inactiveColor.withOpacity(0.3),
+          color: isSelected ? activeColor : Colors.grey.withOpacity(0.1),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? activeColor : inactiveColor,
-            width: isSelected ? 2 : 1,
+            color: isSelected ? activeColor : Colors.grey.withOpacity(0.3),
+            width: 1.5,
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: activeColor.withOpacity(0.3),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
         ),
         child: Text(
           label,
           style: TextStyle(
             color: isSelected ? Colors.white : Colors.grey[700],
-            fontSize: 14,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
           ),
         ),
       ),

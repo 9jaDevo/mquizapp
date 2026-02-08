@@ -17,44 +17,41 @@ class ScopeSelectorWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          Expanded(
-            child: _ScopeButton(
-              label: 'World',
-              icon: Icons.public,
-              isSelected: selectedScope == 'world',
-              onTap: () => onScopeChanged('world'),
-              activeColor: activeColor,
-              inactiveColor: inactiveColor,
-            ),
+    return Row(
+      children: [
+        Expanded(
+          child: _ScopeButton(
+            label: 'World',
+            icon: Icons.public,
+            isSelected: selectedScope == 'world',
+            onTap: () => onScopeChanged('world'),
+            activeColor: activeColor,
+            inactiveColor: inactiveColor,
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _ScopeButton(
-              label: 'Country',
-              icon: Icons.flag,
-              isSelected: selectedScope == 'country',
-              onTap: () => onScopeChanged('country'),
-              activeColor: activeColor,
-              inactiveColor: inactiveColor,
-            ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _ScopeButton(
+            label: 'Country',
+            icon: Icons.flag,
+            isSelected: selectedScope == 'country',
+            onTap: () => onScopeChanged('country'),
+            activeColor: activeColor,
+            inactiveColor: inactiveColor,
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _ScopeButton(
-              label: 'Region',
-              icon: Icons.map,
-              isSelected: selectedScope == 'region',
-              onTap: () => onScopeChanged('region'),
-              activeColor: activeColor,
-              inactiveColor: inactiveColor,
-            ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _ScopeButton(
+            label: 'Region',
+            icon: Icons.map,
+            isSelected: selectedScope == 'region',
+            onTap: () => onScopeChanged('region'),
+            activeColor: activeColor,
+            inactiveColor: inactiveColor,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -80,15 +77,16 @@ class _ScopeButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+      borderRadius: BorderRadius.circular(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         decoration: BoxDecoration(
-          color: isSelected ? activeColor : inactiveColor.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(12),
+          color: isSelected ? activeColor : Colors.grey.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? activeColor : inactiveColor,
-            width: isSelected ? 2 : 1,
+            color: isSelected ? activeColor : Colors.grey.withOpacity(0.3),
+            width: 1.5,
           ),
         ),
         child: Column(
@@ -97,15 +95,15 @@ class _ScopeButton extends StatelessWidget {
             Icon(
               icon,
               color: isSelected ? Colors.white : Colors.grey[600],
-              size: 20,
+              size: 18,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             Text(
               label,
               style: TextStyle(
                 color: isSelected ? Colors.white : Colors.grey[700],
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
               ),
             ),
           ],
