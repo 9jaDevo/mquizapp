@@ -5,9 +5,23 @@
         xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0">
   <url>
     <loc>https://mquiz.uk/blog</loc>
-    <lastmod>2026-02-03</lastmod>
+    <lastmod>2026-02-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://mquiz.uk/blog/best-online-learning-platforms-why-gamified-learning-is-the-future-of-education</loc>
+    <lastmod>2026-02-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <mobile:mobile/>
+  </url>
+  <url>
+    <loc>https://mquiz.uk/blog/deep-learning-tutorials-why-most-learners-struggle-and-how-smarter-practice-builds-real-understanding</loc>
+    <lastmod>2026-02-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <mobile:mobile/>
   </url>
   <url>
     <loc>https://mquiz.uk/blog/mquiz-founder-quiz-competition-winners-announced</loc>

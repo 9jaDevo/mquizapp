@@ -131,7 +131,7 @@ const Footer: React.FC = () => {
               </li>
               <li>
                 <Link
-                  to="/privacy"
+                  to="/privacy-policy"
                   className="text-sm text-slate-400 hover:text-primary transition-colors"
                 >
                   Privacy Policy

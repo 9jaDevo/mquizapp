@@ -19,7 +19,7 @@ const Privacy: React.FC = () => {
         title={seoConfig.privacy.title}
         description={seoConfig.privacy.description}
         keywords={seoConfig.privacy.keywords}
-        url="https://mquiz.uk/privacy"
+        url="https://mquiz.uk/privacy-policy"
         type={seoConfig.privacy.type}
       />
       <div className="container-custom section-padding">

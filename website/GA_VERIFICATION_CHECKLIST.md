@@ -131,7 +131,7 @@ Visit each page and verify in GA4 Real-time:
 - [ ] Page path: "/contact"
 
 #### Privacy Page (`/privacy`)
-- [ ] Visit https://mquiz.uk/privacy
+- [ ] Visit https://mquiz.uk/privacy-policy
 - [ ] Real-time shows: `page_view` event
 - [ ] Page title: "Privacy Policy"
 - [ ] Page path: "/privacy"
