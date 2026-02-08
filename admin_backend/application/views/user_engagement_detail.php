@@ -97,8 +97,8 @@
                                         <div class="card-body">
                                             <?php
                                             if ($engagement) {
-                                                $hours = floor($engagement->total_minutes / 60);
-                                                $minutes = $engagement->total_minutes % 60;
+                                                $hours = (int) floor((float) $engagement->total_minutes / 60);
+                                                $minutes = (int) $engagement->total_minutes % 60;
                                                 echo $hours . 'h ' . $minutes . 'm';
                                             } else {
                                                 echo '0h 0m';

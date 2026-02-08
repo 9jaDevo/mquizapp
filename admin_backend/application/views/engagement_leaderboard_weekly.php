@@ -42,7 +42,7 @@
                                                 <select name="country_code" id="country_code" class="form-control">
                                                     <option value="">Select Country</option>
                                                     <?php
-                                                    $countries = $this->db->select('DISTINCT country_code, country_name')
+                                                    $countries = $this->db->select('DISTINCT country_code, country_name', FALSE)
                                                         ->from('tbl_country_region_mapping')
                                                         ->order_by('country_name', 'ASC')
                                                         ->get()->result();
@@ -57,7 +57,7 @@
                                                 <select name="region" id="region" class="form-control">
                                                     <option value="">Select Region</option>
                                                     <?php
-                                                    $regions = $this->db->select('DISTINCT continent')
+                                                    $regions = $this->db->select('DISTINCT continent', FALSE)
                                                         ->from('tbl_country_region_mapping')
                                                         ->where('continent IS NOT NULL')
                                                         ->order_by('continent', 'ASC')

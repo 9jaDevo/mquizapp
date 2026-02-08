@@ -38,7 +38,7 @@
                                         </div>
                                         <div class="card-body">
                                             <?php
-                                            $active_users = $this->db->select('COUNT(DISTINCT user_id) as count')
+                                            $active_users = $this->db->select('COUNT(DISTINCT user_id) as count', FALSE)
                                                 ->from('tbl_user_engagement')
                                                 ->get()->row()->count;
                                             echo number_format($active_users);
@@ -100,7 +100,7 @@
                                         </div>
                                         <div class="card-body">
                                             <?php
-                                            $countries = $this->db->select('COUNT(DISTINCT u.country_code) as count')
+                                            $countries = $this->db->select('COUNT(DISTINCT u.country_code) as count', FALSE)
                                                 ->from('tbl_user_engagement e')
                                                 ->join('tbl_users u', 'u.id = e.user_id', 'left')
                                                 ->where('u.country_code IS NOT NULL')
@@ -182,8 +182,8 @@
 
                                                     $rank = 1;
                                                     foreach ($top_users as $user) {
-                                                        $hours = floor($user->total_minutes / 60);
-                                                        $minutes = $user->total_minutes % 60;
+                                                        $hours = (int) floor((float) $user->total_minutes / 60);
+                                                        $minutes = (int) $user->total_minutes % 60;
                                                         $profile_img = $user->profile ? base_url() . 'images/profile/' . $user->profile : base_url() . 'images/profile/default.png';
                                                     ?>
                                                         <tr>

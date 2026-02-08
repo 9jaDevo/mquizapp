@@ -90,7 +90,7 @@
                                         </div>
                                         <div class="card-body" id="active_users_period">
                                             <?php
-                                            $active = $this->db->select('COUNT(DISTINCT user_id) as count')
+                                            $active = $this->db->select('COUNT(DISTINCT user_id) as count', FALSE)
                                                 ->where('DATE(session_start) >=', date('Y-m-d', strtotime('-30 days')))
                                                 ->get('tbl_user_engagement')->row()->count;
                                             echo number_format($active);
