@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutterquiz/commons/commons.dart';
 import 'package:flutterquiz/core/core.dart';
+import 'package:flutterquiz/features/ads/blocs/banner_ad_cubit.dart';
 import 'package:flutterquiz/features/ads/blocs/rewarded_ad_cubit.dart';
 import 'package:flutterquiz/features/profile_management/cubits/update_score_and_coins_cubit.dart';
 import 'package:flutterquiz/features/profile_management/cubits/user_details_cubit.dart';
@@ -18,8 +19,8 @@ import 'package:flutterquiz/features/quiz/models/quiz_type.dart';
 import 'package:flutterquiz/features/quiz/quiz_repository.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/features/wallet/cubit/monetization_cubit.dart';
-import 'package:flutterquiz/utils/answer_encryption.dart';
 import 'package:flutterquiz/features/wallet/widgets/monetization_widgets.dart';
+import 'package:flutterquiz/utils/answer_encryption.dart';
 import 'package:flutterquiz/ui/screens/quiz/widgets/audio_question_container.dart';
 import 'package:flutterquiz/ui/widgets/already_logged_in_dialog.dart';
 import 'package:flutterquiz/ui/widgets/circular_progress_container.dart';
@@ -30,6 +31,7 @@ import 'package:flutterquiz/ui/widgets/questions_container.dart';
 import 'package:flutterquiz/ui/widgets/text_circular_timer.dart';
 import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
+import 'package:flutterquiz/features/ads/widgets/banner_ad_container.dart';
 
 enum LifelineStatus { unused, using, used }
 
@@ -175,6 +177,8 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
     //init reward ad
     Future.delayed(Duration.zero, () {
       context.read<RewardedAdCubit>().createRewardedAd(context);
+      // Load banner ad for quiz page
+      context.read<BannerAdCubit>().initBannerAd(context);
     });
     //init animations
     initializeAnimation();
@@ -287,8 +291,10 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
         );
         return q.attempted && q.submittedAnswerId == ans;
       }).length;
-      final accuracy = questions.isEmpty ? 0.0 : (correctAnswers / questions.length) * 100;
-      
+      final accuracy = questions.isEmpty
+          ? 0.0
+          : (correctAnswers / questions.length) * 100;
+
       final metadata = {
         'quiz_score': correctAnswers.toString(),
         'time_taken': totalSecondsToCompleteQuiz.toString(),
@@ -317,54 +323,63 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
         );
         return q.attempted && q.submittedAnswerId == ans;
       }).length;
-      
+
       if (correctAnswers > 0) {
         // Calculate coin value (example: 10 coins per correct answer)
         final baseCoins = correctAnswers * 10;
-        
+
         // Offer boost
-        context.read<MonetizationCubit>().offerBoostEarnings(coinsEarned: baseCoins.toString());
-        
+        context.read<MonetizationCubit>().offerBoostEarnings(
+          coinsEarned: baseCoins.toString(),
+        );
+
         // Show dialog when state changes
         showDialog<void>(
           context: context,
           barrierDismissible: false,
-          builder: (dialogContext) => BlocConsumer<MonetizationCubit, MonetizationState>(
-            listener: (context, state) {
-              // Check if boost earnings were applied (isLoadingBoost goes from true to false with boostEarnings set)
-              if (!state.isLoadingBoost && state.boostEarnings != null) {
-                Navigator.of(dialogContext).pop();
-                // Update user coins with boosted amount
-                final boostedCoins = state.boostEarnings!.boostedCoins;
-                context.read<UpdateCoinsCubit>().updateCoins(
-                  addCoin: true,
-                  coins: boostedCoins,
-                  title: 'Boost Earnings',
-                );
-              }
-            },
-            builder: (context, state) {
-              if (state.boostEarnings != null) {
-                return BoostEarningsDialog(
-                  boost: state.boostEarnings!,
-                  onClaimPressed: () {
-                    context.read<MonetizationCubit>().applyBoostEarnings(
-                      coinsEarned: state.boostEarnings!.boostedCoins.toString(),
-                    );
-                  },
-                  onSkipPressed: () {
-                    Navigator.of(dialogContext).pop();
-                    // Give original coins
-                    context.read<UpdateCoinsCubit>().updateCoins(
-                      addCoin: true,
-                      coins: state.boostEarnings!.originalCoins,
-                      title: 'Quiz Completed',
-                    );
-                  },
-                );
-              }
-              return const Center(child: CircularProgressIndicator());
-            },
+          builder: (dialogContext) => MultiBlocProvider(
+            providers: [
+              BlocProvider.value(value: context.read<MonetizationCubit>()),
+              BlocProvider.value(value: context.read<UpdateCoinsCubit>()),
+            ],
+            child: BlocConsumer<MonetizationCubit, MonetizationState>(
+              listener: (context, state) {
+                // Check if boost earnings were applied (isLoadingBoost goes from true to false with boostEarnings set)
+                if (!state.isLoadingBoost && state.boostEarnings != null) {
+                  Navigator.of(dialogContext).pop();
+                  // Update user coins with boosted amount
+                  final boostedCoins = state.boostEarnings!.boostedCoins;
+                  context.read<UpdateCoinsCubit>().updateCoins(
+                    addCoin: true,
+                    coins: boostedCoins,
+                    title: 'Boost Earnings',
+                  );
+                }
+              },
+              builder: (context, state) {
+                if (state.boostEarnings != null) {
+                  return BoostEarningsDialog(
+                    boost: state.boostEarnings!,
+                    onClaimPressed: () {
+                      context.read<MonetizationCubit>().applyBoostEarnings(
+                        coinsEarned: state.boostEarnings!.boostedCoins
+                            .toString(),
+                      );
+                    },
+                    onSkipPressed: () {
+                      Navigator.of(dialogContext).pop();
+                      // Give original coins
+                      context.read<UpdateCoinsCubit>().updateCoins(
+                        addCoin: true,
+                        coins: state.boostEarnings!.originalCoins,
+                        title: 'Quiz Completed',
+                      );
+                    },
+                  );
+                }
+                return const Center(child: CircularProgressIndicator());
+              },
+            ),
           ),
         );
       }
@@ -634,20 +649,44 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
     }
     //stop timer
     timerAnimationController.stop();
-    
+
     // Show rewarded ad with built-in consent dialog
-    context.read<RewardedAdCubit>().showAd(
-      context: context,
-      rewardAmount: context.read<SystemConfigCubit>().rewardAdsCoins,
-      rewardCurrencyLabel: 'coins',
-      onAdDismissedCallback: _addCoinsAfterRewardAd,
-    ).then((_) {
-      // Resume timer whether user watched ad or skipped it
-      timerAnimationController.forward(from: timerAnimationController.value);
-    });
+    context
+        .read<RewardedAdCubit>()
+        .showAd(
+          context: context,
+          rewardAmount: context.read<SystemConfigCubit>().rewardAdsCoins,
+          rewardCurrencyLabel: 'coins',
+          onAdDismissedCallback: _addCoinsAfterRewardAd,
+        )
+        .then((_) {
+          // Resume timer whether user watched ad or skipped it
+          timerAnimationController.forward(
+            from: timerAnimationController.value,
+          );
+        });
   }
 
   bool get isSmallDevice => MediaQuery.sizeOf(context).width <= 360;
+
+  Widget _buildBannerAdSection() {
+    final bannerAdLoaded =
+        context.watch<BannerAdCubit>().bannerAdLoaded &&
+        !context.read<UserDetailsCubit>().removeAds();
+
+    if (!bannerAdLoaded || widget.isPremiumCategory) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: context.height * 0.01,
+        left: context.width * UiUtils.hzMarginPct,
+        right: context.width * UiUtils.hzMarginPct,
+      ),
+      child: const BannerAdContainer(),
+    );
+  }
 
   Widget _buildLifeLines() {
     if (widget.quizType == QuizTypes.dailyQuiz ||
@@ -932,6 +971,11 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
             );
           }
 
+          final totalQuestions = context
+              .read<QuestionsCubit>()
+              .questions()
+              .length;
+
           return PopScope(
             canPop: false,
             onPopInvokedWithResult: (didPop, _) {
@@ -940,41 +984,120 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
               onTapBackButton();
             },
             child: Scaffold(
-              appBar: QAppBar(
-                onTapBackButton: onTapBackButton,
-                roundedAppBar: false,
-                title: widget.quizType == QuizTypes.funAndLearn
-                    ? AnimatedBuilder(
-                        builder: (context, c) => Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onTertiary.withValues(alpha: 0.4),
-                              width: 4,
+              backgroundColor: const Color(0xFFF0F4FF),
+              appBar: PreferredSize(
+                preferredSize: const Size.fromHeight(96),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF1F51D9),
+                        Color(0xFF4A75E8),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.vertical(
+                      bottom: Radius.circular(20),
+                    ),
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                      child: Row(
+                        children: [
+                          InkWell(
+                            onTap: onTapBackButton,
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              alignment: Alignment.center,
+                              child: const Icon(
+                                Icons.arrow_back_ios_new_rounded,
+                                color: Colors.white,
+                                size: 16,
+                              ),
                             ),
                           ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
-                          ),
-                          child: Text(
-                            remaining,
-                            style: TextStyle(
-                              color: Theme.of(context).primaryColor,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Quiz',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Question ${currentQuestionIndex + 1}/$totalQuestions',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                        animation: timerAnimationController,
-                      )
-                    : TextCircularTimer(
-                        animationController: timerAnimationController,
-                        arcColor: Theme.of(context).primaryColor,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onTertiary.withValues(alpha: 0.2),
+                          widget.quizType == QuizTypes.funAndLearn
+                              ? AnimatedBuilder(
+                                  builder: (context, c) => Container(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(18),
+                                      border: Border.all(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.4,
+                                        ),
+                                        width: 2,
+                                      ),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.15,
+                                      ),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    child: Text(
+                                      remaining,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  animation: timerAnimationController,
+                                )
+                              : SizedBox(
+                                  width: 44,
+                                  height: 44,
+                                  child: TextCircularTimer(
+                                    animationController:
+                                        timerAnimationController,
+                                    arcColor: Colors.white,
+                                    color: Colors.white.withValues(alpha: 0.2),
+                                  ),
+                                ),
+                        ],
                       ),
+                    ),
+                  ),
+                ),
               ),
               body: Stack(
                 children: [
@@ -1008,7 +1131,20 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
                       level: widget.level,
                     ),
                   ),
-                  _buildLifeLines(),
+                  // Banner ads before lifelines
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Container(
+                      alignment: Alignment.bottomCenter,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildBannerAdSection(),
+                          _buildLifeLines(),
+                        ],
+                      ),
+                    ),
+                  ),
                   _buildShowOptionButton(),
                 ],
               ),

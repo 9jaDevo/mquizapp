@@ -35,7 +35,6 @@ import 'package:flutterquiz/ui/screens/home/widgets/daily_challenge_card.dart';
 import 'package:flutterquiz/ui/screens/profile/create_or_edit_profile_screen.dart';
 import 'package:flutterquiz/ui/screens/quiz/category_screen.dart';
 import 'package:flutterquiz/ui/widgets/all.dart';
-import 'package:flutterquiz/ui/widgets/skill_tier_badge.dart';
 import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -213,6 +212,11 @@ class HomeScreenState extends State<HomeScreen>
   // Step 4: Sponsor Banner Widget
   Widget _buildSponsorBanner() {
     return BlocBuilder<MonetizationCubit, MonetizationState>(
+      buildWhen: (previous, current) {
+        // Only rebuild if banners actually changed (not just isLoadingBanner)
+        return previous.banners != current.banners ||
+            (previous.banner != current.banner && current.banners == null);
+      },
       builder: (context, state) {
         log('[SPONSOR_BANNER_UI] Building sponsor banner widget');
         log(
@@ -1514,35 +1518,12 @@ class HomeScreenState extends State<HomeScreen>
                           ),
                         ),
                         alignment: Alignment.center,
-                        child: Stack(
-                          alignment: Alignment.topRight,
-                          children: [
-                            QImage(
-                              imageUrl: Assets.coinMenuIcon,
-                              color: Colors.white,
-                              height: 18,
-                              width: 18,
-                              fit: BoxFit.contain,
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 3,
-                                vertical: 1,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFA500),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                _userCoins,
-                                style: GoogleFonts.nunito(
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
+                        child: QImage(
+                          imageUrl: Assets.coinMenuIcon,
+                          color: Colors.white,
+                          height: 18,
+                          width: 18,
+                          fit: BoxFit.contain,
                         ),
                       ),
                     ),
@@ -1566,7 +1547,7 @@ class HomeScreenState extends State<HomeScreen>
             ),
           ),
           const SizedBox(height: 16),
-          // Your Total Score card
+          // Your Total Score and Coins card
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -1581,42 +1562,78 @@ class HomeScreenState extends State<HomeScreen>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                // Score section
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Your Total Score',
+                        style: GoogleFonts.nunito(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.white.withValues(alpha: 0.8),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _userScore,
+                        style: GoogleFonts.nunito(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 24),
+                // Coins section
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Total Coins',
+                        style: GoogleFonts.nunito(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.white.withValues(alpha: 0.8),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _userCoins,
+                        style: GoogleFonts.nunito(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Icons
                 Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      'Your Total Score',
-                      style: GoogleFonts.nunito(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.white.withValues(alpha: 0.8),
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _userScore,
-                      style: GoogleFonts.nunito(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.trending_up,
                         color: Colors.white,
+                        size: 24,
                       ),
                     ),
                   ],
-                ),
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Icon(
-                    Icons.trending_up,
-                    color: Colors.white,
-                    size: 24,
-                  ),
                 ),
               ],
             ),
@@ -1774,14 +1791,17 @@ class _SponsorBannerCarouselState extends State<_SponsorBannerCarousel> {
     // Start auto-slide only if multiple banners
     if (widget.banners.length > 1) {
       log('[SPONSOR_CAROUSEL] Starting auto-slide timer');
-      _autoSlideTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      // Delay the first auto-slide to ensure banner is visible
+      _autoSlideTimer = Timer.periodic(const Duration(seconds: 6), (timer) {
         if (!mounted) return;
         _currentPage = (_currentPage + 1) % widget.banners.length;
-        _pageController.animateToPage(
-          _currentPage,
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeInOut,
-        );
+        if (_pageController.hasClients) {
+          _pageController.animateToPage(
+            _currentPage,
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeInOut,
+          );
+        }
       });
     }
   }
