@@ -3,26 +3,21 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/commons/commons.dart';
 import 'package:flutterquiz/core/core.dart';
 import 'package:flutterquiz/features/auth/cubits/auth_cubit.dart';
-import 'package:flutterquiz/features/auth/models/auth_providers_enum.dart';
 import 'package:flutterquiz/features/profile_management/cubits/user_details_cubit.dart';
 import 'package:flutterquiz/features/settings/settings_cubit.dart';
+import 'package:flutterquiz/features/skill_tier/models/skill_tier.dart';
+import 'package:flutterquiz/features/skill_tier/skill_tier_service.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/ui/screens/app_settings_screen.dart';
+import 'package:flutterquiz/ui/screens/profile/create_or_edit_profile_screen.dart';
 import 'package:flutterquiz/ui/screens/menu/widgets/delete_account_dialog.dart';
 import 'package:flutterquiz/ui/screens/menu/widgets/language_selector_sheet.dart';
 import 'package:flutterquiz/ui/screens/menu/widgets/logout_dialog.dart';
 import 'package:flutterquiz/ui/screens/menu/widgets/quiz_language_selector_sheet.dart';
 import 'package:flutterquiz/ui/screens/menu/widgets/theme_selector_sheet.dart';
-import 'package:flutterquiz/ui/screens/profile/create_or_edit_profile_screen.dart';
-import 'package:flutterquiz/ui/widgets/all.dart';
-import 'package:flutterquiz/ui/widgets/skill_tier_badge.dart';
-import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/gdpr_helper.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-/// Menu item with localization key and asset path
-typedef MenuItem = ({String name, String image});
 
 final class ProfileTabScreen extends StatefulWidget {
   const ProfileTabScreen({super.key});
@@ -37,36 +32,9 @@ final class ProfileTabScreenState extends State<ProfileTabScreen>
 
   bool get _isGuest => context.read<AuthCubit>().isGuest;
 
-  /// Cached to avoid repeated async calls across rebuilds
-  Future<bool>? _gdprFuture;
-
-  /// All menu items in fixed order - visibility determined at build time
-  static const List<MenuItem> _allMenuItems = [
-    (name: 'wallet', image: Assets.walletMenuIcon),
-    (name: 'coinHistory', image: Assets.coinHistoryMenuIcon),
-    (name: 'inviteFriendsLbl', image: Assets.inviteFriendsMenuIcon),
-    (name: 'bookmarkLbl', image: Assets.bookmarkMenuIcon),
-    (name: 'badges', image: Assets.badgesMenuIcon),
-    (name: 'rewardsLbl', image: Assets.rewardMenuIcon),
-    (name: 'statisticsLabel', image: Assets.statisticsMenuIcon),
-    (name: 'theme', image: Assets.themeMenuIcon),
-    (name: 'quizLanguage', image: Assets.quizLanguageIcon),
-    (name: 'language', image: Assets.languageMenuIcon),
-    (name: 'soundLbl', image: Assets.volumeIcon),
-    (name: 'vibrationLbl', image: Assets.vibrationIcon),
-    (name: 'adsPreference', image: Assets.adsPreferenceIcon),
-    (name: 'aboutQuizApp', image: Assets.aboutUsMenuIcon),
-    (name: howToPlayLbl, image: Assets.howToPlayMenuIcon),
-    (name: 'shareAppLbl', image: Assets.shareMenuIcon),
-    (name: 'rateUsLbl', image: Assets.rateMenuIcon),
-    (name: 'logoutLbl', image: Assets.logoutMenuIcon),
-    (name: 'deleteAccountLbl', image: Assets.deleteAccountMenuIcon),
-  ];
-
   @override
   void initState() {
     super.initState();
-    _gdprFuture = GdprHelper.isUnderGdpr();
   }
 
   @override
@@ -85,46 +53,20 @@ final class ProfileTabScreenState extends State<ProfileTabScreen>
     }
   }
 
-  /// Filters menu items based on feature flags, auth state, and GDPR compliance
-  List<MenuItem> _getVisibleMenuItems({
-    required bool isAuthenticated,
-    required bool isUnderGdpr,
-  }) {
-    final config = context.read<SystemConfigCubit>();
-    final systemLanguages = context
-        .read<AppLocalizationCubit>()
-        .state
-        .systemLanguages;
-
-    return _allMenuItems.where((item) {
-      if (item.name == 'wallet' && !config.isPaymentRequestEnabled) {
-        return false;
-      }
-      if (item.name == 'quizLanguage' && !config.isLanguageModeEnabled) {
-        return false;
-      }
-      if (item.name == 'bookmarkLbl' &&
-          !(config.isQuizZoneEnabled ||
-              config.isGuessTheWordEnabled ||
-              config.isAudioQuizEnabled)) {
-        return false;
-      }
-      if (item.name == 'language' && systemLanguages.length == 1) {
-        return false;
-      }
-      if (item.name == 'adsPreference' && !isUnderGdpr) {
-        return false;
-      }
-      if ((item.name == 'logoutLbl' || item.name == 'deleteAccountLbl') &&
-          !isAuthenticated) {
-        return false;
-      }
-
-      return true;
-    }).toList();
-  }
-
   void _onTapMenuItem(String name) {
+    if (name == 'profileEdit') {
+      if (_isGuest) {
+        showLoginRequiredDialog(context);
+        return;
+      }
+
+      globalCtx.pushNamed(
+        Routes.selectProfile,
+        arguments: const CreateOrEditProfileScreenArgs(isNewUser: false),
+      );
+      return;
+    }
+
     /// Menus that guest can use without being logged in.
     switch (name) {
       case 'theme':
@@ -207,322 +149,456 @@ final class ProfileTabScreenState extends State<ProfileTabScreen>
     super.build(context);
 
     return Scaffold(
-      body: Column(
-        children: [
-          _buildProfileHeader(),
-          Expanded(child: _buildMenuSection()),
-        ],
+      backgroundColor: const Color(0xFFF3F6FF),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          controller: _scrollController,
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          child: Column(
+            children: [
+              _buildProfileHeaderCard(),
+              const SizedBox(height: 16),
+              _buildBalanceCard(),
+              const SizedBox(height: 16),
+              _buildQuickActionsRow(),
+              const SizedBox(height: 16),
+              _buildWeeklyProgressCard(),
+              const SizedBox(height: 16),
+              _buildBookmarksBadgesRow(),
+              const SizedBox(height: 16),
+              _buildPreferencesCard(),
+              const SizedBox(height: 16),
+              _buildMenuActionsCard(),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildMenuSection() {
-    return BlocBuilder<AuthCubit, AuthState>(
-      buildWhen: (previous, current) =>
-          (previous is Authenticated) != (current is Authenticated),
-      builder: (context, authState) {
-        final isAuthenticated = authState is Authenticated;
+  Widget _buildProfileHeaderCard() {
+    return BlocBuilder<UserDetailsCubit, UserDetailsState>(
+      builder: (context, state) {
+        var profileUrl = '';
+        var username = context.tr('helloGuest')!;
+        var gamesCount = 0;
 
-        return FutureBuilder<bool>(
-          future: _gdprFuture,
-          builder: (context, gdprSnapshot) {
-            final isUnderGdpr =
-                gdprSnapshot.hasData && (gdprSnapshot.data ?? false);
+        if (state is UserDetailsFetchSuccess) {
+          profileUrl = state.userProfile.profileUrl ?? '';
+          username = state.userProfile.name ?? username;
+          gamesCount = int.tryParse(state.userProfile.allTimeScore ?? '') ?? 0;
+        }
 
-            final visibleItems = _getVisibleMenuItems(
-              isAuthenticated: isAuthenticated,
-              isUnderGdpr: isUnderGdpr,
+        return FutureBuilder<SkillTier>(
+          future: SkillTierService.computeTier(),
+          builder: (context, snapshot) {
+            final tier = snapshot.data;
+            final leagueLabel = tier != null
+                ? '${SkillTier.label(tier.type)} League'
+                : 'Platinum League';
+            final accuracy = tier?.accuracyPercent ?? 0;
+
+            return Container(
+              height: 280,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 36,
+                    offset: const Offset(0, 16),
+                  ),
+                ],
+              ),
+              child: Stack(
+                children: [
+                  Container(
+                    height: 140,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFFEBF0FF), Color(0xFFDCE6FF)],
+                      ),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(30),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 18,
+                    right: 24,
+                    child: Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.4),
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 32,
+                    left: 24,
+                    child: Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.4),
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.topCenter,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 48),
+                      child: Stack(
+                        children: [
+                          Container(
+                            width: 92,
+                            height: 92,
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 18,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: QImage.circular(imageUrl: profileUrl),
+                          ),
+                          Positioned(
+                            bottom: 2,
+                            right: 2,
+                            child: Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF9B6BFF),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.emoji_events_rounded,
+                                color: Colors.white,
+                                size: 14,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: -6,
+                            right: -6,
+                            child: InkWell(
+                              onTap: () => _onTapMenuItem('profileEdit'),
+                              borderRadius: BorderRadius.circular(999),
+                              child: Container(
+                                width: 30,
+                                height: 30,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.12,
+                                      ),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 6),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.edit_rounded,
+                                  size: 16,
+                                  color: Color(0xFF2E5BEA),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(
+                    top: 145,
+                    child: Column(
+                      children: [
+                        Text(
+                          username,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF1E4FD9),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFE9FF),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF9B6BFF),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                leagueLabel,
+                                style: const TextStyle(
+                                  color: Color(0xFF7E5BEA),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: _buildMiniStatCard(
+                                  value: UiUtils.formatNumber(gamesCount),
+                                  label: 'Games',
+                                  color: const Color(0xFF2E5BEA),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildMiniStatCard(
+                                  value: '${accuracy.toStringAsFixed(0)}%',
+                                  label: 'Accuracy',
+                                  color: const Color(0xFFFFA800),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildMiniStatCard(
+                                  value: '14',
+                                  label: 'Badges',
+                                  color: const Color(0xFF2E5BEA),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             );
-
-            return _buildMenuList(visibleItems);
           },
         );
       },
     );
   }
 
-  Widget _buildMenuList(List<MenuItem> visibleItems) {
-    final gridItems = visibleItems.take(3).toList();
-    final listItems = visibleItems.skip(3).toList();
-
-    return ListView(
-      controller: _scrollController,
-      padding: EdgeInsets.symmetric(
-        horizontal: context.width * UiUtils.hzMarginPct,
-        vertical: context.height * UiUtils.vtMarginPct,
+  Widget _buildMiniStatCard({
+    required String value,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFF),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF7E8AA8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBalanceCard() {
+    return BlocBuilder<UserDetailsCubit, UserDetailsState>(
+      builder: (context, state) {
+        var coins = '0';
+        if (state is UserDetailsFetchSuccess) {
+          coins = state.userProfile.coins ?? '0';
+        }
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 28,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2E5BEA),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.account_balance_wallet_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Total Balance',
+                    style: TextStyle(
+                      color: Color(0xFF7E8AA8),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${UiUtils.formatNumber(int.tryParse(coins) ?? 0)} Coins',
+                    style: const TextStyle(
+                      color: Color(0xFF1E4FD9),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildQuickActionsRow() {
+    return Row(
       children: [
-        _buildGrid(gridItems),
-        const SizedBox(height: 16),
-        _buildList(listItems),
-        const SizedBox(height: 16),
+        Expanded(
+          child: _buildActionCard(
+            title: 'Invite Friends',
+            icon: Icons.person_add_alt_rounded,
+            tint: const Color(0xFFFFEAD2),
+            accent: const Color(0xFFFFA800),
+            onTap: () => _onTapMenuItem('inviteFriendsLbl'),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildActionCard(
+            title: 'Rewards',
+            icon: Icons.card_giftcard_rounded,
+            tint: const Color(0xFFE7ECFF),
+            accent: const Color(0xFF2E5BEA),
+            onTap: () => _onTapMenuItem('rewardsLbl'),
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildGrid(List<MenuItem> items) {
-    return GridView.count(
-      padding: EdgeInsets.zero,
-      crossAxisCount: 3,
-      shrinkWrap: true,
-      crossAxisSpacing: 20,
-      physics: const NeverScrollableScrollPhysics(),
-      children: items.map(_buildGridViewItem).toList(),
-    );
-  }
-
-  Widget _buildList(List<MenuItem> items) {
-    return ListView.separated(
-      padding: EdgeInsets.zero,
-      physics: const NeverScrollableScrollPhysics(),
-      shrinkWrap: true,
-      itemCount: items.length,
-      separatorBuilder: (_, _) => const SizedBox(height: UiUtils.listTileGap),
-      itemBuilder: (_, i) => _buildListViewItem(items[i]),
-    );
-  }
-
-  Widget _buildProfileHeader() {
-    void onTapEditProfile() {
-      if (_isGuest) {
-        showLoginRequiredDialog(context);
-        return;
-      }
-
-      globalCtx.pushNamed(
-        Routes.selectProfile,
-        arguments: const CreateOrEditProfileScreenArgs(isNewUser: false),
-      );
-    }
-
-    return SizedBox(
-      height: context.height * .25,
-      width: double.maxFinite,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final maxHeight = constraints.maxHeight;
-          final maxWidth = constraints.maxWidth;
-
-          return Stack(
-            alignment: Alignment.topCenter,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: context.primaryColor,
-                  borderRadius: const BorderRadius.vertical(
-                    bottom: Radius.circular(12),
-                  ),
-                ),
-                height: maxHeight * .8,
-                width: maxWidth,
-                alignment: Alignment.topCenter,
-                padding: const EdgeInsets.symmetric(vertical: 64),
-                child: Text(
-                  context.tr('profileLbl')!,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.surface,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    height: 1.2,
-                  ),
-                ),
-              ),
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Container(
-                      height: maxHeight * .35,
-                      width: maxWidth * .8,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(200),
-                        boxShadow: [
-                          BoxShadow(
-                            color: context.primaryTextColor.withValues(
-                              alpha: .1,
-                            ),
-                            blurRadius: 8,
-                            spreadRadius: 4,
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      height: maxHeight * .45,
-                      margin: EdgeInsets.symmetric(
-                        horizontal: context.width * UiUtils.hzMarginPct,
-                      ),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: context.surfaceColor,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final maxHeight = constraints.maxHeight;
-
-                          return BlocBuilder<
-                            UserDetailsCubit,
-                            UserDetailsState
-                          >(
-                            builder: (context, state) {
-                              if (state is UserDetailsFetchInProgress) {
-                                return const Center(
-                                  child: CircularProgressContainer(),
-                                );
-                              }
-
-                              var profileUrl = '';
-                              var username = context.tr('helloGuest')!;
-                              var profileDesc = context.tr(
-                                'provideGuestDetails',
-                              )!;
-
-                              if (state is UserDetailsFetchSuccess) {
-                                profileUrl = state.userProfile.profileUrl!;
-                                username = state.userProfile.name!;
-
-                                if (context
-                                        .read<AuthCubit>()
-                                        .getAuthProvider() ==
-                                    AuthProviders.mobile) {
-                                  profileDesc =
-                                      state.userProfile.mobileNumber ?? '';
-                                } else {
-                                  profileDesc = state.userProfile.email ?? '';
-                                }
-                              }
-
-                              return Row(
-                                children: [
-                                  Container(
-                                    height: maxHeight,
-                                    width: maxHeight,
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: context.primaryTextColor
-                                            .withValues(alpha: .1),
-                                      ),
-                                    ),
-                                    child: QImage.circular(
-                                      imageUrl: profileUrl,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          username,
-                                          textAlign: TextAlign.start,
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            color: context.primaryTextColor,
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        if (!_isGuest) const SkillTierBadge(),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          profileDesc,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            color: context.primaryTextColor
-                                                .withValues(alpha: .3),
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  InkWell(
-                                    onTap: onTapEditProfile,
-                                    child: Container(
-                                      height: maxHeight * .5,
-                                      width: maxHeight * .5,
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        border: Border.all(
-                                          color: context.primaryTextColor
-                                              .withValues(alpha: .1),
-                                        ),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: QImage(
-                                        imageUrl: Assets.editIcon,
-                                        color: context.primaryColor,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildGridViewItem(MenuItem item) {
+  Widget _buildActionCard({
+    required String title,
+    required IconData icon,
+    required Color tint,
+    required Color accent,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
-      onTap: () => _onTapMenuItem(item.name),
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
       child: Container(
+        height: 96,
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          color: Theme.of(context).colorScheme.surface,
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            /// Image
-            Container(
-              height: 44,
-              width: 44,
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(
-                border: Border.all(color: context.scaffoldBackgroundColor),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: QImage(
-                imageUrl: item.image,
-                color: context.primaryColor,
-                fit: BoxFit.fitHeight,
-              ),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 28,
+              offset: const Offset(0, 12),
             ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: 85,
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: tint,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(icon, color: accent, size: 22),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
               child: Text(
-                context.tr(item.name)!,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                style: TextStyle(
-                  fontWeight: FontWeights.regular,
-                  overflow: TextOverflow.ellipsis,
+                title,
+                style: const TextStyle(
+                  color: Color(0xFF1E4FD9),
                   fontSize: 14,
-                  color: context.primaryTextColor,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
@@ -532,46 +608,409 @@ final class ProfileTabScreenState extends State<ProfileTabScreen>
     );
   }
 
-  Widget _buildListViewItem(MenuItem item) {
-    Widget? trailing;
+  Widget _buildWeeklyProgressCard() {
+    const progressValue = 0.68;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 28,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Text(
+                'Weekly Progress',
+                style: TextStyle(
+                  color: Color(0xFF1E4FD9),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEAF0FF),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.trending_up_rounded,
+                  color: Color(0xFF2E5BEA),
+                  size: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: progressValue,
+              minHeight: 8,
+              backgroundColor: const Color(0xFFE7ECFF),
+              valueColor: const AlwaysStoppedAnimation(Color(0xFF2E5BEA)),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: const [
+              Text(
+                '34 of 50 quizzes completed',
+                style: TextStyle(
+                  color: Color(0xFF7E8AA8),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Spacer(),
+              Text(
+                '68%',
+                style: TextStyle(
+                  color: Color(0xFF2E5BEA),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
-    if (item.name == 'soundLbl') {
-      trailing = const _SoundSwitchWidget();
-    } else if (item.name == 'vibrationLbl') {
-      trailing = const _VibrationSwitchWidget();
-    }
+  Widget _buildBookmarksBadgesRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildInfoCard(
+            title: 'Bookmarks',
+            subtitle: '28 saved',
+            icon: Icons.bookmark_rounded,
+            tint: const Color(0xFFFFF2D6),
+            accent: const Color(0xFFFFA800),
+            onTap: () => _onTapMenuItem('bookmarkLbl'),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildInfoCard(
+            title: 'Badges',
+            subtitle: '14 earned',
+            icon: Icons.workspace_premium_rounded,
+            tint: const Color(0xFFE7ECFF),
+            accent: const Color(0xFF2E5BEA),
+            onTap: () => _onTapMenuItem('badges'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color tint,
+    required Color accent,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        height: 96,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 28,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: tint,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: accent, size: 20),
+            ),
+            const Spacer(),
+            Text(
+              title,
+              style: const TextStyle(
+                color: Color(0xFF1E4FD9),
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: const TextStyle(
+                color: Color(0xFF7E8AA8),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreferencesCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 28,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Preferences',
+            style: TextStyle(
+              color: Color(0xFF1E4FD9),
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 14),
+          _buildPreferenceRow(
+            icon: Icons.palette_rounded,
+            label: 'Theme',
+            trailing: Text(
+              Theme.of(context).brightness == Brightness.dark
+                  ? 'Dark'
+                  : 'Light',
+              style: const TextStyle(
+                color: Color(0xFF7E8AA8),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            onTap: () => _onTapMenuItem('theme'),
+          ),
+          const SizedBox(height: 12),
+          _buildPreferenceRow(
+            icon: Icons.volume_up_rounded,
+            label: 'Sound',
+            trailing: const _SoundSwitchWidget(),
+          ),
+          const SizedBox(height: 12),
+          _buildPreferenceRow(
+            icon: Icons.vibration_rounded,
+            label: 'Vibration',
+            trailing: const _VibrationSwitchWidget(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuActionsCard() {
+    final items = <_MenuActionItem>[
+      _MenuActionItem(
+        label: 'Wallet',
+        icon: Icons.account_balance_wallet_rounded,
+        action: () => _onTapMenuItem('wallet'),
+      ),
+      _MenuActionItem(
+        label: 'Coin History',
+        icon: Icons.receipt_long_rounded,
+        action: () => _onTapMenuItem('coinHistory'),
+      ),
+      _MenuActionItem(
+        label: 'Statistics',
+        icon: Icons.insights_rounded,
+        action: () => _onTapMenuItem('statisticsLabel'),
+      ),
+      _MenuActionItem(
+        label: 'About',
+        icon: Icons.info_outline_rounded,
+        action: () => _onTapMenuItem('aboutQuizApp'),
+      ),
+      _MenuActionItem(
+        label: 'How to Play',
+        icon: Icons.help_outline_rounded,
+        action: () => _onTapMenuItem(howToPlayLbl),
+      ),
+      _MenuActionItem(
+        label: 'Share App',
+        icon: Icons.share_rounded,
+        action: () => _onTapMenuItem('shareAppLbl'),
+      ),
+      _MenuActionItem(
+        label: 'Rate Us',
+        icon: Icons.star_rate_rounded,
+        action: () => _onTapMenuItem('rateUsLbl'),
+      ),
+      if (!_isGuest)
+        _MenuActionItem(
+          label: 'Logout',
+          icon: Icons.logout_rounded,
+          action: () => _onTapMenuItem('logoutLbl'),
+          color: const Color(0xFFEF4444),
+        ),
+      if (!_isGuest)
+        _MenuActionItem(
+          label: 'Delete Account',
+          icon: Icons.delete_forever_rounded,
+          action: () => _onTapMenuItem('deleteAccountLbl'),
+          color: const Color(0xFFEF4444),
+        ),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 28,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < items.length; i++) ...[
+            _buildMenuActionTile(items[i]),
+            if (i != items.length - 1) const SizedBox(height: 10),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuActionTile(_MenuActionItem item) {
+    final color = item.color ?? const Color(0xFF2E5BEA);
 
     return InkWell(
-      onTap: () => _onTapMenuItem(item.name),
+      onTap: item.action,
+      borderRadius: BorderRadius.circular(18),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        height: 54,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: context.surfaceColor,
-          borderRadius: BorderRadius.circular(8),
+          color: const Color(0xFFF1F4FF),
+          borderRadius: BorderRadius.circular(18),
         ),
         child: Row(
           children: [
-            QImage(
-              imageUrl: item.image,
-              color: context.primaryColor,
-              fit: BoxFit.fitHeight,
-              height: 24,
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Icon(item.icon, color: color, size: 18),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                context.tr(item.name)!,
-                textAlign: TextAlign.start,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 2,
+                item.label,
                 style: TextStyle(
-                  fontWeight: FontWeights.regular,
-                  fontSize: 16,
-                  color: context.primaryTextColor,
+                  color: color,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
-            if (trailing != null) ...[const SizedBox(width: 12), trailing],
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: const Color(0xFF9AA7C0),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreferenceRow({
+    required IconData icon,
+    required String label,
+    required Widget trailing,
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        height: 56,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F4FF),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Icon(icon, color: const Color(0xFF2E5BEA), size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Color(0xFF1E4FD9),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            trailing,
           ],
         ),
       ),
@@ -599,6 +1038,20 @@ class _SoundSwitchWidget extends StatelessWidget {
       },
     );
   }
+}
+
+class _MenuActionItem {
+  _MenuActionItem({
+    required this.label,
+    required this.icon,
+    required this.action,
+    this.color,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback action;
+  final Color? color;
 }
 
 /// Extracts only vibration value from settings state to prevent rebuilds

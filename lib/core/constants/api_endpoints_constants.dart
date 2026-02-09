@@ -71,6 +71,7 @@ const getUserBadgesUrl = '$_api/get_user_badges';
 // Payment & Coins
 const getCoinStoreData = '$_api/get_coin_store_data';
 const getCoinHistoryUrl = '$_api/get_tracker_data';
+const getReferralStatsUrl = '$_api/get_referral_stats';
 const updateUserCoinsAndScoreUrl = '$_api/set_user_coin_score';
 const makePaymentRequestUrl = '$_api/set_payment_request';
 const cancelPaymentRequestUrl = '$_api/delete_pending_payment_request';

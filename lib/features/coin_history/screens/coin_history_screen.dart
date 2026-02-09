@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -159,40 +160,22 @@ final class _CoinHistoryScreenState extends State<CoinHistoryScreen> {
   Widget _buildTopBar() {
     return Row(
       children: [
-        GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.12),
-                  blurRadius: 22,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              size: 18,
-              color: Color(0xFF1E4FD9),
-            ),
-          ),
+        _GlassIconButton(
+          icon: Icons.arrow_back_rounded,
+          onTap: Navigator.of(context).pop,
         ),
-        const Expanded(child: SizedBox()),
+        const SizedBox(width: 12),
         Text(
-          'Coin History',
+          context.tr(coinHistoryKey)!,
+          textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 23,
-            fontWeight: FontWeight.w800,
-            color: const Color(0xFF1E4FD9),
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF1F51D9),
           ),
         ),
-        const Expanded(child: SizedBox()),
-        const SizedBox(width: 44),
+        const Spacer(),
+        const SizedBox(width: 48),
       ],
     );
   }
@@ -403,7 +386,8 @@ final class _CoinHistoryScreenState extends State<CoinHistoryScreen> {
 
     return items.where((item) {
       final type = (context.tr(item.type) ?? item.type).toLowerCase();
-      final matchesSearch = query.isEmpty ||
+      final matchesSearch =
+          query.isEmpty ||
           type.contains(query) ||
           item.pointsValue.toString().contains(query);
 
@@ -705,7 +689,8 @@ class _TransactionStyle {
 
   static _TransactionStyle from(CoinHistory transaction) {
     final type = transaction.type.toLowerCase();
-    final isBonus = type.contains('bonus') ||
+    final isBonus =
+        type.contains('bonus') ||
         type.contains('admin') ||
         type.contains('reward') ||
         type.contains('refer');
@@ -730,6 +715,42 @@ class _TransactionStyle {
       tint: Color(0xFFE8F8EF),
       accent: Color(0xFF22C55E),
       icon: Icons.add_circle_rounded,
+    );
+  }
+}
+
+class _GlassIconButton extends StatelessWidget {
+  const _GlassIconButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: const Color(0xFF1F51D9).withValues(alpha: 0.25),
+                width: 1,
+              ),
+            ),
+            child: Icon(
+              icon,
+              color: const Color(0xFF1F51D9),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
