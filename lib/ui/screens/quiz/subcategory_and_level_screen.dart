@@ -79,7 +79,7 @@ class _SubCategoryAndLevelScreen extends State<SubCategoryAndLevelScreen> {
         children: [
           // Blue gradient header background
           Container(
-            height: 180,
+            height: 140,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -111,7 +111,7 @@ class _SubCategoryAndLevelScreen extends State<SubCategoryAndLevelScreen> {
               children: [
                 // Custom Header
                 _buildHeader(context),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
                 // Content area with rounded top
                 Expanded(
                   child: Container(
@@ -153,15 +153,15 @@ class _SubCategoryAndLevelScreen extends State<SubCategoryAndLevelScreen> {
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Row(
         children: [
           // Back button
           GestureDetector(
             onTap: () => Navigator.pop(context),
             child: Container(
-              width: 40,
-              height: 40,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
@@ -169,7 +169,7 @@ class _SubCategoryAndLevelScreen extends State<SubCategoryAndLevelScreen> {
               child: const Icon(
                 Icons.arrow_back_ios_new_rounded,
                 color: Colors.white,
-                size: 20,
+                size: 18,
               ),
             ),
           ),
@@ -191,7 +191,7 @@ class _SubCategoryAndLevelScreen extends State<SubCategoryAndLevelScreen> {
                 Text(
                   'Choose a topic to play',
                   style: GoogleFonts.nunito(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w400,
                     color: Colors.white.withValues(alpha: 0.8),
                   ),

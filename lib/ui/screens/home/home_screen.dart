@@ -1514,35 +1514,12 @@ class HomeScreenState extends State<HomeScreen>
                           ),
                         ),
                         alignment: Alignment.center,
-                        child: Stack(
-                          alignment: Alignment.topRight,
-                          children: [
-                            QImage(
-                              imageUrl: Assets.coinMenuIcon,
-                              color: Colors.white,
-                              height: 18,
-                              width: 18,
-                              fit: BoxFit.contain,
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 3,
-                                vertical: 1,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFA500),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                _userCoins,
-                                style: GoogleFonts.nunito(
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
+                        child: QImage(
+                          imageUrl: Assets.coinMenuIcon,
+                          color: Colors.white,
+                          height: 18,
+                          width: 18,
+                          fit: BoxFit.contain,
                         ),
                       ),
                     ),
@@ -1557,11 +1534,11 @@ class HomeScreenState extends State<HomeScreen>
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _buildBadge('Rank #$_userRank'),
+                _buildBadge('Rank #$_userRank', Icons.emoji_events_rounded),
                 const SizedBox(width: 8),
-                _buildBadge('Silver'),
+                _buildBadge('Silver', Icons.stars_rounded),
                 const SizedBox(width: 8),
-                _buildBadge('70%'),
+                _buildBadge('70%', Icons.percent_rounded),
               ],
             ),
           ),
@@ -1581,26 +1558,64 @@ class HomeScreenState extends State<HomeScreen>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Your Coins',
+                          style: GoogleFonts.nunito(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.white.withValues(alpha: 0.8),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _userCoins,
+                          style: GoogleFonts.nunito(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 16),
                     Text(
-                      'Your Total Score',
+                      '|',
                       style: GoogleFonts.nunito(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white.withValues(alpha: 0.6),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _userScore,
-                      style: GoogleFonts.nunito(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+                    const SizedBox(width: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Your Total Score',
+                          style: GoogleFonts.nunito(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.white.withValues(alpha: 0.8),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _userScore,
+                          style: GoogleFonts.nunito(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -1626,7 +1641,7 @@ class HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildBadge(String text) {
+  Widget _buildBadge(String text, IconData icon) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -1637,13 +1652,24 @@ class HomeScreenState extends State<HomeScreen>
           width: 1,
         ),
       ),
-      child: Text(
-        text,
-        style: GoogleFonts.nunito(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: Colors.white,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: GoogleFonts.nunito(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+        ],
       ),
     );
   }

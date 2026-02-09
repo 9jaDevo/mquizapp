@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer' as dev;
+import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -94,7 +95,7 @@ class _WalletScreenState extends State<WalletScreen>
       ..addListener(() => FocusScope.of(context).unfocus());
     Future.delayed(Duration.zero, () {
       fetchTransactions();
-      
+
       // Step 8: Check payout eligibility
       context.read<MonetizationCubit>().checkPayoutEligibility();
 
@@ -213,38 +214,124 @@ class _WalletScreenState extends State<WalletScreen>
           // Step 8: Payout Eligibility Widget
           BlocBuilder<MonetizationCubit, MonetizationState>(
             builder: (context, state) {
-              if (state.payoutEligibility != null) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: PayoutEligibilityWidget(eligibility: state.payoutEligibility!),
-                );
+              final eligibility = state.payoutEligibility;
+              if (eligibility == null) {
+                return const SizedBox.shrink();
               }
-              return const SizedBox.shrink();
+
+              final requiredDays = eligibility.requiredDays == 0
+                  ? 1
+                  : eligibility.requiredDays;
+              final progressValue = (eligibility.activeDays / requiredDays)
+                  .clamp(0.0, 1.0);
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF7ED),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFFED7AA)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(
+                            0xFFF59E0B,
+                          ).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(
+                              0xFFF59E0B,
+                            ).withValues(alpha: 0.35),
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.hourglass_top_rounded,
+                          color: Color(0xFFF59E0B),
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              eligibility.message,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: const Color(0xFF92400E),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: LinearProgressIndicator(
+                                value: progressValue,
+                                minHeight: 8,
+                                backgroundColor: const Color(0xFFFDE68A),
+                                valueColor: const AlwaysStoppedAnimation<Color>(
+                                  Color(0xFFF59E0B),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '${eligibility.activeDays}/${eligibility.requiredDays}',
+                              style: TextStyle(
+                                color: const Color(0xFFB45309),
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
             },
           ),
           Container(
+            width: double.infinity,
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(16),
+              color: context.surfaceColor,
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: context.primaryTextColor.withValues(alpha: .08),
+                color: context.primaryTextColor.withValues(alpha: 0.08),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                /// Total Coins Section
                 Text(
                   context.tr(totalCoinsKey)!,
                   style: TextStyle(
-                    color: context.primaryTextColor.withValues(alpha: .6),
-                    fontSize: 13,
+                    color: context.primaryTextColor.withValues(alpha: 0.6),
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    letterSpacing: 0.5,
+                    letterSpacing: 0.3,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 BlocSelector<UserDetailsCubit, UserDetailsState, String?>(
                   selector: (state) {
                     if (state is UserDetailsFetchSuccess) {
@@ -255,59 +342,81 @@ class _WalletScreenState extends State<WalletScreen>
                   builder: (context, coins) {
                     if (coins == null) return const SizedBox.shrink();
 
-                    return AnimatedCoinDisplay(coins: coins);
+                    return Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF4CC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(
+                                0xFFF59E0B,
+                              ).withValues(alpha: 0.3),
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: const QImage(
+                            imageUrl: Assets.coin,
+                            width: 22,
+                            height: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            NumberFormat('#,###').format(
+                              int.tryParse(coins) ?? 0,
+                            ),
+                            style: TextStyle(
+                              color: context.primaryTextColor,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 28,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
                   },
                 ),
-
-                // divider
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  child: Divider(
-                    color: context.primaryTextColor.withValues(alpha: .08),
-                    height: 1,
+                const SizedBox(height: 18),
+                Divider(
+                  color: context.primaryTextColor.withValues(alpha: 0.08),
+                  height: 1,
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  context.tr(redeemableAmountKey)!,
+                  style: TextStyle(
+                    color: context.primaryTextColor,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
                   ),
                 ),
-
-                /// Redeemable Amount Label
-                Row(
-                  children: [
-                    Text(
-                      context.tr(redeemableAmountKey)!,
-                      style: TextStyle(
-                        color: context.primaryTextColor,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 12),
-
-                /// Amount Input Field
+                const SizedBox(height: 10),
                 Container(
                   decoration: BoxDecoration(
                     color: context.scaffoldBackgroundColor.withValues(
-                      alpha: .8,
+                      alpha: 0.7,
                     ),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: context.primaryColor.withValues(alpha: .2),
+                      color: context.primaryColor.withValues(alpha: 0.22),
                     ),
                   ),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
-                    vertical: 8,
+                    vertical: 10,
                   ),
                   child: Row(
                     children: [
-                      // Currency symbol
                       Text(
                         payoutRequestCurrency,
                         style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
                           color: context.primaryColor,
                         ),
                       ),
@@ -316,9 +425,9 @@ class _WalletScreenState extends State<WalletScreen>
                         child: TextField(
                           style: TextStyle(
                             fontSize: 22,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w800,
                             color: context.primaryTextColor,
-                            letterSpacing: 0.5,
+                            letterSpacing: 0.3,
                           ),
                           keyboardType: const TextInputType.numberWithOptions(
                             decimal: true,
@@ -331,26 +440,30 @@ class _WalletScreenState extends State<WalletScreen>
                             contentPadding: EdgeInsets.zero,
                             hintStyle: TextStyle(
                               color: context.primaryTextColor.withValues(
-                                alpha: .25,
+                                alpha: 0.25,
                               ),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
                       ),
-                      // Edit indicator
-                      Icon(
-                        Icons.edit_outlined,
-                        color: context.primaryColor.withValues(alpha: .6),
-                        size: 16,
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: context.primaryColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          Icons.edit_outlined,
+                          color: context.primaryColor,
+                          size: 16,
+                        ),
                       ),
                     ],
                   ),
                 ),
-
-                const SizedBox(height: 20),
-
-                /// Payout Notes
+                const SizedBox(height: 16),
                 ...payoutRequestNotes(
                   payoutRequestCurrency,
                   (minimumCoinLimit / perCoin).toString(),
@@ -363,58 +476,82 @@ class _WalletScreenState extends State<WalletScreen>
           SizedBox(height: context.height * 0.03),
 
           /// Redeem Now Btn
-          CustomRoundedButton(
-            widthPercentage: 1,
-            backgroundColor: context.primaryColor,
-            buttonTitle: context.tr(redeemNowKey),
-            radius: 12,
-            showBorder: false,
-            height: 56,
-            titleColor: context.surfaceColor,
-            fontWeight: FontWeight.bold,
-            textSize: 18,
-            onTap: () {
-              unawaited(HapticFeedback.mediumImpact());
-              final enteredRedeemAmount =
-                  double.tryParse(
-                    redeemableAmountTextEditingController!.text.trim(),
-                  ) ??
-                  0;
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () {
+                unawaited(HapticFeedback.mediumImpact());
+                final enteredRedeemAmount =
+                    double.tryParse(
+                      redeemableAmountTextEditingController!.text.trim(),
+                    ) ??
+                    0;
 
-              if (enteredRedeemAmount < _minimumRedeemableAmount()) {
-                context.showSnack(
-                  '${context.tr(minimumRedeemableAmountKey)} $payoutRequestCurrency${_minimumRedeemableAmount()} ',
+                if (enteredRedeemAmount < _minimumRedeemableAmount()) {
+                  context.showSnack(
+                    '${context.tr(minimumRedeemableAmountKey)} $payoutRequestCurrency${_minimumRedeemableAmount()} ',
+                  );
+                  return;
+                }
+
+                final userCoins = int.parse(
+                  context.read<UserDetailsCubit>().getCoins()!,
                 );
-                return;
-              }
 
-              final userCoins = int.parse(
-                context.read<UserDetailsCubit>().getCoins()!,
-              );
-
-              final maxRedeemableAmount = UiUtils.calculateAmountPerCoins(
-                userCoins: userCoins,
-                amount: coinAmount,
-                coins: perCoin,
-              );
-
-              if (enteredRedeemAmount > maxRedeemableAmount) {
-                context.showSnack(
-                  context.tr(notEnoughCoinsToRedeemAmountKey)!,
+                final maxRedeemableAmount = UiUtils.calculateAmountPerCoins(
+                  userCoins: userCoins,
+                  amount: coinAmount,
+                  coins: perCoin,
                 );
-                return;
-              }
 
-              showRedeemRequestAmountBottomSheet(
-                deductedCoins:
-                    UiUtils.calculateDeductedCoinsForRedeemableAmount(
-                      amount: coinAmount,
-                      coins: perCoin,
-                      userEnteredAmount: enteredRedeemAmount,
+                if (enteredRedeemAmount > maxRedeemableAmount) {
+                  context.showSnack(
+                    context.tr(notEnoughCoinsToRedeemAmountKey)!,
+                  );
+                  return;
+                }
+
+                showRedeemRequestAmountBottomSheet(
+                  deductedCoins:
+                      UiUtils.calculateDeductedCoinsForRedeemableAmount(
+                        amount: coinAmount,
+                        coins: perCoin,
+                        userEnteredAmount: enteredRedeemAmount,
+                      ),
+                  redeemableAmount: enteredRedeemAmount,
+                );
+              },
+              child: Container(
+                width: double.infinity,
+                height: 56,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF4F46E5), Color(0xFF22D3EE)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF4F46E5).withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
                     ),
-                redeemableAmount: enteredRedeemAmount,
-              );
-            },
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  context.tr(redeemNowKey)!,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -693,24 +830,158 @@ class _WalletScreenState extends State<WalletScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: QAppBar(
-        title: Text(context.tr(walletKey)!),
-        bottom: TabBar(
-          onTap: (_) => HapticFeedback.lightImpact(),
-          tabAlignment: TabAlignment.fill,
-          controller: tabController,
-          tabs: [
-            Tab(text: context.tr(requestKey)),
-            Tab(text: context.tr(transactionKey)),
-          ],
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          _buildWalletBackground(),
+          SafeArea(
+            child: Column(
+              children: [
+                const SizedBox(height: 8),
+                _buildWalletHeader(context),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.width * UiUtils.hzMarginPct,
+                  ),
+                  child: Container(
+                    height: 46,
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: const Color(0xFF1F51D9).withValues(alpha: 0.12),
+                      ),
+                    ),
+                    child: TabBar(
+                      onTap: (_) => HapticFeedback.lightImpact(),
+                      controller: tabController,
+                      labelColor: Colors.white,
+                      unselectedLabelColor: const Color(
+                        0xFF1F51D9,
+                      ).withValues(alpha: 0.6),
+                      labelStyle: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                      unselectedLabelStyle: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                      indicator: BoxDecoration(
+                        color: const Color(0xFF1F51D9),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      indicatorPadding: const EdgeInsets.all(2),
+                      dividerColor: Colors.transparent,
+                      padding: EdgeInsets.zero,
+                      tabs: [
+                        Tab(text: context.tr(requestKey)),
+                        Tab(text: context.tr(transactionKey)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: TabBarView(
+                    controller: tabController,
+                    children: [
+                      _buildRequestContainer(),
+                      _buildTransactionListContainer(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWalletBackground() {
+    return Positioned.fill(
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment(-0.6, -0.6),
+            radius: 1.1,
+            colors: [
+              Colors.white,
+              Color(0xFFEAF2FF),
+              Color(0xFFCFE0FF),
+            ],
+          ),
         ),
       ),
-      body: TabBarView(
-        controller: tabController,
+    );
+  }
+
+  Widget _buildWalletHeader(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: context.width * UiUtils.hzMarginPct,
+      ),
+      child: Row(
         children: [
-          _buildRequestContainer(),
-          _buildTransactionListContainer(),
+          _GlassIconButton(
+            icon: Icons.arrow_back_rounded,
+            onTap: Navigator.of(context).pop,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              context.tr(walletKey)!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1F51D9),
+              ),
+            ),
+          ),
+          const SizedBox(width: 48),
         ],
+      ),
+    );
+  }
+}
+
+class _GlassIconButton extends StatelessWidget {
+  const _GlassIconButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: const Color(0xFF1F51D9).withValues(alpha: 0.25),
+                width: 1,
+              ),
+            ),
+            child: Icon(
+              icon,
+              color: const Color(0xFF1F51D9),
+              size: 20,
+            ),
+          ),
+        ),
       ),
     );
   }
