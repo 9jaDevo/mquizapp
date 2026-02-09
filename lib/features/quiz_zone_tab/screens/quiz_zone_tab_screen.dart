@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/commons/commons.dart';
@@ -8,8 +9,11 @@ import 'package:flutterquiz/features/auth/cubits/auth_cubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/quiz_category_cubit.dart';
 import 'package:flutterquiz/features/quiz/models/category.dart';
 import 'package:flutterquiz/features/quiz/models/quiz_type.dart';
+import 'package:flutterquiz/ui/screens/quiz/guess_the_word_quiz_screen.dart';
 import 'package:flutterquiz/ui/screens/quiz/levels_screen.dart';
+import 'package:flutterquiz/ui/screens/quiz/multi_match/screens/multi_match_quiz_screen.dart';
 import 'package:flutterquiz/ui/screens/quiz/subcategory_and_level_screen.dart';
+import 'package:flutterquiz/ui/screens/quiz/subcategory_screen.dart';
 import 'package:flutterquiz/ui/widgets/already_logged_in_dialog.dart';
 import 'package:flutterquiz/ui/widgets/circular_progress_container.dart';
 import 'package:flutterquiz/ui/widgets/error_container.dart';
@@ -18,17 +22,44 @@ import 'package:flutterquiz/ui/widgets/unlock_premium_category_dialog.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+final class QuizZoneTabScreenArgs extends RouteArgs {
+  const QuizZoneTabScreenArgs({required this.quizType});
+
+  final QuizTypes quizType;
+}
+
 final class QuizZoneTabScreen extends StatefulWidget {
-  const QuizZoneTabScreen({super.key});
+  const QuizZoneTabScreen({super.key, this.args});
+
+  final QuizZoneTabScreenArgs? args;
 
   @override
   State<QuizZoneTabScreen> createState() => QuizZoneTabScreenState();
+
+  static Route<dynamic> route(RouteSettings routeSettings) {
+    final args = routeSettings.args<QuizZoneTabScreenArgs>();
+
+    return CupertinoPageRoute(
+      builder: (_) => QuizZoneTabScreen(args: args),
+    );
+  }
 }
 
 final class QuizZoneTabScreenState extends State<QuizZoneTabScreen>
     with AutomaticKeepAliveClientMixin {
   final _scrollController = ScrollController();
   final refreshKey = GlobalKey<RefreshIndicatorState>();
+
+  QuizTypes get _quizType => widget.args?.quizType ?? QuizTypes.quizZone;
+
+  String getCategoryTitle(QuizTypes quizType) => context.tr(switch (quizType) {
+    QuizTypes.mathMania => 'mathMania',
+    QuizTypes.audioQuestions => 'audioQuestions',
+    QuizTypes.guessTheWord => 'guessTheWord',
+    QuizTypes.funAndLearn => 'funAndLearn',
+    QuizTypes.multiMatch => 'multiMatch',
+    _ => 'quizZone',
+  })!;
 
   @override
   void initState() {
@@ -55,16 +86,17 @@ final class QuizZoneTabScreenState extends State<QuizZoneTabScreen>
   }
 
   Future<void> _fetchCategories() async {
+    final quizType = _quizType;
     /// Fetch the quiz zone categories, if logged in, fetch categories with user data, otherwise without it.
     if (context.read<AuthCubit>().isGuest) {
       await context.read<QuizCategoryCubit>().getQuizCategory(
         languageId: UiUtils.getCurrentQuizLanguageId(context),
-        type: QuizTypes.quizZone.typeValue!,
+        type: UiUtils.getCategoryTypeNumberFromQuizType(quizType),
       );
     } else {
       await context.read<QuizCategoryCubit>().getQuizCategoryWithUserId(
         languageId: UiUtils.getCurrentQuizLanguageId(context),
-        type: QuizTypes.quizZone.typeValue!,
+        type: UiUtils.getCategoryTypeNumberFromQuizType(quizType),
       );
     }
   }
@@ -93,44 +125,114 @@ final class QuizZoneTabScreenState extends State<QuizZoneTabScreen>
 
     // check if Category has subcategories
     if (category.hasSubcategories) {
-      // redirect to Subcategories list screen
-      globalCtx.pushNamed(
-        Routes.subcategoryAndLevel,
-        arguments: SubCategoryAndLevelScreenArgs(
-          quizType: QuizTypes.quizZone,
-          category: category,
-          categoryCubit: context.read<QuizCategoryCubit>(),
-        ),
-      );
-    } else {
-      // otherwise check if Category has levels
-      if (category.hasLevels) {
-        // redirect to Levels screen
+      if (_quizType case QuizTypes.multiMatch || QuizTypes.quizZone) {
+        // redirect to Subcategories list screen
         globalCtx.pushNamed(
-          Routes.levels,
-          arguments: LevelsScreenArgs(
-            quizType: QuizTypes.quizZone,
+          Routes.subcategoryAndLevel,
+          arguments: SubCategoryAndLevelScreenArgs(
+            quizType: _quizType,
             category: category,
             categoryCubit: context.read<QuizCategoryCubit>(),
           ),
         );
       } else {
-        // Start the Quiz
         Navigator.of(globalCtx).pushNamed(
+          Routes.subCategory,
+          arguments: SubCategoryScreenArgs(
+            quizType: _quizType,
+            category: category,
+            categoryCubit: context.read<QuizCategoryCubit>(),
+          ),
+        );
+      }
+    } else {
+      // otherwise check if Category has levels
+      if (_quizType == QuizTypes.multiMatch) {
+        if (category.maxLevel == '0') {
+          globalCtx.pushNamed(
+            Routes.multiMatchQuiz,
+            arguments: MultiMatchQuizArgs(
+              categoryId: category.id!,
+              isPremiumCategory: category.isPremium,
+            ),
+          );
+        } else {
+          globalCtx.pushNamed(
+            Routes.levels,
+            arguments: LevelsScreenArgs(
+              quizType: QuizTypes.multiMatch,
+              category: category,
+              categoryCubit: context.read<QuizCategoryCubit>(),
+            ),
+          );
+        }
+      } else if (_quizType == QuizTypes.quizZone) {
+        if (category.maxLevel == '0') {
+          //direct move to quiz screen pass level as 0
+          Navigator.of(globalCtx).pushNamed(
+            Routes.quiz,
+            arguments: {
+              'numberOfPlayer': 1,
+              'quizType': _quizType,
+              'categoryId': category.id,
+              'subcategoryId': '',
+              'level': '0',
+              'subcategoryMaxLevel': category.maxLevel,
+              'unlockedLevel': 0,
+              'contestId': '',
+              'comprehensionId': '',
+              'showRetryButton': category.hasQuestions,
+              'isPremiumCategory': category.isPremium,
+              'isPlayed': category.isPlayed,
+            },
+          );
+        } else {
+          //navigate to level screen
+          globalCtx.pushNamed(
+            Routes.levels,
+            arguments: LevelsScreenArgs(
+              quizType: QuizTypes.quizZone,
+              category: category,
+              categoryCubit: context.read<QuizCategoryCubit>(),
+            ),
+          );
+        }
+      } else if (_quizType == QuizTypes.audioQuestions) {
+        Navigator.of(context).pushNamed(
           Routes.quiz,
           arguments: {
-            'numberOfPlayer': 1,
-            'quizType': QuizTypes.quizZone,
+            'quizType': QuizTypes.audioQuestions,
             'categoryId': category.id,
-            'subcategoryId': '',
-            'level': '0',
-            'subcategoryMaxLevel': category.maxLevel,
-            'unlockedLevel': 0,
-            'contestId': '',
-            'comprehensionId': '',
-            'showRetryButton': category.hasQuestions,
-            'isPremiumCategory': category.isPremium,
             'isPlayed': category.isPlayed,
+            'isPremiumCategory': category.isPremium,
+          },
+        );
+      } else if (_quizType == QuizTypes.guessTheWord) {
+        context.pushNamed(
+          Routes.guessTheWord,
+          arguments: GuessTheWordQuizScreenArgs(
+            categoryId: category.id!,
+            isPlayed: category.isPlayed,
+            isPremiumCategory: category.isPremium,
+          ),
+        );
+      } else if (_quizType == QuizTypes.funAndLearn) {
+        Navigator.of(context).pushNamed(
+          Routes.funAndLearnTitle,
+          arguments: {
+            'categoryId': category.id,
+            'title': category.categoryName,
+            'isPremiumCategory': category.isPremium,
+          },
+        );
+      } else if (_quizType == QuizTypes.mathMania) {
+        Navigator.of(context).pushNamed(
+          Routes.quiz,
+          arguments: {
+            'quizType': QuizTypes.mathMania,
+            'categoryId': category.id,
+            'isPlayed': category.isPlayed,
+            'isPremiumCategory': category.isPremium,
           },
         );
       }
@@ -149,7 +251,7 @@ final class QuizZoneTabScreenState extends State<QuizZoneTabScreen>
           children: [
             // Blue gradient header background
             Container(
-              height: 320,
+              height: 170,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -161,11 +263,11 @@ final class QuizZoneTabScreenState extends State<QuizZoneTabScreen>
                 children: [
                   // Decorative circle
                   Positioned(
-                    top: -60,
-                    right: -60,
+                    top: -50,
+                    right: -50,
                     child: Container(
-                      width: 200,
-                      height: 200,
+                      width: 150,
+                      height: 150,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: Colors.white.withValues(alpha: 0.1),
@@ -181,7 +283,7 @@ final class QuizZoneTabScreenState extends State<QuizZoneTabScreen>
                 children: [
                   // Custom Header
                   _buildHeader(context),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   // Content area with rounded top
                   Expanded(
                     child: Container(
@@ -212,20 +314,41 @@ final class QuizZoneTabScreenState extends State<QuizZoneTabScreen>
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Column(
         children: [
           // Logo/Icon row
           Row(
             children: [
-              const SizedBox(width: 44), // Balance for space
+              if (widget.args != null)
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                )
+              else
+                const SizedBox(width: 34),
               const Spacer(),
               Container(
-                width: 64,
-                height: 64,
+                width: 52,
+                height: 52,
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: Colors.white.withValues(alpha: 0.3),
                     width: 2,
@@ -234,34 +357,34 @@ final class QuizZoneTabScreenState extends State<QuizZoneTabScreen>
                 child: const Icon(
                   Icons.quiz_rounded,
                   color: Colors.white,
-                  size: 32,
+                  size: 26,
                 ),
               ),
               const Spacer(),
-              const SizedBox(width: 44), // Balance for back button
+              const SizedBox(width: 34), // Balance for back button
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 6),
           // Title
           Text(
-            context.tr('quizZone')!,
+            getCategoryTitle(_quizType),
             style: GoogleFonts.nunito(
-              fontSize: 28,
+              fontSize: 20,
               fontWeight: FontWeight.w700,
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           // Subtitle
           Text(
             'Explore categories and test your knowledge',
             style: GoogleFonts.nunito(
-              fontSize: 14,
+              fontSize: 11,
               fontWeight: FontWeight.w400,
               color: Colors.white.withValues(alpha: 0.9),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 8),
           // Stats Row
           BlocBuilder<QuizCategoryCubit, QuizCategoryState>(
             builder: (context, state) {
@@ -287,14 +410,14 @@ final class QuizZoneTabScreenState extends State<QuizZoneTabScreen>
                       'Categories',
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: _buildStatBadge(
                       '${topicsCount > 60 ? "60+" : topicsCount}',
                       'Topics',
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: _buildStatBadge(
                       '${questionsCount > 1000 ? "${(questionsCount / 1000).toStringAsFixed(0)}K+" : questionsCount}',
@@ -312,33 +435,43 @@ final class QuizZoneTabScreenState extends State<QuizZoneTabScreen>
 
   Widget _buildStatBadge(String value, String label) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(10),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          constraints: const BoxConstraints(minHeight: 52),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+            color: Colors.white.withValues(alpha: 0.28),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
           ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 value,
                 style: GoogleFonts.nunito(
-                  fontSize: 18,
+                  fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
+                  shadows: const [
+                    Shadow(color: Color(0x66000000), blurRadius: 4),
+                  ],
                 ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 3),
               Text(
                 label,
                 style: GoogleFonts.nunito(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.white.withValues(alpha: 0.9),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  height: 1.1,
+                  color: Colors.white,
+                  shadows: const [
+                    Shadow(color: Color(0x66000000), blurRadius: 4),
+                  ],
                 ),
               ),
             ],

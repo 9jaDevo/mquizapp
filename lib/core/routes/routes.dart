@@ -26,7 +26,7 @@ import 'package:flutterquiz/ui/screens/notifications_screen.dart';
 import 'package:flutterquiz/ui/screens/onboarding_screen.dart';
 import 'package:flutterquiz/ui/screens/profile/create_or_edit_profile_screen.dart';
 import 'package:flutterquiz/ui/screens/quiz/bookmark_quiz_screen.dart';
-import 'package:flutterquiz/ui/screens/quiz/category_screen.dart';
+import 'package:flutterquiz/features/quiz_zone_tab/screens/quiz_zone_tab_screen.dart';
 import 'package:flutterquiz/ui/screens/quiz/contest_leaderboard_screen.dart';
 import 'package:flutterquiz/ui/screens/quiz/contest_screen.dart';
 import 'package:flutterquiz/ui/screens/contest_rules_screen.dart';
@@ -165,7 +165,7 @@ class Routes {
       case selfChallengeQuestions:
         return SelfChallengeQuestionsScreen.route(rs);
       case category:
-        return CategoryScreen.route(rs);
+        return QuizZoneTabScreen.route(rs);
       case bookmark:
         return BookmarkScreen.route();
       case bookmarkQuiz:

@@ -2634,6 +2634,28 @@ class Table extends REST_Controller
         $query = $this->db->get();
         $res = $query->result();
 
+        $res_count = is_array($res) ? count($res) : 0;
+        if ($res_count < 3) {
+            $fallback = $this->fetch_engagement_from_sessions(
+                'alltime',
+                null,
+                null,
+                null,
+                'world',
+                null,
+                null,
+                $sort,
+                $order,
+                $this->get('offset'),
+                $this->get('limit'),
+                $this->get('search')
+            );
+            if (!empty($fallback['rows']) && count($fallback['rows']) > $res_count) {
+                $total = $fallback['total'];
+                $res = $fallback['rows'];
+            }
+        }
+
         $bulkData = [
             'total' => $total,
             'rows' => []
@@ -2708,6 +2730,28 @@ class Table extends REST_Controller
 
         $query = $this->db->get();
         $res = $query->result();
+
+        $res_count = is_array($res) ? count($res) : 0;
+        if ($res_count < 3) {
+            $fallback = $this->fetch_engagement_from_sessions(
+                'weekly',
+                $year,
+                null,
+                $week,
+                $scope,
+                $this->get('country_code'),
+                $this->get('region'),
+                $sort,
+                $order,
+                $this->get('offset'),
+                $this->get('limit'),
+                $this->get('search')
+            );
+            if (!empty($fallback['rows']) && count($fallback['rows']) > $res_count) {
+                $total = $fallback['total'];
+                $res = $fallback['rows'];
+            }
+        }
 
         $bulkData = [
             'total' => $total,
@@ -2786,6 +2830,28 @@ class Table extends REST_Controller
         $query = $this->db->get();
         $res = $query->result();
 
+        $res_count = is_array($res) ? count($res) : 0;
+        if ($res_count < 3) {
+            $fallback = $this->fetch_engagement_from_sessions(
+                'monthly',
+                $year,
+                $month,
+                null,
+                $scope,
+                $this->get('country_code'),
+                $this->get('region'),
+                $sort,
+                $order,
+                $this->get('offset'),
+                $this->get('limit'),
+                $this->get('search')
+            );
+            if (!empty($fallback['rows']) && count($fallback['rows']) > $res_count) {
+                $total = $fallback['total'];
+                $res = $fallback['rows'];
+            }
+        }
+
         $bulkData = [
             'total' => $total,
             'rows' => []
@@ -2860,6 +2926,28 @@ class Table extends REST_Controller
         $query = $this->db->get();
         $res = $query->result();
 
+        $res_count = is_array($res) ? count($res) : 0;
+        if ($res_count < 3) {
+            $fallback = $this->fetch_engagement_from_sessions(
+                'alltime',
+                null,
+                null,
+                null,
+                $scope,
+                $this->get('country_code'),
+                $this->get('region'),
+                $sort,
+                $order,
+                $this->get('offset'),
+                $this->get('limit'),
+                $this->get('search')
+            );
+            if (!empty($fallback['rows']) && count($fallback['rows']) > $res_count) {
+                $total = $fallback['total'];
+                $res = $fallback['rows'];
+            }
+        }
+
         $bulkData = [
             'total' => $total,
             'rows' => []
@@ -2884,6 +2972,93 @@ class Table extends REST_Controller
         }
 
         echo json_encode($bulkData, JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
+     * Fallback engagement leaderboard using session data.
+     *
+     * @param string $period weekly|monthly|alltime
+     * @param int|null $year
+     * @param int|null $month
+     * @param int|null $week
+     * @param string $scope world|country|region
+     * @param string|null $country_code
+     * @param string|null $region
+     * @param string $sort
+     * @param string $order
+     * @param int|null $offset
+     * @param int|null $limit
+     * @param string|null $search
+     * @return array
+     */
+    private function fetch_engagement_from_sessions(
+        $period,
+        $year,
+        $month,
+        $week,
+        $scope,
+        $country_code,
+        $region,
+        $sort,
+        $order,
+        $offset,
+        $limit,
+        $search
+    ) {
+        $period_where = '';
+        if ($period === 'weekly' && $year && $week) {
+            $period_where = "AND YEAR(e.session_end) = {$year} AND WEEK(e.session_end, 1) = {$week}";
+        } elseif ($period === 'monthly' && $year && $month) {
+            $period_where = "AND YEAR(e.session_end) = {$year} AND MONTH(e.session_end) = {$month}";
+        }
+
+        $scope_where = '';
+        if ($scope === 'country' && !empty($country_code)) {
+            $country_code = $this->db->escape_str($country_code);
+            $scope_where = "AND u.country_code='{$country_code}'";
+        } elseif ($scope === 'region' && !empty($region)) {
+            $region = $this->db->escape_str($region);
+            $scope_where = "AND u.continent='{$region}'";
+        }
+
+        $sub_query = "SELECT u.id AS user_id, u.name, u.email, u.profile, u.country_name, u.continent, u.country_code, \
+                      ROUND(SUM(e.duration_seconds) / 60, 2) AS total_minutes, \
+                      MAX(e.session_end) AS last_updated \
+                      FROM tbl_user_engagement e \
+                      JOIN tbl_users u ON u.id = e.user_id \
+                      WHERE u.status=1 {$period_where} {$scope_where} \
+                      GROUP BY e.user_id";
+
+        $ranked_query = "SELECT s.*, @user_rank := @user_rank + 1 user_rank \
+                         FROM ({$sub_query}) s, (SELECT @user_rank := 0) init \
+                         ORDER BY s.total_minutes DESC, s.last_updated ASC";
+
+        $this->db->select('r.*');
+        $this->db->from("({$ranked_query}) r", false);
+
+        if (!empty($search)) {
+            $search = $this->db->escape_like_str($search);
+            $this->db->group_start()
+                ->like('r.name', $search)
+                ->or_like('r.email', $search)
+                ->or_like('r.country_name', $search)
+                ->group_end();
+        }
+
+        $total = $this->db->count_all_results('', false);
+        $this->db->order_by($sort, $order);
+
+        if (!empty($limit)) {
+            $this->db->limit($limit, $offset);
+        }
+
+        $result = $this->db->get();
+        $rows = $result->result();
+
+        return [
+            'total' => $total,
+            'rows' => $rows,
+        ];
     }
 
     // Engagement Tracking - User Session History
