@@ -7879,6 +7879,24 @@ class Api extends REST_Controller
             $result = $this->db->get();
             $data = $result->result_array();
 
+            $fallback_data = null;
+            if (count($data) < 3) {
+                $fallback_data = $this->getEngagementLeaderboardFromSessions(
+                    $user_id,
+                    'weekly',
+                    $scope,
+                    $filter_value,
+                    $offset,
+                    $limit
+                );
+                if (!empty($fallback_data['data']) && count($fallback_data['data']) > count($data)) {
+                    $data = $fallback_data['data'];
+                    $total = $fallback_data['total'];
+                } else {
+                    $fallback_data = null;
+                }
+            }
+
             if (!empty($data)) {
                 for ($i = 0; $i < count($data); $i++) {
                     if (filter_var($data[$i]['profile'], FILTER_VALIDATE_URL) === false) {
@@ -7886,37 +7904,42 @@ class Api extends REST_Controller
                     }
                 }
 
-                // Get top 3
-                $this->db->reset_query();
-                $this->db->from("($sub_query) r");
-                $this->db->select('r.*');
-                $this->db->order_by('r.user_rank', 'ASC');
-                $this->db->limit(3);
-                $top_three_result = $this->db->get();
-                $topThreeUsersData = $top_three_result->result_array();
-
-                for ($i = 0; $i < count($topThreeUsersData); $i++) {
-                    if (filter_var($topThreeUsersData[$i]['profile'], FILTER_VALIDATE_URL) === false) {
-                        $topThreeUsersData[$i]['profile'] = ($topThreeUsersData[$i]['profile']) ? base_url() . USER_IMG_PATH . $topThreeUsersData[$i]['profile'] : '';
-                    }
-                }
-
-                // Get user's rank
-                $my_rank = $this->myEngagementRank($user_id, 'weekly', $scope, $filter_value);
-                if (!empty($my_rank)) {
-                    if (filter_var($my_rank['profile'], FILTER_VALIDATE_URL) === false) {
-                        $my_rank['profile'] = (!empty($my_rank['profile'])) ? base_url() . USER_IMG_PATH . $my_rank['profile'] : '';
-                    }
-                    $user_rank = $my_rank;
+                if ($fallback_data) {
+                    $topThreeUsersData = $fallback_data['top_three_ranks'] ?? array();
+                    $user_rank = $fallback_data['my_rank'] ?? array();
                 } else {
-                    $user_rank = array(
-                        'user_id' => $user_id,
-                        'total_minutes' => '0',
-                        'user_rank' => '0',
-                        'email' => '',
-                        'name' => '',
-                        'profile' => '',
-                    );
+                    // Get top 3
+                    $this->db->reset_query();
+                    $this->db->from("($sub_query) r");
+                    $this->db->select('r.*');
+                    $this->db->order_by('r.user_rank', 'ASC');
+                    $this->db->limit(3);
+                    $top_three_result = $this->db->get();
+                    $topThreeUsersData = $top_three_result->result_array();
+
+                    for ($i = 0; $i < count($topThreeUsersData); $i++) {
+                        if (filter_var($topThreeUsersData[$i]['profile'], FILTER_VALIDATE_URL) === false) {
+                            $topThreeUsersData[$i]['profile'] = ($topThreeUsersData[$i]['profile']) ? base_url() . USER_IMG_PATH . $topThreeUsersData[$i]['profile'] : '';
+                        }
+                    }
+
+                    // Get user's rank
+                    $my_rank = $this->myEngagementRank($user_id, 'weekly', $scope, $filter_value);
+                    if (!empty($my_rank)) {
+                        if (filter_var($my_rank['profile'], FILTER_VALIDATE_URL) === false) {
+                            $my_rank['profile'] = (!empty($my_rank['profile'])) ? base_url() . USER_IMG_PATH . $my_rank['profile'] : '';
+                        }
+                        $user_rank = $my_rank;
+                    } else {
+                        $user_rank = array(
+                            'user_id' => $user_id,
+                            'total_minutes' => '0',
+                            'user_rank' => '0',
+                            'email' => '',
+                            'name' => '',
+                            'profile' => '',
+                        );
+                    }
                 }
 
                 $response['error'] = false;
@@ -7996,6 +8019,24 @@ class Api extends REST_Controller
             $result = $this->db->get();
             $data = $result->result_array();
 
+            $fallback_data = null;
+            if (count($data) < 3) {
+                $fallback_data = $this->getEngagementLeaderboardFromSessions(
+                    $user_id,
+                    'monthly',
+                    $scope,
+                    $filter_value,
+                    $offset,
+                    $limit
+                );
+                if (!empty($fallback_data['data']) && count($fallback_data['data']) > count($data)) {
+                    $data = $fallback_data['data'];
+                    $total = $fallback_data['total'];
+                } else {
+                    $fallback_data = null;
+                }
+            }
+
             if (!empty($data)) {
                 for ($i = 0; $i < count($data); $i++) {
                     if (filter_var($data[$i]['profile'], FILTER_VALIDATE_URL) === false) {
@@ -8003,37 +8044,42 @@ class Api extends REST_Controller
                     }
                 }
 
-                // Get top 3
-                $this->db->reset_query();
-                $this->db->from("($sub_query) r");
-                $this->db->select('r.*');
-                $this->db->order_by('r.user_rank', 'ASC');
-                $this->db->limit(3);
-                $top_three_result = $this->db->get();
-                $topThreeUsersData = $top_three_result->result_array();
-
-                for ($i = 0; $i < count($topThreeUsersData); $i++) {
-                    if (filter_var($topThreeUsersData[$i]['profile'], FILTER_VALIDATE_URL) === false) {
-                        $topThreeUsersData[$i]['profile'] = ($topThreeUsersData[$i]['profile']) ? base_url() . USER_IMG_PATH . $topThreeUsersData[$i]['profile'] : '';
-                    }
-                }
-
-                // Get user's rank
-                $my_rank = $this->myEngagementRank($user_id, 'monthly', $scope, $filter_value);
-                if (!empty($my_rank)) {
-                    if (filter_var($my_rank['profile'], FILTER_VALIDATE_URL) === false) {
-                        $my_rank['profile'] = (!empty($my_rank['profile'])) ? base_url() . USER_IMG_PATH . $my_rank['profile'] : '';
-                    }
-                    $user_rank = $my_rank;
+                if ($fallback_data) {
+                    $topThreeUsersData = $fallback_data['top_three_ranks'] ?? array();
+                    $user_rank = $fallback_data['my_rank'] ?? array();
                 } else {
-                    $user_rank = array(
-                        'user_id' => $user_id,
-                        'total_minutes' => '0',
-                        'user_rank' => '0',
-                        'email' => '',
-                        'name' => '',
-                        'profile' => '',
-                    );
+                    // Get top 3
+                    $this->db->reset_query();
+                    $this->db->from("($sub_query) r");
+                    $this->db->select('r.*');
+                    $this->db->order_by('r.user_rank', 'ASC');
+                    $this->db->limit(3);
+                    $top_three_result = $this->db->get();
+                    $topThreeUsersData = $top_three_result->result_array();
+
+                    for ($i = 0; $i < count($topThreeUsersData); $i++) {
+                        if (filter_var($topThreeUsersData[$i]['profile'], FILTER_VALIDATE_URL) === false) {
+                            $topThreeUsersData[$i]['profile'] = ($topThreeUsersData[$i]['profile']) ? base_url() . USER_IMG_PATH . $topThreeUsersData[$i]['profile'] : '';
+                        }
+                    }
+
+                    // Get user's rank
+                    $my_rank = $this->myEngagementRank($user_id, 'monthly', $scope, $filter_value);
+                    if (!empty($my_rank)) {
+                        if (filter_var($my_rank['profile'], FILTER_VALIDATE_URL) === false) {
+                            $my_rank['profile'] = (!empty($my_rank['profile'])) ? base_url() . USER_IMG_PATH . $my_rank['profile'] : '';
+                        }
+                        $user_rank = $my_rank;
+                    } else {
+                        $user_rank = array(
+                            'user_id' => $user_id,
+                            'total_minutes' => '0',
+                            'user_rank' => '0',
+                            'email' => '',
+                            'name' => '',
+                            'profile' => '',
+                        );
+                    }
                 }
 
                 $response['error'] = false;
@@ -8110,6 +8156,24 @@ class Api extends REST_Controller
             $result = $this->db->get();
             $data = $result->result_array();
 
+            $fallback_data = null;
+            if (count($data) < 3) {
+                $fallback_data = $this->getEngagementLeaderboardFromSessions(
+                    $user_id,
+                    'alltime',
+                    $scope,
+                    $filter_value,
+                    $offset,
+                    $limit
+                );
+                if (!empty($fallback_data['data']) && count($fallback_data['data']) > count($data)) {
+                    $data = $fallback_data['data'];
+                    $total = $fallback_data['total'];
+                } else {
+                    $fallback_data = null;
+                }
+            }
+
             if (!empty($data)) {
                 for ($i = 0; $i < count($data); $i++) {
                     if (filter_var($data[$i]['profile'], FILTER_VALIDATE_URL) === false) {
@@ -8117,37 +8181,42 @@ class Api extends REST_Controller
                     }
                 }
 
-                // Get top 3
-                $this->db->reset_query();
-                $this->db->from("($sub_query) r");
-                $this->db->select('r.*');
-                $this->db->order_by('r.user_rank', 'ASC');
-                $this->db->limit(3);
-                $top_three_result = $this->db->get();
-                $topThreeUsersData = $top_three_result->result_array();
-
-                for ($i = 0; $i < count($topThreeUsersData); $i++) {
-                    if (filter_var($topThreeUsersData[$i]['profile'], FILTER_VALIDATE_URL) === false) {
-                        $topThreeUsersData[$i]['profile'] = ($topThreeUsersData[$i]['profile']) ? base_url() . USER_IMG_PATH . $topThreeUsersData[$i]['profile'] : '';
-                    }
-                }
-
-                // Get user's rank
-                $my_rank = $this->myEngagementRank($user_id, 'alltime', $scope, $filter_value);
-                if (!empty($my_rank)) {
-                    if (filter_var($my_rank['profile'], FILTER_VALIDATE_URL) === false) {
-                        $my_rank['profile'] = (!empty($my_rank['profile'])) ? base_url() . USER_IMG_PATH . $my_rank['profile'] : '';
-                    }
-                    $user_rank = $my_rank;
+                if ($fallback_data) {
+                    $topThreeUsersData = $fallback_data['top_three_ranks'] ?? array();
+                    $user_rank = $fallback_data['my_rank'] ?? array();
                 } else {
-                    $user_rank = array(
-                        'user_id' => $user_id,
-                        'total_minutes' => '0',
-                        'user_rank' => '0',
-                        'email' => '',
-                        'name' => '',
-                        'profile' => '',
-                    );
+                    // Get top 3
+                    $this->db->reset_query();
+                    $this->db->from("($sub_query) r");
+                    $this->db->select('r.*');
+                    $this->db->order_by('r.user_rank', 'ASC');
+                    $this->db->limit(3);
+                    $top_three_result = $this->db->get();
+                    $topThreeUsersData = $top_three_result->result_array();
+
+                    for ($i = 0; $i < count($topThreeUsersData); $i++) {
+                        if (filter_var($topThreeUsersData[$i]['profile'], FILTER_VALIDATE_URL) === false) {
+                            $topThreeUsersData[$i]['profile'] = ($topThreeUsersData[$i]['profile']) ? base_url() . USER_IMG_PATH . $topThreeUsersData[$i]['profile'] : '';
+                        }
+                    }
+
+                    // Get user's rank
+                    $my_rank = $this->myEngagementRank($user_id, 'alltime', $scope, $filter_value);
+                    if (!empty($my_rank)) {
+                        if (filter_var($my_rank['profile'], FILTER_VALIDATE_URL) === false) {
+                            $my_rank['profile'] = (!empty($my_rank['profile'])) ? base_url() . USER_IMG_PATH . $my_rank['profile'] : '';
+                        }
+                        $user_rank = $my_rank;
+                    } else {
+                        $user_rank = array(
+                            'user_id' => $user_id,
+                            'total_minutes' => '0',
+                            'user_rank' => '0',
+                            'email' => '',
+                            'name' => '',
+                            'profile' => '',
+                        );
+                    }
                 }
 
                 $response['error'] = false;
@@ -8398,6 +8467,101 @@ class Api extends REST_Controller
                 'date_created' => $this->toDateTime
             ]);
         }
+    }
+
+    /**
+     * Build engagement leaderboard from session data for a period.
+     *
+     * @param int $user_id
+     * @param string $period weekly|monthly|alltime
+     * @param string $scope world|country|region
+     * @param string|null $filter_value
+     * @param int $offset
+     * @param int $limit
+     * @return array
+     */
+    private function getEngagementLeaderboardFromSessions($user_id, $period, $scope, $filter_value, $offset, $limit)
+    {
+        $week_number = date('W');
+        $year = date('Y');
+        $month = date('m');
+
+        $scope_where = '';
+        if ($scope === 'country' && !empty($filter_value)) {
+            $scope_where = "AND u.country_code = '{$filter_value}'";
+        } elseif ($scope === 'region' && !empty($filter_value)) {
+            $scope_where = "AND u.continent = '{$filter_value}'";
+        }
+
+        $period_where = '';
+        if ($period === 'weekly') {
+            $period_where = "AND YEAR(e.session_end) = {$year} AND WEEK(e.session_end, 1) = {$week_number}";
+        } elseif ($period === 'monthly') {
+            $period_where = "AND YEAR(e.session_end) = {$year} AND MONTH(e.session_end) = {$month}";
+        }
+
+        $sub_query = "(SELECT s.*, @user_rank := @user_rank + 1 AS user_rank FROM (SELECT u.id AS user_id, u.email, u.name, u.profile, u.country_code, u.continent, ROUND(SUM(e.duration_seconds) / 60, 2) AS total_minutes, MAX(e.session_end) AS last_updated FROM tbl_user_engagement e JOIN tbl_users u ON u.id = e.user_id WHERE u.status = 1 {$period_where} {$scope_where} GROUP BY e.user_id) s, (SELECT @user_rank := 0) init ORDER BY s.total_minutes DESC, s.last_updated ASC)";
+
+        $this->db->select('r.*');
+        $this->db->from("$sub_query r", false);
+        $total = $this->db->count_all_results('', false);
+        $this->db->order_by('r.user_rank', 'ASC');
+        if ($limit) {
+            $this->db->limit($limit, $offset);
+        }
+        $result = $this->db->get();
+        $data = $result->result_array();
+
+        // Format profile URLs
+        for ($i = 0; $i < count($data); $i++) {
+            if (filter_var($data[$i]['profile'], FILTER_VALIDATE_URL) === false) {
+                $data[$i]['profile'] = ($data[$i]['profile']) ? base_url() . USER_IMG_PATH . $data[$i]['profile'] : '';
+            }
+        }
+
+        // Top 3
+        $this->db->reset_query();
+        $this->db->from("($sub_query) r");
+        $this->db->select('r.*');
+        $this->db->order_by('r.user_rank', 'ASC');
+        $this->db->limit(3);
+        $top_three_result = $this->db->get();
+        $topThreeUsersData = $top_three_result->result_array();
+
+        for ($i = 0; $i < count($topThreeUsersData); $i++) {
+            if (filter_var($topThreeUsersData[$i]['profile'], FILTER_VALIDATE_URL) === false) {
+                $topThreeUsersData[$i]['profile'] = ($topThreeUsersData[$i]['profile']) ? base_url() . USER_IMG_PATH . $topThreeUsersData[$i]['profile'] : '';
+            }
+        }
+
+        // My rank
+        $this->db->reset_query();
+        $this->db->select('r.*');
+        $this->db->from("$sub_query r", false);
+        $this->db->where('r.user_id', $user_id);
+        $my_rank = $this->db->get()->row_array();
+
+        if (!empty($my_rank)) {
+            if (filter_var($my_rank['profile'], FILTER_VALIDATE_URL) === false) {
+                $my_rank['profile'] = (!empty($my_rank['profile'])) ? base_url() . USER_IMG_PATH . $my_rank['profile'] : '';
+            }
+        } else {
+            $my_rank = array(
+                'user_id' => $user_id,
+                'total_minutes' => '0',
+                'user_rank' => '0',
+                'email' => '',
+                'name' => '',
+                'profile' => '',
+            );
+        }
+
+        return array(
+            'data' => $data,
+            'total' => $total,
+            'top_three_ranks' => $topThreeUsersData ?? array(),
+            'my_rank' => $my_rank,
+        );
     }
 
     /**

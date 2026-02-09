@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/cupertino.dart';
@@ -585,41 +586,56 @@ class _SelectProfilePictureScreen extends State<CreateOrEditProfileScreen> {
                               .activeLanguage
                               .name,
                         );
+                        return;
                       }
 
-                      /// ----
-                      if (emailController!.text.isNotEmpty ||
-                          phoneController!.text.isNotEmpty) {
-                        context.read<UserDetailsCubit>().updateUserProfile(
-                          email: emailController!.text.trim(),
-                          name: nameController!.text.trim(),
-                          mobile: phoneController!.text.trim(),
-                        );
+                      final updatedName = nameController!.text.trim();
+                      final updatedEmail =
+                          emailController!.text.trim().isEmpty
+                              ? (userProfile.email ?? '')
+                              : emailController!.text.trim();
+                      final updatedPhone =
+                          phoneController!.text.trim().isEmpty
+                              ? (userProfile.mobileNumber ?? '')
+                              : phoneController!.text.trim();
 
-                        await context
-                            .read<UpdateUserDetailCubit>()
-                            .updateProfile(
-                              email: emailController!.text,
-                              name: nameController!.text,
-                              mobile: phoneController!.text,
-                            );
-                      }
+                      context.read<UserDetailsCubit>().updateUserProfile(
+                        email: updatedEmail,
+                        name: updatedName,
+                        mobile: updatedPhone,
+                      );
+
+                      await context.read<UpdateUserDetailCubit>().updateProfile(
+                        email: updatedEmail,
+                        name: updatedName,
+                        mobile: updatedPhone,
+                      );
 
                       await context.pushNamedAndRemoveUntil(
                         Routes.home,
                         predicate: (_) => false,
                       );
                     } else {
+                      final updatedName = nameController!.text.trim();
+                      final updatedEmail =
+                          emailController!.text.trim().isEmpty
+                              ? (userProfile.email ?? '')
+                              : emailController!.text.trim();
+                      final updatedPhone =
+                          phoneController!.text.trim().isEmpty
+                              ? (userProfile.mobileNumber ?? '')
+                              : phoneController!.text.trim();
+
                       context.read<UserDetailsCubit>().updateUserProfile(
-                        email: emailController!.text.trim(),
-                        name: nameController!.text.trim(),
-                        mobile: phoneController!.text.trim(),
+                        email: updatedEmail,
+                        name: updatedName,
+                        mobile: updatedPhone,
                       );
 
                       await context.read<UpdateUserDetailCubit>().updateProfile(
-                        email: emailController!.text,
-                        name: nameController!.text,
-                        mobile: phoneController!.text,
+                        email: updatedEmail,
+                        name: updatedName,
+                        mobile: updatedPhone,
                       );
                     }
                   },
@@ -657,8 +673,12 @@ class _SelectProfilePictureScreen extends State<CreateOrEditProfileScreen> {
         ],
         Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            color: colorScheme.surface,
+            borderRadius: BorderRadius.circular(14),
+            color: Colors.white.withValues(alpha: 0.65),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.7),
+              width: 1,
+            ),
           ),
           width: context.width,
           height: 50,
@@ -674,10 +694,14 @@ class _SelectProfilePictureScreen extends State<CreateOrEditProfileScreen> {
             decoration: InputDecoration(
               hintText: context.tr('enterNameLbl'),
               border: InputBorder.none,
+              prefixIcon: Icon(
+                Icons.person_outline,
+                color: colorScheme.onTertiary.withValues(alpha: 0.7),
+              ),
               hintStyle: TextStyle(
                 color: colorScheme.onTertiary.withValues(alpha: .4),
               ),
-              contentPadding: const EdgeInsets.only(left: 10),
+              contentPadding: const EdgeInsets.only(top: 12, bottom: 12),
             ),
           ),
         ),
@@ -702,10 +726,14 @@ class _SelectProfilePictureScreen extends State<CreateOrEditProfileScreen> {
         const SizedBox(height: 10),
         Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(14),
             color: isEmailTextFieldEnabled
-                ? colorScheme.surface
-                : colorScheme.onTertiary.withValues(alpha: 0.2),
+                ? Colors.white.withValues(alpha: 0.65)
+                : Colors.white.withValues(alpha: 0.4),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.7),
+              width: 1,
+            ),
           ),
           width: context.width,
           height: 50,
@@ -732,10 +760,14 @@ class _SelectProfilePictureScreen extends State<CreateOrEditProfileScreen> {
               decoration: InputDecoration(
                 hintText: context.tr('enterEmailLbl'),
                 border: InputBorder.none,
+                prefixIcon: Icon(
+                  Icons.mail_outline,
+                  color: colorScheme.onTertiary.withValues(alpha: 0.7),
+                ),
                 hintStyle: TextStyle(
                   color: colorScheme.onTertiary.withValues(alpha: .4),
                 ),
-                contentPadding: const EdgeInsets.only(left: 10),
+                contentPadding: const EdgeInsets.only(top: 12, bottom: 12),
               ),
             ),
           ),
@@ -761,10 +793,14 @@ class _SelectProfilePictureScreen extends State<CreateOrEditProfileScreen> {
         const SizedBox(height: 10),
         Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(14),
             color: isPhoneTextFieldEnabled
-                ? colorScheme.surface
-                : colorScheme.onTertiary.withValues(alpha: 0.2),
+                ? Colors.white.withValues(alpha: 0.65)
+                : Colors.white.withValues(alpha: 0.4),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.7),
+              width: 1,
+            ),
           ),
           width: context.width,
           height: 50,
@@ -789,10 +825,14 @@ class _SelectProfilePictureScreen extends State<CreateOrEditProfileScreen> {
             decoration: InputDecoration(
               hintText: '-',
               border: InputBorder.none,
+              prefixIcon: Icon(
+                Icons.phone_iphone,
+                color: colorScheme.onTertiary.withValues(alpha: 0.7),
+              ),
               hintStyle: TextStyle(
                 color: colorScheme.onTertiary.withValues(alpha: .4),
               ),
-              contentPadding: const EdgeInsets.only(left: 10),
+              contentPadding: const EdgeInsets.only(top: 12, bottom: 12),
             ),
           ),
         ),
@@ -806,8 +846,12 @@ class _SelectProfilePictureScreen extends State<CreateOrEditProfileScreen> {
     return [
       Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          color: Colors.white.withValues(alpha: 0.6),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.65),
+            width: 1,
+          ),
         ),
         padding: const EdgeInsets.all(15),
         margin: EdgeInsets.symmetric(
@@ -827,28 +871,69 @@ class _SelectProfilePictureScreen extends State<CreateOrEditProfileScreen> {
                     color: colorScheme.onTertiary,
                   ),
                 ),
-                Transform.scale(
-                  scale: 0.8,
-                  child: CupertinoSwitch(
-                    thumbColor: iHaveInviteCode
-                        ? Theme.of(context).primaryColor
-                        : const Color(0xFF5c5c5c),
-                    activeTrackColor: Theme.of(context).scaffoldBackgroundColor,
-                    inactiveTrackColor: Theme.of(
-                      context,
-                    ).scaffoldBackgroundColor,
-                    value: iHaveInviteCode,
-                    onChanged: (v) => setState(() => iHaveInviteCode = v),
+                GestureDetector(
+                  onTap: () => setState(() => iHaveInviteCode = !iHaveInviteCode),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 58,
+                    height: 30,
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      color: iHaveInviteCode
+                          ? Theme.of(context)
+                              .primaryColor
+                              .withValues(alpha: 0.85)
+                          : Colors.white.withValues(alpha: 0.4),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.6),
+                        width: 1,
+                      ),
+                    ),
+                    child: Align(
+                      alignment: iHaveInviteCode
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
+                      child: Container(
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.12),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
+            if (!iHaveInviteCode) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Optional: add a friend code to unlock rewards.',
+                style: TextStyle(
+                  color: colorScheme.onTertiary.withValues(alpha: 0.6),
+                  fontSize: 12,
+                ),
+              ),
+            ],
             if (iHaveInviteCode) ...[
               const SizedBox(height: 15),
               Container(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  color: colorScheme.onTertiary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(14),
+                  color: Colors.white.withValues(alpha: 0.6),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.6),
+                    width: 1,
+                  ),
                 ),
                 height: 50,
                 padding: const EdgeInsets.symmetric(horizontal: 15),
@@ -863,6 +948,10 @@ class _SelectProfilePictureScreen extends State<CreateOrEditProfileScreen> {
                   ),
                   decoration: InputDecoration(
                     hintText: context.tr(enterReferralCodeLbl),
+                    prefixIcon: Icon(
+                      Icons.card_giftcard,
+                      color: colorScheme.onTertiary.withValues(alpha: 0.7),
+                    ),
                     hintStyle: TextStyle(
                       color: colorScheme.onTertiary.withValues(alpha: .3),
                       fontSize: 18,
@@ -883,136 +972,273 @@ class _SelectProfilePictureScreen extends State<CreateOrEditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final appBar = !widget.args.isNewUser
-        ? QAppBar(title: Text(context.tr('editProfile')!))
+        ? AppBar(
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            title: Text(
+              context.tr('editProfile')!,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            leading: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: _buildGlassBackButton(context),
+            ),
+          )
         : null;
 
     return PopScope(
       canPop: !widget.args.isNewUser,
       child: Scaffold(
+        extendBodyBehindAppBar: true,
+        backgroundColor: Colors.transparent,
         appBar: appBar,
         body: Stack(
           children: [
-            BlocConsumer<UserDetailsCubit, UserDetailsState>(
-              listener: (context, state) {
-                //when user register first time then set this listener
-                if (state is UserDetailsFetchSuccess && widget.args.isNewUser) {
-                  UiUtils.fetchBookmarkAndBadges(
-                    context: context,
-                    userId: state.userProfile.userId!,
+            _buildGlassBackground(),
+            SafeArea(
+              child: BlocConsumer<UserDetailsCubit, UserDetailsState>(
+                listener: (context, state) {
+                  //when user register first time then set this listener
+                  if (state is UserDetailsFetchSuccess &&
+                      widget.args.isNewUser) {
+                    UiUtils.fetchBookmarkAndBadges(
+                      context: context,
+                      userId: state.userProfile.userId!,
+                    );
+                  }
+                },
+                bloc: context.read<UserDetailsCubit>(),
+                builder: (context, state) {
+                  if (state is UserDetailsFetchInProgress ||
+                      state is UserDetailsInitial) {
+                    return const Center(child: CircularProgressContainer());
+                  }
+                  if (state is UserDetailsFetchFailure) {
+                    return ErrorContainer(
+                      showBackButton: true,
+                      errorMessage: convertErrorCodeToLanguageKey(
+                        state.errorMessage,
+                      ),
+                      onTapRetry: () {
+                        context.read<UserDetailsCubit>().fetchUserDetails();
+                      },
+                      showErrorImage: true,
+                    );
+                  }
+
+                  final userProfile =
+                      (state as UserDetailsFetchSuccess).userProfile;
+
+                  nameController ??= TextEditingController(
+                    text: userProfile.name,
                   );
-                }
-              },
-              bloc: context.read<UserDetailsCubit>(),
-              builder: (context, state) {
-                if (state is UserDetailsFetchInProgress ||
-                    state is UserDetailsInitial) {
-                  return const Center(child: CircularProgressContainer());
-                }
-                if (state is UserDetailsFetchFailure) {
-                  return ErrorContainer(
-                    showBackButton: true,
-                    errorMessage: convertErrorCodeToLanguageKey(
-                      state.errorMessage,
+                  emailController ??= TextEditingController(
+                    text: userProfile.email,
+                  );
+                  phoneController ??= TextEditingController(
+                    text: userProfile.mobileNumber,
+                  );
+
+                  final size = context;
+
+                  // TODO(J): too many conditionals,
+                  //  separate isNewUser logic to one place.
+                  return SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: size.width * UiUtils.hzMarginPct,
+                      vertical: 16,
                     ),
-                    onTapRetry: () {
-                      context.read<UserDetailsCubit>().fetchUserDetails();
-                    },
-                    showErrorImage: true,
+                    child: _buildGlassCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(height: 12),
+                          Text(
+                            widget.args.isNewUser
+                                ? 'Complete your profile'
+                                : context.tr('editProfile')!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF1F51D9),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.args.isNewUser
+                                ? 'Add your details to get started'
+                                : 'Update your details and photo',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: const Color(0xFF1F51D9)
+                                  .withValues(alpha: 0.7),
+                            ),
+                          ),
+                          SizedBox(height: size.height * .02),
+                          Center(
+                            child: TweenAnimationBuilder<double>(
+                              tween: Tween(begin: 0.92, end: 1),
+                              duration: const Duration(milliseconds: 500),
+                              curve: Curves.easeOutBack,
+                              builder: (context, value, child) {
+                                final opacity =
+                                    ((value - 0.92) / 0.08).clamp(0.0, 1.0);
+                                return Opacity(
+                                  opacity: opacity,
+                                  child: Transform.scale(
+                                    scale: value,
+                                    child: child,
+                                  ),
+                                );
+                              },
+                              child: _buildCurrentProfilePictureContainer(
+                                image: selectedAvatar != null
+                                    ? selectedAvatar!
+                                    : selectedImage != null
+                                    ? selectedImage!.path
+                                    : userProfile.profileUrl ?? '',
+                                isFile: selectedImage != null,
+                                isAsset: selectedAvatar != null,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 15),
+                          _buildSelectAvatarText(),
+                          SizedBox(height: size.height * .025),
+                          _buildDefaultAvtarImages(),
+                          if (widget.args.isNewUser)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 15),
+                              child: Divider(color: Color(0xFF707070)),
+                            )
+                          else
+                            const Divider(),
+                          SizedBox(height: size.height * .02),
+                          _buildNameTextFieldContainer(),
+                          SizedBox(height: size.height * .03),
+                          if (!widget.args.isNewUser) ...[
+                            _buildEmailTextFieldContainer(),
+                            SizedBox(height: size.height * .03),
+                            _buildPhoneTextFieldContainer(),
+                            SizedBox(height: size.height * .03),
+                          ] else ...[
+                            ..._buildNameAndReferCodeContainer(),
+                          ],
+                          _buildContinueButton(userProfile),
+                          const SizedBox(height: 32),
+                        ],
+                      ),
+                    ),
                   );
-                }
-
-                final userProfile =
-                    (state as UserDetailsFetchSuccess).userProfile;
-
-                nameController ??= TextEditingController(
-                  text: userProfile.name,
-                );
-                emailController ??= TextEditingController(
-                  text: userProfile.email,
-                );
-                phoneController ??= TextEditingController(
-                  text: userProfile.mobileNumber,
-                );
-
-                final size = context;
-
-                // TODO(J): too many conditionals,
-                //  separate isNewUser logic to one place.
-                return SingleChildScrollView(
-                  padding: EdgeInsets.only(
-                    top: MediaQuery.of(context).padding.top,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(height: size.height * .025),
-                      Center(
-                        child: _buildCurrentProfilePictureContainer(
-                          image: selectedAvatar != null
-                              ? selectedAvatar!
-                              : selectedImage != null
-                              ? selectedImage!.path
-                              : userProfile.profileUrl ?? '',
-                          isFile: selectedImage != null,
-                          isAsset: selectedAvatar != null,
-                        ),
-                      ),
-                      const SizedBox(height: 15),
-                      _buildSelectAvatarText(),
-                      SizedBox(height: size.height * .025),
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: size.width * UiUtils.hzMarginPct,
-                        ),
-                        child: _buildDefaultAvtarImages(),
-                      ),
-                      if (widget.args.isNewUser)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 15),
-                          child: Divider(color: Color(0xFF707070)),
-                        )
-                      else
-                        const Divider(),
-                      SizedBox(height: size.height * .02),
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: size.width * UiUtils.hzMarginPct,
-                        ),
-                        child: _buildNameTextFieldContainer(),
-                      ),
-                      SizedBox(height: size.height * .03),
-                      if (!widget.args.isNewUser) ...[
-                        Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: size.width * UiUtils.hzMarginPct,
-                          ),
-                          child: _buildEmailTextFieldContainer(),
-                        ),
-                        SizedBox(height: size.height * .03),
-                        Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: size.width * UiUtils.hzMarginPct,
-                          ),
-                          child: _buildPhoneTextFieldContainer(),
-                        ),
-                        SizedBox(height: size.height * .03),
-                      ] else ...[
-                        ..._buildNameAndReferCodeContainer(),
-                      ],
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: size.width * UiUtils.hzMarginPct,
-                        ),
-                        child: _buildContinueButton(userProfile),
-                      ),
-                      const SizedBox(height: 50),
-                    ],
-                  ),
-                );
-              },
+                },
+              ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlassBackground() {
+    return Positioned.fill(
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFF5F7FF),
+              Color(0xFFEAF2FF),
+              Color(0xFFDDE9FF),
+            ],
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              top: -60,
+              right: -40,
+              child: Container(
+                width: 180,
+                height: 180,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.35),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: -50,
+              left: -30,
+              child: Container(
+                width: 160,
+                height: 160,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.25),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlassCard({required Widget child}) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.75),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.5),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF1F51D9).withValues(alpha: 0.08),
+                blurRadius: 24,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlassBackButton(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: InkWell(
+          onTap: () => Navigator.pop(context),
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.6),
+                width: 1,
+              ),
+            ),
+            child: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              size: 18,
+              color: Color(0xFF1F51D9),
+            ),
+          ),
         ),
       ),
     );

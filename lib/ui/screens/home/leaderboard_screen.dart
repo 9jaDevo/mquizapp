@@ -366,31 +366,14 @@ class LeaderBoardScreenState extends State<LeaderBoardScreen>
         }
 
         if (state is EngagementWeeklySuccess) {
-          if (state.leaderboardData.isEmpty) {
+          if (state.leaderboardData.isEmpty && state.topThree.isEmpty) {
             return _noLeaderboard();
           }
 
-          // The leaderboardData contains all entries mixed together
-          // Filter out my_rank if it exists as a nested object
-          final allEntries = state.leaderboardData
-              .where(
-                (item) =>
-                    item.containsKey('user_id') && item['user_id'] != null,
-              )
-              .toList();
-
-          // Try to find my_rank data
-          Map<String, dynamic>? myRankData;
-          for (var item in state.leaderboardData) {
-            if (item.containsKey('my_rank') && item['my_rank'] is Map) {
-              myRankData = item['my_rank'] as Map<String, dynamic>;
-              break;
-            }
-          }
-
           return _buildLeaderboardUI(
-            entries: allEntries,
-            myRank: myRankData,
+            entries: state.leaderboardData,
+            topThree: state.topThree,
+            myRank: state.myRank,
             hasMore: state.hasMore,
             isEngagement: true,
           );
@@ -422,28 +405,14 @@ class LeaderBoardScreenState extends State<LeaderBoardScreen>
         }
 
         if (state is EngagementMonthlySuccess) {
-          if (state.leaderboardData.isEmpty) {
+          if (state.leaderboardData.isEmpty && state.topThree.isEmpty) {
             return _noLeaderboard();
           }
 
-          final allEntries = state.leaderboardData
-              .where(
-                (item) =>
-                    item.containsKey('user_id') && item['user_id'] != null,
-              )
-              .toList();
-
-          Map<String, dynamic>? myRankData;
-          for (var item in state.leaderboardData) {
-            if (item.containsKey('my_rank') && item['my_rank'] is Map) {
-              myRankData = item['my_rank'] as Map<String, dynamic>;
-              break;
-            }
-          }
-
           return _buildLeaderboardUI(
-            entries: allEntries,
-            myRank: myRankData,
+            entries: state.leaderboardData,
+            topThree: state.topThree,
+            myRank: state.myRank,
             hasMore: state.hasMore,
             isEngagement: true,
           );
@@ -475,28 +444,14 @@ class LeaderBoardScreenState extends State<LeaderBoardScreen>
         }
 
         if (state is EngagementAllTimeSuccess) {
-          if (state.leaderboardData.isEmpty) {
+          if (state.leaderboardData.isEmpty && state.topThree.isEmpty) {
             return _noLeaderboard();
           }
 
-          final allEntries = state.leaderboardData
-              .where(
-                (item) =>
-                    item.containsKey('user_id') && item['user_id'] != null,
-              )
-              .toList();
-
-          Map<String, dynamic>? myRankData;
-          for (var item in state.leaderboardData) {
-            if (item.containsKey('my_rank') && item['my_rank'] is Map) {
-              myRankData = item['my_rank'] as Map<String, dynamic>;
-              break;
-            }
-          }
-
           return _buildLeaderboardUI(
-            entries: allEntries,
-            myRank: myRankData,
+            entries: state.leaderboardData,
+            topThree: state.topThree,
+            myRank: state.myRank,
             hasMore: state.hasMore,
             isEngagement: true,
           );
@@ -596,11 +551,12 @@ class LeaderBoardScreenState extends State<LeaderBoardScreen>
 
   Widget _buildLeaderboardUI({
     required List<Map<String, dynamic>> entries,
+    required List<Map<String, dynamic>> topThree,
     required Map<String, dynamic>? myRank,
     required bool hasMore,
     required bool isEngagement,
   }) {
-    if (entries.isEmpty) {
+    if (entries.isEmpty && topThree.isEmpty) {
       return _noLeaderboard();
     }
 
@@ -608,10 +564,28 @@ class LeaderBoardScreenState extends State<LeaderBoardScreen>
         .read<UserDetailsCubit>()
         .getUserProfile()
         .userId;
-    final topThree = entries.take(3).toList();
-    final remainingEntries = entries.length > 3
-        ? entries.sublist(3)
-        : <Map<String, dynamic>>[];
+    final sanitizedTopThree = topThree
+        .where(
+          (item) =>
+              item['user_id'] != null &&
+              item['user_id'].toString().isNotEmpty,
+        )
+        .toList();
+    final useFallbackTopThree = sanitizedTopThree.isEmpty;
+    final resolvedTopThree = useFallbackTopThree
+        ? entries.take(3).toList()
+        : sanitizedTopThree;
+    final topThreeIds = resolvedTopThree
+        .map((e) => e['user_id']?.toString())
+        .where((id) => id != null && id.isNotEmpty)
+        .toSet();
+    final remainingEntries = useFallbackTopThree
+        ? (entries.length > 3 ? entries.sublist(3) : <Map<String, dynamic>>[])
+        : entries
+            .where(
+              (item) => !topThreeIds.contains(item['user_id']?.toString()),
+            )
+            .toList();
     final myRankInt = myRank != null
         ? int.tryParse(myRank['user_rank']?.toString() ?? '0') ?? 0
         : 0;
@@ -640,7 +614,7 @@ class LeaderBoardScreenState extends State<LeaderBoardScreen>
                         vertical: 16,
                       ),
                       child: TopThreePodiumWidget(
-                        topThree: topThree,
+                        topThree: resolvedTopThree,
                         isEngagement: isEngagement,
                       ),
                     ),
@@ -674,7 +648,9 @@ class LeaderBoardScreenState extends State<LeaderBoardScreen>
                               rank: entry['user_rank']?.toString() ?? '0',
                               name: entry['name']?.toString() ?? '',
                               profile: entry['profile']?.toString() ?? '',
-                              value: entry['total_minutes']?.toString() ?? '0',
+                              value: _formatEngagementMinutes(
+                                entry['total_minutes']?.toString() ?? '0',
+                              ),
                               isCurrentUser: entry['user_id'] == currentUserId,
                               isEngagement: isEngagement,
                               countryCode: entry['country_code']?.toString(),
@@ -699,7 +675,9 @@ class LeaderBoardScreenState extends State<LeaderBoardScreen>
               rank: myRank['user_rank']?.toString() ?? '0',
               name: myRank['name']?.toString() ?? '',
               profile: myRank['profile']?.toString() ?? '',
-              value: myRank['total_minutes']?.toString() ?? '0',
+              value: _formatEngagementMinutes(
+                myRank['total_minutes']?.toString() ?? '0',
+              ),
               isEngagement: isEngagement,
               countryCode: myRank['country_code']?.toString(),
             ),
@@ -822,4 +800,15 @@ class LeaderBoardScreenState extends State<LeaderBoardScreen>
 
   @override
   bool get wantKeepAlive => true;
+
+  String _formatEngagementMinutes(String minutes) {
+    final totalMinutes = double.tryParse(minutes) ?? 0.0;
+    final hours = (totalMinutes / 60).floor();
+    final mins = (totalMinutes % 60).round();
+
+    if (hours > 0) {
+      return '${hours}h ${mins}m';
+    }
+    return '${mins}m';
+  }
 }

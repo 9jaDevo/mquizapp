@@ -10,11 +10,15 @@ class EngagementAllTimeProgress extends EngagementAllTimeState {}
 
 class EngagementAllTimeSuccess extends EngagementAllTimeState {
   final List<Map<String, dynamic>> leaderboardData;
+  final List<Map<String, dynamic>> topThree;
+  final Map<String, dynamic>? myRank;
   final int total;
   final bool hasMore;
 
   EngagementAllTimeSuccess({
     required this.leaderboardData,
+    required this.topThree,
+    required this.myRank,
     required this.total,
     required this.hasMore,
   });
@@ -55,18 +59,21 @@ class EngagementAllTimeCubit extends Cubit<EngagementAllTimeState> {
             (data['other_users_rank'] ?? <dynamic>[]) as List<dynamic>;
         final total = int.tryParse(result['total']?.toString() ?? '0') ?? 0;
 
-        final leaderboardData = <Map<String, dynamic>>[
-          (data['my_rank'] ?? <String, dynamic>{}) as Map<String, dynamic>,
-          ...otherUsersRank.map((e) => e as Map<String, dynamic>),
-          if (data['top_three_ranks'] != null)
-            ...(data['top_three_ranks'] as List).map(
-              (e) => e as Map<String, dynamic>,
-            ),
-        ];
+        final leaderboardData =
+            otherUsersRank.map((e) => e as Map<String, dynamic>).toList();
+        final topThree = (data['top_three_ranks'] as List?)
+                ?.map((e) => e as Map<String, dynamic>)
+                .toList() ??
+            <Map<String, dynamic>>[];
+        final myRank = data['my_rank'] is Map<String, dynamic>
+            ? data['my_rank'] as Map<String, dynamic>
+            : null;
 
         emit(
           EngagementAllTimeSuccess(
             leaderboardData: leaderboardData,
+            topThree: topThree,
+            myRank: myRank,
             total: total,
             hasMore: otherUsersRank.length >= int.parse(limit),
           ),
@@ -115,6 +122,8 @@ class EngagementAllTimeCubit extends Cubit<EngagementAllTimeState> {
           emit(
             EngagementAllTimeSuccess(
               leaderboardData: updatedData,
+              topThree: currentState.topThree,
+              myRank: currentState.myRank,
               total: currentState.total,
               hasMore: otherUsersRank.length >= int.parse(limit),
             ),
