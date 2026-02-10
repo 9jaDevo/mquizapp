@@ -1,7 +1,7 @@
 name: flutterquiz
 description: A new Flutter application.
 publish_to: "none"
-version: 2.3.7+63
+version: 2.4.0+64
 
 # Release Version: 2.3.7 (do not remove or edit this)
 environment:
@@ -61,7 +61,6 @@ dependencies:
 dependency_overrides:
   flutter_widget_from_html: 0.16.0
   webview_flutter_plus: 0.4.7
-
 
 dev_dependencies:
   change_app_package_name: ^1.5.0

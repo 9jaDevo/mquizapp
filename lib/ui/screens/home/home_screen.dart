@@ -1313,80 +1313,95 @@ class HomeScreenState extends State<HomeScreen>
                 ),
               ),
             ),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Column(
+            SafeArea(
+              top: true,
+              bottom: false,
+              child: Stack(
                 children: [
-                  SizedBox(height: context.height * .12),
-                  Expanded(
-                    child: RefreshIndicator(
-                      key: refreshKey,
-                      color: context.primaryColor,
-                      backgroundColor: context.scaffoldBackgroundColor,
-                      onRefresh: () async {
-                        _currLangId = UiUtils.getCurrentQuizLanguageId(context);
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Column(
+                      children: [
+                        SizedBox(height: context.height * .12),
+                        Expanded(
+                          child: RefreshIndicator(
+                            key: refreshKey,
+                            color: context.primaryColor,
+                            backgroundColor: context.scaffoldBackgroundColor,
+                            onRefresh: () async {
+                              _currLangId = UiUtils.getCurrentQuizLanguageId(
+                                context,
+                              );
 
-                        if (!_isGuest) {
-                          fetchUserDetails();
+                              if (!_isGuest) {
+                                fetchUserDetails();
 
-                          await context.read<ContestCubit>().getContest(
-                            languageId: _currLangId,
-                          );
+                                await context.read<ContestCubit>().getContest(
+                                  languageId: _currLangId,
+                                );
 
-                          // Refresh monetization data
-                          context.read<MonetizationCubit>().checkDailyStreak();
-                        }
+                                // Refresh monetization data
+                                context
+                                    .read<MonetizationCubit>()
+                                    .checkDailyStreak();
+                              }
 
-                        if (!_isGuest) {
-                          _skillTierFuture = SkillTierService.computeTier();
-                        }
+                              if (!_isGuest) {
+                                _skillTierFuture =
+                                    SkillTierService.computeTier();
+                              }
 
-                        // Always refresh sponsor banners (guests included)
-                        context.read<MonetizationCubit>().getSponsorBanners();
-                        setState(() {});
-                      },
-                      child: ListView(
-                        controller: _scrollController,
-                        children: [
-                          const SizedBox(height: 24),
-                          UserAchievements(
-                            userRank: _userRank,
-                            userCoins: _userCoins,
-                            userScore: _userScore,
+                              // Always refresh sponsor banners (guests included)
+                              context
+                                  .read<MonetizationCubit>()
+                                  .getSponsorBanners();
+                              setState(() {});
+                            },
+                            child: ListView(
+                              controller: _scrollController,
+                              children: [
+                                const SizedBox(height: 24),
+                                UserAchievements(
+                                  userRank: _userRank,
+                                  userCoins: _userCoins,
+                                  userScore: _userScore,
+                                ),
+                                const SizedBox(height: 16),
+                                const DailyChallengeCard(),
+                                const SizedBox(height: 8),
+                                // Step 5: Daily Streak Widget
+                                if (!_isGuest) ...[
+                                  _buildDailyStreakWidget(),
+                                  const SizedBox(height: 8),
+                                ],
+                                // Step 4: Sponsor Banner Widget (shown to all users)
+                                _buildSponsorBanner(),
+                                const SizedBox(height: 8),
+                                if (!_isGuest &&
+                                    _sysConfigCubit.isAdsEnable &&
+                                    _sysConfigCubit.isDailyAdsEnabled) ...[
+                                  _buildDailyAds(),
+                                ],
+                                if (!_isGuest &&
+                                    _sysConfigCubit.isContestEnabled) ...[
+                                  _buildLiveContestSection(),
+                                ],
+                                _buildBattle(),
+                                _buildExamSelf(),
+                                const SizedBox(height: 32),
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 16),
-                          const DailyChallengeCard(),
-                          const SizedBox(height: 8),
-                          // Step 5: Daily Streak Widget
-                          if (!_isGuest) ...[
-                            _buildDailyStreakWidget(),
-                            const SizedBox(height: 8),
-                          ],
-                          // Step 4: Sponsor Banner Widget (shown to all users)
-                          _buildSponsorBanner(),
-                          const SizedBox(height: 8),
-                          if (!_isGuest &&
-                              _sysConfigCubit.isAdsEnable &&
-                              _sysConfigCubit.isDailyAdsEnabled) ...[
-                            _buildDailyAds(),
-                          ],
-                          if (!_isGuest &&
-                              _sysConfigCubit.isContestEnabled) ...[
-                            _buildLiveContestSection(),
-                          ],
-                          _buildBattle(),
-                          _buildExamSelf(),
-                          const SizedBox(height: 32),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
+                  ),
+                  Align(
+                    alignment: Alignment.topCenter,
+                    child: _buildUserProfileHeader(),
                   ),
                 ],
               ),
-            ),
-            Align(
-              alignment: Alignment.topCenter,
-              child: _buildUserProfileHeader(),
             ),
           ],
         );

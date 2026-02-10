@@ -490,9 +490,13 @@ final class _CoinHistoryScreenState extends State<CoinHistoryScreen> {
       backgroundColor: const Color(0xFFF3F6FF),
       body: Stack(
         children: [
-          Padding(
-            padding: EdgeInsets.only(bottom: showBannerAd ? 60 : 0),
-            child: _buildContent(),
+          SafeArea(
+            top: true,
+            bottom: false,
+            child: Padding(
+              padding: EdgeInsets.only(bottom: showBannerAd ? 60 : 0),
+              child: _buildContent(),
+            ),
           ),
           const Align(
             alignment: Alignment.bottomCenter,
