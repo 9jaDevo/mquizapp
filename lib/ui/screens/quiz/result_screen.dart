@@ -35,7 +35,6 @@ import 'package:flutterquiz/ui/screens/quiz/widgets/radial_result_container.dart
 import 'package:flutterquiz/ui/widgets/already_logged_in_dialog.dart';
 import 'package:flutterquiz/ui/widgets/circular_progress_container.dart';
 import 'package:flutterquiz/ui/widgets/custom_appbar.dart';
-import 'package:flutterquiz/ui/widgets/custom_rounded_button.dart';
 import 'package:flutterquiz/ui/widgets/error_container.dart';
 import 'package:flutterquiz/utils/answer_encryption.dart';
 import 'package:flutterquiz/utils/extensions.dart';
@@ -137,6 +136,28 @@ class ResultScreen extends StatefulWidget {
 
   @override
   State<ResultScreen> createState() => _ResultScreenState();
+}
+
+class _ResultViewData {
+  const _ResultViewData({
+    required this.percentage,
+    required this.correct,
+    required this.total,
+    required this.score,
+    required this.coins,
+    required this.rankLabel,
+    required this.timeLabel,
+  });
+
+  final int percentage;
+  final int correct;
+  final int total;
+  final int score;
+  final int coins;
+  final String rankLabel;
+  final String timeLabel;
+
+  int get wrong => total - correct;
 }
 
 class _ResultScreenState extends State<ResultScreen> {
@@ -378,6 +399,64 @@ class _ResultScreenState extends State<ResultScreen> {
     }
   }
 
+  bool get _isBattleResult =>
+      widget.quizType == QuizTypes.oneVsOneBattle ||
+      widget.quizType == QuizTypes.randomBattle;
+
+  String _resolveFirstName() {
+    final trimmed = userName.trim();
+    if (trimmed.isEmpty) return 'Player';
+    return trimmed.split(' ').first;
+  }
+
+  String _formatTime(int? totalSeconds) {
+    final total = totalSeconds ?? 0;
+    if (total <= 0) return '--';
+    final minutes = total ~/ 60;
+    final seconds = total % 60;
+    final minutesText = minutes < 10 ? '0$minutes' : '$minutes';
+    final secondsText = seconds < 10 ? '0$seconds' : '$seconds';
+    return '$minutesText:$secondsText';
+  }
+
+  String _resolveRankLabel(List<BattleUserRank> ranks) {
+    if (ranks.isEmpty) return '--';
+    final currentUserId = context.read<UserDetailsCubit>().userId();
+    final match = ranks.where((rank) => rank.userId == currentUserId);
+    if (match.isEmpty) return '--';
+    final rank = match.first.rank;
+    return rank > 0 ? '#$rank' : '--';
+  }
+
+  _ResultViewData _buildResultViewDataFromState(SetCoinScoreSuccess state) {
+    final seconds = widget.timeTakenToCompleteQuiz?.round();
+    return _ResultViewData(
+      percentage: state.percentage,
+      correct: state.correctAnswer,
+      total: state.totalQuestions,
+      score: state.earnScore,
+      coins: state.earnCoin,
+      rankLabel: _resolveRankLabel(state.userRanks),
+      timeLabel: _formatTime(seconds),
+    );
+  }
+
+  _ResultViewData _buildResultViewDataFromLocal() {
+    final seconds = widget.timeTakenToCompleteQuiz?.round();
+    final score = widget.quizType == QuizTypes.exam
+        ? (widget.obtainedMarks ?? 0)
+        : 0;
+    return _ResultViewData(
+      percentage: winPercentage.round(),
+      correct: correctAnswers,
+      total: totalQuestions,
+      score: score,
+      coins: 0,
+      rankLabel: '--',
+      timeLabel: _formatTime(seconds),
+    );
+  }
+
   Widget _buildGreetingMessage({
     int? scorePct,
     String? userName,
@@ -464,6 +543,396 @@ class _ResultScreenState extends State<ResultScreen> {
             style: TextStyle(fontSize: 19, color: context.primaryTextColor),
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildConfettiDots() {
+    return IgnorePointer(
+      child: Stack(
+        children: const [
+          Positioned(
+            top: 40,
+            left: 30,
+            child: _ConfettiDot(size: 8, color: Color(0xFFB9E3FF)),
+          ),
+          Positioned(
+            top: 120,
+            right: 40,
+            child: _ConfettiDot(size: 6, color: Color(0xFFCCEAD6)),
+          ),
+          Positioned(
+            top: 210,
+            left: 60,
+            child: _ConfettiDot(size: 10, color: Color(0xFFFFE1B8)),
+          ),
+          Positioned(
+            top: 280,
+            right: 80,
+            child: _ConfettiDot(size: 7, color: Color(0xFFFAD4E8)),
+          ),
+          Positioned(
+            bottom: 180,
+            left: 40,
+            child: _ConfettiDot(size: 9, color: Color(0xFFBFE7FF)),
+          ),
+          Positioned(
+            bottom: 120,
+            right: 50,
+            child: _ConfettiDot(size: 6, color: Color(0xFFDCEBFF)),
+          ),
+          Positioned(
+            bottom: 60,
+            left: 120,
+            child: _ConfettiDot(size: 5, color: Color(0xFFE5F6D6)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderSection() {
+    final displayName = _resolveFirstName();
+
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF86F1B6).withValues(alpha: 0.4),
+                blurRadius: 18,
+                spreadRadius: 2,
+                offset: const Offset(0, 8),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.emoji_events_rounded,
+            color: Color(0xFF2E6CF6),
+            size: 38,
+          ),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'Excellent Work!',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF1E3A8A),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Congratulations $displayName, you passed!',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 16,
+            color: const Color(0xFF1E3A8A).withValues(alpha: 0.7),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildScoreDonut(int percentage) {
+    return SizedBox(
+      width: 200,
+      height: 200,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox(
+            width: 200,
+            height: 200,
+            child: CircularProgressIndicator(
+              value: percentage / 100,
+              strokeWidth: 14,
+              backgroundColor: const Color(0xFFE6EEF9),
+              valueColor: const AlwaysStoppedAnimation(Color(0xFF2E6CF6)),
+            ),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '$percentage%',
+                style: const TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF1E3A8A),
+                ),
+              ),
+              const Text(
+                'Score',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF7B8BB5),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard({
+    required String label,
+    required String value,
+    required String icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.center,
+            child: SvgPicture.asset(
+              icon,
+              width: 20,
+              height: 20,
+              colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF1E3A8A),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF7B8BB5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatGrid(_ResultViewData data) {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 16,
+      crossAxisSpacing: 16,
+      childAspectRatio: 1.25,
+      children: [
+        _buildStatCard(
+          label: 'Correct',
+          value: '${data.correct}/${data.total}',
+          icon: Assets.correct,
+          color: const Color(0xFF35C78A),
+        ),
+        _buildStatCard(
+          label: 'Wrong',
+          value: '${data.wrong}/${data.total}',
+          icon: Assets.wrong,
+          color: const Color(0xFFF16060),
+        ),
+        _buildStatCard(
+          label: 'Score',
+          value: '${data.score}',
+          icon: Assets.score,
+          color: const Color(0xFFF59E0B),
+        ),
+        _buildStatCard(
+          label: 'Coins',
+          value: '${data.coins}',
+          icon: Assets.earnedCoin,
+          color: const Color(0xFFFACC15),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSummaryItem({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Column(
+      children: [
+        Icon(icon, color: const Color(0xFF2E6CF6), size: 20),
+        const SizedBox(height: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF7B8BB5),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1E3A8A),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSummaryRow(_ResultViewData data) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 14,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: _buildSummaryItem(
+              icon: Icons.check_circle_outline,
+              label: 'Accuracy',
+              value: '${data.percentage}%',
+            ),
+          ),
+          Expanded(
+            child: _buildSummaryItem(
+              icon: Icons.emoji_events_outlined,
+              label: 'Rank',
+              value: data.rankLabel,
+            ),
+          ),
+          Expanded(
+            child: _buildSummaryItem(
+              icon: Icons.schedule,
+              label: 'Time',
+              value: data.timeLabel,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required String title,
+    required VoidCallback onTap,
+    IconData? leadingIcon,
+    IconData? trailingIcon,
+    bool isPrimary = false,
+    bool isTertiary = false,
+  }) {
+    final background = isPrimary ? const Color(0xFF2E6CF6) : Colors.white;
+    final textColor = isPrimary ? Colors.white : const Color(0xFF1E3A8A);
+    final borderColor = isPrimary
+        ? Colors.transparent
+        : (isTertiary ? const Color(0xFFE7EEF8) : const Color(0xFFDCE6F6));
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          height: 54,
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: borderColor),
+            boxShadow: [
+              if (!isTertiary)
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 14,
+                  offset: const Offset(0, 8),
+                ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (leadingIcon != null) ...[
+                Icon(leadingIcon, color: textColor, size: 20),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              if (trailingIcon != null) ...[
+                const SizedBox(width: 10),
+                Icon(trailingIcon, color: textColor, size: 22),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRedesignedResultLayout(_ResultViewData data) {
+    return Column(
+      children: [
+        _buildHeaderSection(),
+        const SizedBox(height: 24),
+        _buildScoreDonut(data.percentage),
+        const SizedBox(height: 24),
+        _buildStatGrid(data),
+        const SizedBox(height: 24),
+        _buildSummaryRow(data),
       ],
     );
   }
@@ -1135,59 +1604,71 @@ class _ResultScreenState extends State<ResultScreen> {
     );
   }
 
-  Widget _buildButton(String buttonTitle, VoidCallback onTap) {
-    return CustomRoundedButton(
-      widthPercentage: 0.90,
-      backgroundColor: context.primaryColor,
-      buttonTitle: buttonTitle,
-      radius: 8,
-      elevation: 5,
-      showBorder: false,
-      fontWeight: FontWeights.regular,
-      height: 50,
-      titleColor: context.surfaceColor,
+  Widget _buildButton(
+    String buttonTitle,
+    VoidCallback onTap, {
+    IconData? leadingIcon,
+    IconData? trailingIcon,
+    bool isPrimary = false,
+    bool isTertiary = false,
+  }) {
+    return _buildActionButton(
+      title: buttonTitle,
       onTap: onTap,
-      textSize: 20,
+      leadingIcon: leadingIcon,
+      trailingIcon: trailingIcon,
+      isPrimary: isPrimary,
+      isTertiary: isTertiary,
     );
   }
 
   //play again button will be build different for every quizType
   Widget _buildPlayAgainButton() {
     if (widget.quizType == QuizTypes.audioQuestions) {
-      return _buildButton(context.tr('playAgainBtn')!, () {
-        fetchUpdateUserDetails();
-        Navigator.of(context).pushReplacementNamed(
-          Routes.quiz,
-          arguments: {
-            'isPlayed': widget.isPlayed,
-            'quizType': QuizTypes.audioQuestions,
-            'subcategoryId': widget.questions!.first.subcategoryId == '0'
-                ? ''
-                : widget.questions!.first.subcategoryId,
-            'categoryId': widget.questions!.first.subcategoryId == '0'
-                ? widget.questions!.first.categoryId
-                : '',
-          },
-        );
-      });
+      return _buildButton(
+        context.tr('playAgainBtn')!,
+        () {
+          fetchUpdateUserDetails();
+          Navigator.of(context).pushReplacementNamed(
+            Routes.quiz,
+            arguments: {
+              'isPlayed': widget.isPlayed,
+              'quizType': QuizTypes.audioQuestions,
+              'subcategoryId': widget.questions!.first.subcategoryId == '0'
+                  ? ''
+                  : widget.questions!.first.subcategoryId,
+              'categoryId': widget.questions!.first.subcategoryId == '0'
+                  ? widget.questions!.first.categoryId
+                  : '',
+            },
+          );
+        },
+        isPrimary: true,
+        trailingIcon: Icons.chevron_right,
+      );
     } else if (widget.quizType == QuizTypes.guessTheWord) {
       if (_isWinner) {
         return const SizedBox();
       }
 
-      return _buildButton(context.tr('playAgainBtn')!, () async {
-        await context.pushReplacementNamed(
-          Routes.guessTheWord,
-          arguments: GuessTheWordQuizScreenArgs(
-            categoryId: widget.categoryId!,
-            subcategoryId: widget.subcategoryId!.isNotEmpty
-                ? widget.subcategoryId
-                : null,
-            isPlayed: widget.isPlayed,
-            isPremiumCategory: widget.isPremiumCategory,
-          ),
-        );
-      });
+      return _buildButton(
+        context.tr('playAgainBtn')!,
+        () async {
+          await context.pushReplacementNamed(
+            Routes.guessTheWord,
+            arguments: GuessTheWordQuizScreenArgs(
+              categoryId: widget.categoryId!,
+              subcategoryId: widget.subcategoryId!.isNotEmpty
+                  ? widget.subcategoryId
+                  : null,
+              isPlayed: widget.isPlayed,
+              isPremiumCategory: widget.isPremiumCategory,
+            ),
+          );
+        },
+        isPrimary: true,
+        trailingIcon: Icons.chevron_right,
+      );
     } else if (widget.quizType == QuizTypes.quizZone) {
       //if user is winner
       if (_isWinner) {
@@ -1198,7 +1679,7 @@ class _ResultScreenState extends State<ResultScreen> {
           return const SizedBox.shrink();
         }
         return _buildButton(
-          context.tr('nextLevelBtn')!,
+          'Continue to Next Level',
           () {
             //if given level is same as unlocked level then we need to update level
             //else do not update level
@@ -1222,25 +1703,32 @@ class _ResultScreenState extends State<ResultScreen> {
               },
             );
           },
+          isPrimary: true,
+          trailingIcon: Icons.chevron_right,
         );
       }
       //if user failed to complete this level
-      return _buildButton(context.tr('playAgainBtn')!, () {
-        fetchUpdateUserDetails();
-        //to play this level again (for quizZone quizType)
-        Navigator.of(context).pushReplacementNamed(
-          Routes.quiz,
-          arguments: {
-            'quizType': widget.quizType,
-            //if subcategory id is empty for question means we need to fetch questions by it's category
-            'categoryId': widget.categoryId,
-            'subcategoryId': widget.subcategoryId,
-            'level': widget.questions!.first.level,
-            'unlockedLevel': widget.unlockedLevel,
-            'subcategoryMaxLevel': widget.subcategoryMaxLevel,
-          },
-        );
-      });
+      return _buildButton(
+        context.tr('playAgainBtn')!,
+        () {
+          fetchUpdateUserDetails();
+          //to play this level again (for quizZone quizType)
+          Navigator.of(context).pushReplacementNamed(
+            Routes.quiz,
+            arguments: {
+              'quizType': widget.quizType,
+              //if subcategory id is empty for question means we need to fetch questions by it's category
+              'categoryId': widget.categoryId,
+              'subcategoryId': widget.subcategoryId,
+              'level': widget.questions!.first.level,
+              'unlockedLevel': widget.unlockedLevel,
+              'subcategoryMaxLevel': widget.subcategoryMaxLevel,
+            },
+          );
+        },
+        isPrimary: true,
+        trailingIcon: Icons.chevron_right,
+      );
     }
 
     return const SizedBox.shrink();
@@ -1249,55 +1737,61 @@ class _ResultScreenState extends State<ResultScreen> {
   Widget _buildShareYourScoreButton() {
     return Builder(
       builder: (context) {
-        return _buildButton(context.tr('shareScoreBtn')!, () async {
-          if (_isShareInProgress) return;
+        return _buildButton(
+          context.tr('shareScoreBtn')!,
+          () async {
+            if (_isShareInProgress) return;
 
-          setState(() => _isShareInProgress = true);
+            setState(() => _isShareInProgress = true);
 
-          try {
-            //capturing image
-            final image = await screenshotController.capture();
-            //root directory path
-            final directory = (await getApplicationDocumentsDirectory()).path;
+            try {
+              //capturing image
+              final image = await screenshotController.capture();
+              //root directory path
+              final directory = (await getApplicationDocumentsDirectory()).path;
 
-            final fileName = DateTime.now().microsecondsSinceEpoch.toString();
-            //create file with given path
-            final file = await File('$directory/$fileName.png').create();
-            //write as bytes
-            await file.writeAsBytes(image!.buffer.asUint8List());
+              final fileName = DateTime.now().microsecondsSinceEpoch.toString();
+              //create file with given path
+              final file = await File('$directory/$fileName.png').create();
+              //write as bytes
+              await file.writeAsBytes(image!.buffer.asUint8List());
 
-            final appLink = context.read<SystemConfigCubit>().appUrl;
+              final appLink = context.read<SystemConfigCubit>().appUrl;
 
-            final referralCode =
-                context.read<UserDetailsCubit>().getUserProfile().referCode ??
-                '';
+              final referralCode =
+                  context.read<UserDetailsCubit>().getUserProfile().referCode ??
+                  '';
 
-            final scoreText =
-                '$kAppName'
-                "\n${context.tr('myScoreLbl')!}"
-                "\n${context.tr("appLink")!}"
-                '\n$appLink'
-                "\n${context.tr("useMyReferral")} $referralCode ${context.tr("toGetCoins")}";
+              final scoreText =
+                  '$kAppName'
+                  "\n${context.tr('myScoreLbl')!}"
+                  "\n${context.tr("appLink")!}"
+                  '\n$appLink'
+                  "\n${context.tr("useMyReferral")} $referralCode ${context.tr("toGetCoins")}";
 
-            await UiUtils.share(
-              scoreText,
-              files: [XFile(file.path)],
-              context: context,
-            ).onError((e, s) => ShareResult('$e', ShareResultStatus.dismissed));
-          } on Exception catch (_) {
-            if (!mounted) return;
+              await UiUtils.share(
+                scoreText,
+                files: [XFile(file.path)],
+                context: context,
+              ).onError(
+                (e, s) => ShareResult('$e', ShareResultStatus.dismissed),
+              );
+            } on Exception catch (_) {
+              if (!mounted) return;
 
-            context.showSnack(
-              context.tr(
-                convertErrorCodeToLanguageKey(errorCodeDefaultMessage),
-              )!,
-            );
-          } finally {
-            if (mounted) {
-              setState(() => _isShareInProgress = false);
+              context.showSnack(
+                context.tr(
+                  convertErrorCodeToLanguageKey(errorCodeDefaultMessage),
+                )!,
+              );
+            } finally {
+              if (mounted) {
+                setState(() => _isShareInProgress = false);
+              }
             }
-          }
-        });
+          },
+          leadingIcon: Icons.share_outlined,
+        );
       },
     );
   }
@@ -1360,43 +1854,47 @@ class _ResultScreenState extends State<ResultScreen> {
           });
     }
 
-    return _buildButton(context.tr('reviewAnsBtn')!, () async {
-      if (_isReviewInProgress) return;
+    return _buildButton(
+      context.tr('reviewAnsBtn')!,
+      () async {
+        if (_isReviewInProgress) return;
 
-      if (_unlockedReviewAnswersOnce) {
-        await context.pushNamed(
-          Routes.reviewAnswers,
-          arguments: ReviewAnswersScreenArgs(
-            quizType: widget.quizType!,
-            questions: widget.quizType == QuizTypes.guessTheWord
-                ? []
-                : widget.questions!,
-            guessTheWordQuestions: widget.quizType == QuizTypes.guessTheWord
-                ? widget.guessTheWordQuestions!
-                : [],
-          ),
-        );
-        return;
-      }
-
-      setState(() => _isReviewInProgress = true);
-
-      try {
-        await context.showDialog<void>(
-          title: context.tr('reviewAnswers'),
-          image: Assets.coinsDialogIcon,
-          message:
-              '${context.tr('spend')} ${context.read<SystemConfigCubit>().reviewAnswersDeductCoins} ${context.tr('reviewAnsMessage')}',
-          onConfirm: onTapYesReviewAnswers,
-          confirmButtonText: context.tr('reviewAndImprove'),
-          cancelButtonText: context.tr('notNow'),
-        );
-      } finally {
-        if (mounted) {
-          setState(() => _isReviewInProgress = false);
+        if (_unlockedReviewAnswersOnce) {
+          await context.pushNamed(
+            Routes.reviewAnswers,
+            arguments: ReviewAnswersScreenArgs(
+              quizType: widget.quizType!,
+              questions: widget.quizType == QuizTypes.guessTheWord
+                  ? []
+                  : widget.questions!,
+              guessTheWordQuestions: widget.quizType == QuizTypes.guessTheWord
+                  ? widget.guessTheWordQuestions!
+                  : [],
+            ),
+          );
+          return;
         }
-      }
-    });
+
+        setState(() => _isReviewInProgress = true);
+
+        try {
+          await context.showDialog<void>(
+            title: context.tr('reviewAnswers'),
+            image: Assets.coinsDialogIcon,
+            message:
+                '${context.tr('spend')} ${context.read<SystemConfigCubit>().reviewAnswersDeductCoins} ${context.tr('reviewAnsMessage')}',
+            onConfirm: onTapYesReviewAnswers,
+            confirmButtonText: context.tr('reviewAndImprove'),
+            cancelButtonText: context.tr('notNow'),
+          );
+        } finally {
+          if (mounted) {
+            setState(() => _isReviewInProgress = false);
+          }
+        }
+      },
+      leadingIcon: Icons.article_outlined,
+    );
   }
 
   Widget _buildHomeButton() {
@@ -1406,7 +1904,12 @@ class _ResultScreenState extends State<ResultScreen> {
       dashboardScreenKey.currentState?.changeTab(NavTabType.home);
     }
 
-    return _buildButton(context.tr('homeBtn')!, onTapHomeButton);
+    return _buildButton(
+      context.tr('homeBtn')!,
+      onTapHomeButton,
+      leadingIcon: Icons.home_outlined,
+      isTertiary: true,
+    );
   }
 
   Widget _buildResultButtons(BuildContext context) {
@@ -1436,6 +1939,124 @@ class _ResultScreenState extends State<ResultScreen> {
         _buildHomeButton(),
         buttonSpace,
       ],
+    );
+  }
+
+  Widget _buildBackButton() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () {
+          onPageBackCalls();
+          Navigator.pop(context);
+        },
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Color(0xFF1E3A8A),
+            size: 18,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRedesignedResultContent() {
+    if (widget.quizType == QuizTypes.selfChallenge ||
+        widget.quizType == QuizTypes.exam) {
+      return _buildRedesignedResultLayout(_buildResultViewDataFromLocal());
+    }
+
+    return BlocConsumer<SetCoinScoreCubit, SetCoinScoreState>(
+      listener: (context, state) {
+        if (state is SetCoinScoreSuccess) {
+          setState(() {
+            _isWinner =
+                state.percentage >
+                context.read<SystemConfigCubit>().quizWinningPercentage;
+          });
+        }
+      },
+      builder: (context, state) {
+        if (state is SetCoinScoreSuccess) {
+          return _buildRedesignedResultLayout(
+            _buildResultViewDataFromState(state),
+          );
+        }
+
+        if (state is SetCoinScoreFailure) {
+          return Center(
+            child: ErrorContainer(
+              showBackButton: true,
+              errorMessageColor: context.primaryColor,
+              errorMessage: convertErrorCodeToLanguageKey(state.error),
+              onTapRetry: () async {
+                await _updateResult();
+              },
+              showErrorImage: true,
+            ),
+          );
+        }
+
+        return const Center(child: CircularProgressContainer());
+      },
+    );
+  }
+
+  Widget _buildRedesignedBody() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFFDFF1FF), Colors.white],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
+      child: SafeArea(
+        child: Stack(
+          children: [
+            _buildConfettiDots(),
+            SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
+                child: Column(
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: _buildBackButton(),
+                    ),
+                    const SizedBox(height: 12),
+                    Screenshot(
+                      controller: screenshotController,
+                      child: _buildRedesignedResultContent(),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildResultButtons(context),
+                    const SizedBox(height: 12),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1487,24 +2108,48 @@ class _ResultScreenState extends State<ResultScreen> {
           ),
         ],
         child: Scaffold(
-          appBar: QAppBar(
-            roundedAppBar: false,
-            title: Text(_appbarTitle),
-            onTapBackButton: () {
-              onPageBackCalls();
-              Navigator.pop(context);
-            },
-          ),
-          body: SingleChildScrollView(
-            child: Column(
-              children: [
-                Center(child: _buildResultContainer(context)),
-                const SizedBox(height: 20),
-                _buildResultButtons(context),
-              ],
-            ),
-          ),
+          backgroundColor: Colors.transparent,
+          appBar: _isBattleResult
+              ? QAppBar(
+                  roundedAppBar: false,
+                  title: Text(_appbarTitle),
+                  onTapBackButton: () {
+                    onPageBackCalls();
+                    Navigator.pop(context);
+                  },
+                )
+              : null,
+          body: _isBattleResult
+              ? SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      Center(child: _buildResultContainer(context)),
+                      const SizedBox(height: 20),
+                      _buildResultButtons(context),
+                    ],
+                  ),
+                )
+              : _buildRedesignedBody(),
         ),
+      ),
+    );
+  }
+}
+
+class _ConfettiDot extends StatelessWidget {
+  const _ConfettiDot({required this.size, required this.color});
+
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.45),
+        shape: BoxShape.circle,
       ),
     );
   }
