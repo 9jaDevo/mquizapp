@@ -231,19 +231,22 @@ class GuessTheWordQuestionContainerState
     }
     //stop timer
     widget.timerAnimationController.stop();
-    
+
     // Show rewarded ad with built-in consent dialog
-    context.read<RewardedAdCubit>().showAd(
-      context: context,
-      rewardAmount: context.read<SystemConfigCubit>().rewardAdsCoins,
-      rewardCurrencyLabel: 'coins',
-      onAdDismissedCallback: _addCoinsAfterRewardAd,
-    ).then((_) {
-      // Resume timer whether user watched ad or skipped it
-      widget.timerAnimationController.forward(
-        from: widget.timerAnimationController.value,
-      );
-    });
+    context
+        .read<RewardedAdCubit>()
+        .showAd(
+          context: context,
+          rewardAmount: context.read<SystemConfigCubit>().rewardAdsCoins,
+          rewardCurrencyLabel: 'coins',
+          onAdDismissedCallback: _addCoinsAfterRewardAd,
+        )
+        .then((_) {
+          // Resume timer whether user watched ad or skipped it
+          widget.timerAnimationController.forward(
+            from: widget.timerAnimationController.value,
+          );
+        });
   }
 
   late final int hintDeductCoins = context
@@ -275,19 +278,23 @@ class GuessTheWordQuestionContainerState
 
           return Container(
             clipBehavior: Clip.hardEdge,
-            alignment: Alignment.bottomCenter,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
-              /// box bottom border
-              border: Border(
-                bottom: BorderSide(
-                  width: border,
-                  color: currentSelectedIndex == answerBoxIndex
-                      ? Theme.of(context).colorScheme.onTertiary
-                      : Theme.of(
-                          context,
-                        ).colorScheme.onTertiary.withValues(alpha: 0.1),
-                ),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                width: border,
+                color: currentSelectedIndex == answerBoxIndex
+                    ? const Color(0xFF2E6CF6)
+                    : const Color(0xFFDCE6F6),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 2.5),
             height: optionBoxContainerHeight,
@@ -324,17 +331,16 @@ class GuessTheWordQuestionContainerState
                       return Container(
                         height: 2,
                         width:
-                            35.0 *
+                            28.0 *
                             (1.0 -
                                 topContainerAnimations[answerBoxIndex].value),
                         color: currentSelectedIndex == answerBoxIndex
-                            ? Theme.of(context).colorScheme.onTertiary
-                            : Theme.of(
-                                context,
-                              ).colorScheme.onTertiary.withValues(alpha: 0.1),
+                            ? const Color(0xFF2E6CF6)
+                            : const Color(0xFFDCE6F6),
                       );
                     },
                   ),
+                  const SizedBox(height: 4),
                   Text(
                     //submitted answer contains the index of option
                     //length of answerbox is same as submittedAnswer
@@ -351,10 +357,10 @@ class GuessTheWordQuestionContainerState
                     //
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 20,
+                      fontSize: 18,
                       color: currentSelectedIndex == answerBoxIndex
-                          ? Theme.of(context).primaryColor
-                          : Theme.of(context).colorScheme.onTertiary,
+                          ? const Color(0xFF2E6CF6)
+                          : const Color(0xFF1E3A8A),
                     ),
                   ),
                 ],
@@ -415,10 +421,18 @@ class GuessTheWordQuestionContainerState
         alignment: Alignment.center,
         margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(2),
+          borderRadius: BorderRadius.circular(12),
           color: submittedAnswer.contains(optionIndex)
-              ? Theme.of(context).primaryColor
-              : Theme.of(context).colorScheme.surface,
+              ? const Color(0xFF2E6CF6)
+              : Colors.white,
+          border: Border.all(color: const Color(0xFFDCE6F6)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         height: optionBoxContainerHeight,
         width: optionBoxContainerHeight,
@@ -437,8 +451,8 @@ class GuessTheWordQuestionContainerState
                 letter == ' ' ? 'Space' : letter,
                 style: TextStyle(
                   color: submittedAnswer.contains(optionIndex)
-                      ? Theme.of(context).colorScheme.surface
-                      : Theme.of(context).colorScheme.onTertiary,
+                      ? Colors.white
+                      : const Color(0xFF1E3A8A),
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
                 ),
@@ -536,15 +550,16 @@ class GuessTheWordQuestionContainerState
           width: optionBoxContainerHeight * 2,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(2),
-            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            color: const Color(0xFFF5F8FE),
+            border: Border.all(color: const Color(0xFFDCE6F6)),
           ),
           child: Text(
             context.tr(hintKey)!,
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onTertiary,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
+              color: const Color(0xFF1E3A8A),
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
             ),
           ),
         ),
@@ -576,15 +591,16 @@ class GuessTheWordQuestionContainerState
         width: optionBoxContainerHeight * 2,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(2),
-          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          color: Colors.white,
+          border: Border.all(color: const Color(0xFFDCE6F6)),
         ),
         child: Text(
           context.tr(backKey)!,
           style: TextStyle(
-            color: Theme.of(context).colorScheme.onTertiary,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
+            color: const Color(0xFF1E3A8A),
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
           ),
         ),
       ),
@@ -660,18 +676,18 @@ class GuessTheWordQuestionContainerState
         if (state is UserDetailsFetchSuccess) {
           return Text.rich(
             TextSpan(
-              style: TextStyle(
-                color: Theme.of(
-                  context,
-                ).colorScheme.onTertiary.withValues(alpha: 0.5),
-                fontSize: 14,
+              style: const TextStyle(
+                color: Color(0xFF7B8BB5),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
               ),
               children: [
-                TextSpan(text: "${context.tr("coinsLbl")!} : "),
+                TextSpan(text: "${context.tr("coinsLbl")!} "),
                 TextSpan(
                   text: '${state.userProfile.coins}',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onTertiary,
+                  style: const TextStyle(
+                    color: Color(0xFF1E3A8A),
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
@@ -701,99 +717,143 @@ class GuessTheWordQuestionContainerState
       child: SingleChildScrollView(
         child: Column(
           children: [
-            // Coins & Que Index
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                if (widget.showHint) _buildCurrentCoins(),
-                Text.rich(
-                  TextSpan(
-                    style: TextStyle(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onTertiary.withValues(alpha: 0.5),
-                      fontSize: 14,
+                if (widget.showHint)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
                     ),
-                    children: [
-                      TextSpan(text: '${widget.currentQuestionIndex + 1}'),
-                      TextSpan(
-                        text: ' / ${widget.questions.length}',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onTertiary,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFDCE6F6)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
                         ),
+                      ],
+                    ),
+                    child: _buildCurrentCoins(),
+                  ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFDCE6F6)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
                       ),
                     ],
+                  ),
+                  child: Text(
+                    '${widget.currentQuestionIndex + 1} / ${widget.questions.length}',
+                    style: const TextStyle(
+                      color: Color(0xFF1E3A8A),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-
-            /// Question
-            Text(
-              question.question,
-              style: TextStyle(
-                fontSize: 24,
-                color: Theme.of(context).colorScheme.onTertiary,
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 14,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
-            ),
-            SizedBox(height: widget.constraints.maxHeight * 0.025),
-
-            /// Image
-            if (question.image.isNotEmpty) ...[
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                width: context.width,
-                height: widget.constraints.maxHeight * 0.275,
-                alignment: Alignment.center,
-                child: InteractiveViewer(
-                  boundaryMargin: const EdgeInsets.all(20),
-                  child: CachedNetworkImage(
-                    placeholder: (context, _) {
-                      return const Center(child: CircularProgressContainer());
-                    },
-                    imageUrl: question.image,
-                    imageBuilder: (context, imageProvider) {
-                      return Container(
-                        decoration: BoxDecoration(
-                          image: DecorationImage(
-                            image: imageProvider,
-                            fit: BoxFit.cover,
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      );
-                    },
-                    errorWidget: (_, i, e) => Center(
-                      child: Icon(
-                        Icons.error,
-                        color: Theme.of(context).primaryColor,
-                      ),
+              child: Column(
+                children: [
+                  Text(
+                    question.question,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1E3A8A),
                     ),
                   ),
-                ),
+                  if (question.image.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFDCE6F6)),
+                      ),
+                      width: context.width,
+                      height: widget.constraints.maxHeight * 0.24,
+                      alignment: Alignment.center,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: InteractiveViewer(
+                          boundaryMargin: const EdgeInsets.all(20),
+                          child: CachedNetworkImage(
+                            placeholder: (context, _) {
+                              return const Center(
+                                child: CircularProgressContainer(),
+                              );
+                            },
+                            imageUrl: question.image,
+                            imageBuilder: (context, imageProvider) {
+                              return Container(
+                                decoration: BoxDecoration(
+                                  image: DecorationImage(
+                                    image: imageProvider,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              );
+                            },
+                            errorWidget: (_, i, e) => const Center(
+                              child: Icon(
+                                Icons.error,
+                                color: Color(0xFF2E6CF6),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
-              SizedBox(height: widget.constraints.maxHeight * 0.025),
-            ],
-
-            ///
+            ),
+            const SizedBox(height: 16),
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
               child: widget.questions[widget.currentQuestionIndex].hasAnswered
                   ? _buildAnswerCorrectness()
                   : _buildAnswerBoxes(),
             ),
-            SizedBox(height: widget.constraints.maxHeight * 0.04),
+            SizedBox(height: widget.constraints.maxHeight * 0.035),
             _buildOptions(question.options),
-            SizedBox(height: widget.constraints.maxHeight * 0.11),
+            SizedBox(height: widget.constraints.maxHeight * 0.09),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (widget.showHint) ...[_buildHintButton()],
-                const SizedBox(width: 3),
+                const SizedBox(width: 8),
                 _buildBackButton(),
               ],
             ),

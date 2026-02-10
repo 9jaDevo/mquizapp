@@ -4,6 +4,9 @@ import 'package:flutterquiz/commons/commons.dart';
 import 'package:flutterquiz/core/core.dart';
 import 'package:flutterquiz/features/auth/cubits/auth_cubit.dart';
 import 'package:flutterquiz/features/badges/blocs/badges_cubit.dart';
+import 'package:flutterquiz/features/bookmark/cubits/audio_question_bookmark_cubit.dart';
+import 'package:flutterquiz/features/bookmark/cubits/bookmark_cubit.dart';
+import 'package:flutterquiz/features/bookmark/cubits/guess_the_word_bookmark_cubit.dart';
 import 'package:flutterquiz/features/profile_management/cubits/user_details_cubit.dart';
 import 'package:flutterquiz/features/settings/settings_cubit.dart';
 import 'package:flutterquiz/features/skill_tier/models/skill_tier.dart';
@@ -40,6 +43,9 @@ final class ProfileTabScreenState extends State<ProfileTabScreen>
     if (!_isGuest) {
       context.read<StatisticCubit>().getStatistic();
       context.read<BadgesCubit>().getBadges();
+      context.read<BookmarkCubit>().getBookmark();
+      context.read<GuessTheWordBookmarkCubit>().getBookmark();
+      context.read<AudioQuestionBookmarkCubit>().getBookmark();
     }
   }
 
@@ -168,6 +174,8 @@ final class ProfileTabScreenState extends State<ProfileTabScreen>
               const SizedBox(height: 16),
               _buildQuickActionsRow(),
               const SizedBox(height: 16),
+              _buildProgressSnapshotCard(),
+              const SizedBox(height: 16),
               _buildBookmarksBadgesRow(),
               const SizedBox(height: 16),
               _buildPreferencesCard(),
@@ -190,7 +198,8 @@ final class ProfileTabScreenState extends State<ProfileTabScreen>
         var badgeCount = 0;
 
         final statisticState = context.watch<StatisticCubit>().state;
-        if (statisticState is StatisticFetchSuccess) {
+        final hasStats = statisticState is StatisticFetchSuccess;
+        if (hasStats) {
           final stats = statisticState.statisticModel;
           final answered = int.tryParse(stats.answeredQuestions) ?? 0;
           final correct = int.tryParse(stats.correctAnswers) ?? 0;
@@ -204,7 +213,10 @@ final class ProfileTabScreenState extends State<ProfileTabScreen>
         if (state is UserDetailsFetchSuccess) {
           profileUrl = state.userProfile.profileUrl ?? '';
           username = state.userProfile.name ?? username;
-          gamesCount = int.tryParse(state.userProfile.allTimeScore ?? '') ?? 0;
+          if (!hasStats) {
+            gamesCount =
+                int.tryParse(state.userProfile.allTimeScore ?? '') ?? 0;
+          }
         }
 
         return FutureBuilder<SkillTier>(
@@ -629,12 +641,18 @@ final class ProfileTabScreenState extends State<ProfileTabScreen>
   }
 
   Widget _buildBookmarksBadgesRow() {
+    final totalBookmarks =
+        context.watch<BookmarkCubit>().questions().length +
+        context.watch<GuessTheWordBookmarkCubit>().questions().length +
+        context.watch<AudioQuestionBookmarkCubit>().questions().length;
+    final badgeCount = context.watch<BadgesCubit>().getUnlockedBadges().length;
+
     return Row(
       children: [
         Expanded(
           child: _buildInfoCard(
             title: 'Bookmarks',
-            subtitle: '28 saved',
+            subtitle: '${UiUtils.formatNumber(totalBookmarks)} saved',
             icon: Icons.bookmark_rounded,
             tint: const Color(0xFFFFF2D6),
             accent: const Color(0xFFFFA800),
@@ -645,7 +663,7 @@ final class ProfileTabScreenState extends State<ProfileTabScreen>
         Expanded(
           child: _buildInfoCard(
             title: 'Badges',
-            subtitle: '14 earned',
+            subtitle: '${UiUtils.formatNumber(badgeCount)} earned',
             icon: Icons.workspace_premium_rounded,
             tint: const Color(0xFFE7ECFF),
             accent: const Color(0xFF2E5BEA),
@@ -744,22 +762,6 @@ final class ProfileTabScreenState extends State<ProfileTabScreen>
           ),
           const SizedBox(height: 14),
           _buildPreferenceRow(
-            icon: Icons.palette_rounded,
-            label: 'Theme',
-            trailing: Text(
-              Theme.of(context).brightness == Brightness.dark
-                  ? 'Dark'
-                  : 'Light',
-              style: const TextStyle(
-                color: Color(0xFF7E8AA8),
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            onTap: () => _onTapMenuItem('theme'),
-          ),
-          const SizedBox(height: 12),
-          _buildPreferenceRow(
             icon: Icons.volume_up_rounded,
             label: 'Sound',
             trailing: const _SoundSwitchWidget(),
@@ -769,6 +771,93 @@ final class ProfileTabScreenState extends State<ProfileTabScreen>
             icon: Icons.vibration_rounded,
             label: 'Vibration',
             trailing: const _VibrationSwitchWidget(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgressSnapshotCard() {
+    final statisticState = context.watch<StatisticCubit>().state;
+    var answered = 0;
+    var correct = 0;
+    var accuracy = 0.0;
+
+    if (statisticState is StatisticFetchSuccess) {
+      answered =
+          int.tryParse(statisticState.statisticModel.answeredQuestions) ?? 0;
+      correct = int.tryParse(statisticState.statisticModel.correctAnswers) ?? 0;
+      accuracy = answered > 0 ? (correct / answered) * 100 : 0;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 28,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Text(
+                'Progress Snapshot',
+                style: TextStyle(
+                  color: Color(0xFF1E4FD9),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEAF0FF),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.insights_rounded,
+                  color: Color(0xFF2E5BEA),
+                  size: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildMiniStatCard(
+                  value: UiUtils.formatNumber(answered),
+                  label: 'Answered',
+                  color: const Color(0xFF2E5BEA),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildMiniStatCard(
+                  value: UiUtils.formatNumber(correct),
+                  label: 'Correct',
+                  color: const Color(0xFF35C78A),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildMiniStatCard(
+                  value: '${accuracy.toStringAsFixed(0)}%',
+                  label: 'Accuracy',
+                  color: const Color(0xFFFFA800),
+                ),
+              ),
+            ],
           ),
         ],
       ),

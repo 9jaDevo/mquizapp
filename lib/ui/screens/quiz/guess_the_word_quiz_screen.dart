@@ -15,11 +15,9 @@ import 'package:flutterquiz/features/system_config/model/answer_mode.dart';
 import 'package:flutterquiz/ui/screens/quiz/widgets/guess_the_word_question_container.dart';
 import 'package:flutterquiz/ui/widgets/already_logged_in_dialog.dart';
 import 'package:flutterquiz/ui/widgets/circular_progress_container.dart';
-import 'package:flutterquiz/ui/widgets/custom_appbar.dart';
 import 'package:flutterquiz/ui/widgets/custom_rounded_button.dart';
 import 'package:flutterquiz/ui/widgets/error_container.dart';
 import 'package:flutterquiz/ui/widgets/questions_container.dart';
-import 'package:flutterquiz/ui/widgets/text_circular_timer.dart';
 import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 
@@ -330,30 +328,24 @@ class _GuessTheWordQuizScreenState extends State<GuessTheWordQuizScreen>
       bloc: guessTheWordQuizCubit,
       builder: (context, state) {
         if (state is GuessTheWordQuizFetchSuccess) {
-          return Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: EdgeInsets.only(bottom: context.height * 0.025),
-              child: CustomRoundedButton(
-                widthPercentage: 0.5,
-                backgroundColor: Theme.of(context).primaryColor,
-                buttonTitle: context.tr('submitBtn'),
-                elevation: 5,
-                shadowColor: Colors.black45,
-                titleColor: Theme.of(context).colorScheme.surface,
-                fontWeight: FontWeight.bold,
-                onTap: () {
-                  //
-                  submitAnswer(
-                    questionContainerKeys[_currentQuestionIndex].currentState!
-                        .getSubmittedAnswer(),
-                  );
-                },
-                radius: 10,
-                showBorder: false,
-                height: 45,
-              ),
-            ),
+          return CustomRoundedButton(
+            widthPercentage: 0.88,
+            backgroundColor: const Color(0xFF2E6CF6),
+            buttonTitle: context.tr('submitBtn'),
+            elevation: 4,
+            shadowColor: Colors.black26,
+            titleColor: Colors.white,
+            fontWeight: FontWeight.w700,
+            textSize: 16,
+            onTap: () {
+              submitAnswer(
+                questionContainerKeys[_currentQuestionIndex].currentState!
+                    .getSubmittedAnswer(),
+              );
+            },
+            radius: 16,
+            showBorder: false,
+            height: 50,
           );
         }
         return const SizedBox();
@@ -378,9 +370,122 @@ class _GuessTheWordQuizScreenState extends State<GuessTheWordQuizScreen>
         .then((_) => isExitDialogOpen = false);
   }
 
+  Widget _buildCloseButton() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTapBackButton,
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.close_rounded,
+            color: Color(0xFF1E3A8A),
+            size: 18,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuestionPill({required int current, required int total}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Text(
+        'Question $current/$total',
+        style: const TextStyle(
+          fontWeight: FontWeight.w700,
+          color: Color(0xFF1E3A8A),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimerRing() {
+    return AnimatedBuilder(
+      animation: timerAnimationController,
+      builder: (context, _) {
+        final duration = timerAnimationController.duration ?? Duration.zero;
+        final elapsed =
+            timerAnimationController.lastElapsedDuration ?? Duration.zero;
+        final remaining = duration - elapsed;
+        final seconds = remaining.inSeconds.remainder(60).clamp(0, 59);
+        final progress = 1 - timerAnimationController.value;
+
+        return SizedBox(
+          width: 38,
+          height: 38,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              CircularProgressIndicator(
+                value: progress.clamp(0.0, 1.0),
+                strokeWidth: 4,
+                backgroundColor: const Color(0xFFE6EEF9),
+                valueColor: const AlwaysStoppedAnimation(
+                  Color(0xFF2E6CF6),
+                ),
+              ),
+              Text(
+                seconds.toString().padLeft(2, '0'),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1E3A8A),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTopProgressBar({required int current, required int total}) {
+    final value = total > 0 ? current / total : 0.0;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(999),
+      child: LinearProgressIndicator(
+        value: value.clamp(0.0, 1.0),
+        minHeight: 6,
+        backgroundColor: const Color(0xFFE6EEF9),
+        valueColor: const AlwaysStoppedAnimation(Color(0xFF2E6CF6)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final guessTheWordQuizCubit = context.read<GuessTheWordQuizCubit>();
+    final questionsState = context.watch<GuessTheWordQuizCubit>().state;
+    final totalQuestions = questionsState is GuessTheWordQuizFetchSuccess
+        ? questionsState.questions.length
+        : 0;
+    final currentQuestion = _currentQuestionIndex + 1;
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -424,22 +529,68 @@ class _GuessTheWordQuizScreenState extends State<GuessTheWordQuizScreen>
           ),
         ],
         child: Scaffold(
-          appBar: QAppBar(
-            roundedAppBar: false,
-            onTapBackButton: onTapBackButton,
-            title: TextCircularTimer(
-              animationController: timerAnimationController,
-              arcColor: Theme.of(context).primaryColor,
-              color: Theme.of(
-                context,
-              ).colorScheme.onTertiary.withValues(alpha: 0.2),
+          backgroundColor: Colors.transparent,
+          body: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFDFF1FF), Colors.white],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
             ),
-          ),
-          body: Stack(
-            children: [
-              _buildQuestions(guessTheWordQuizCubit),
-              _buildSubmitButton(guessTheWordQuizCubit),
-            ],
+            child: SafeArea(
+              child: Stack(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
+                    child: Column(
+                      children: [
+                        if (questionsState is GuessTheWordQuizFetchSuccess) ...[
+                          Row(
+                            children: [
+                              _buildCloseButton(),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Center(
+                                  child: _buildQuestionPill(
+                                    current: currentQuestion,
+                                    total: totalQuestions,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              _buildTimerRing(),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          _buildTopProgressBar(
+                            current: currentQuestion,
+                            total: totalQuestions,
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.topCenter,
+                            child: _buildQuestions(guessTheWordQuizCubit),
+                          ),
+                        ),
+                        const SizedBox(height: 90),
+                      ],
+                    ),
+                  ),
+                  Positioned(
+                    left: 20,
+                    right: 20,
+                    bottom: 20,
+                    child: _buildSubmitButton(guessTheWordQuizCubit),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

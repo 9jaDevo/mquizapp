@@ -33,10 +33,15 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   static const _detailsCardBorderRadius = 20.0;
   static const _showTotalBadgesCounter = 4;
 
-  TextStyle get _detailsTitleTextStyle => TextStyle(
-    fontWeight: FontWeight.bold,
-    color: Theme.of(context).colorScheme.onTertiary,
-    fontSize: 18,
+  static const _primaryBlue = Color(0xFF2E6CF6);
+  static const _textBlue = Color(0xFF1E3A8A);
+  static const _mutedBlue = Color(0xFF7B8BB5);
+  static const _cardBorder = Color(0xFFDCE6F6);
+
+  TextStyle get _detailsTitleTextStyle => const TextStyle(
+    fontWeight: FontWeight.w700,
+    color: _textBlue,
+    fontSize: 16,
   );
 
   static const _correctAnsColor = Color(0xFF62A9CD);
@@ -46,11 +51,18 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
 
   final _boxShadow = [
     BoxShadow(
-      color: Colors.black.withValues(alpha: 0.2),
-      blurRadius: 3,
-      offset: const Offset(2.5, 2.5),
+      color: Colors.black.withValues(alpha: 0.06),
+      blurRadius: 14,
+      offset: const Offset(0, 8),
     ),
   ];
+
+  BoxDecoration get _cardDecoration => BoxDecoration(
+    boxShadow: _boxShadow,
+    color: Colors.white,
+    borderRadius: BorderRadius.circular(_detailsCardBorderRadius),
+    border: Border.all(color: _cardBorder),
+  );
 
   @override
   void initState() {
@@ -95,7 +107,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       onTap: onTapViewAll,
                       child: Text(
                         context.tr(viewAllKey)!,
-                        style: TextStyle(color: Theme.of(context).primaryColor),
+                        style: const TextStyle(
+                          color: _primaryBlue,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     )
                   else
@@ -106,11 +121,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               const SizedBox(height: 10),
               Container(
                 height: context.height * _detailsCardHeightPercentage,
-                decoration: BoxDecoration(
-                  boxShadow: _boxShadow,
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(_detailsCardBorderRadius),
-                ),
+                decoration: _cardDecoration,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: visibleBadges
@@ -142,9 +153,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                                   style: TextStyle(
                                     fontWeight: FontWeights.medium,
                                     fontSize: 14,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onTertiary,
+                                    color: _textBlue,
                                   ),
                                 ),
                               ),
@@ -169,9 +178,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     final correctAnswers = int.parse(statistics.correctAnswers);
     final incorrectAnswers = totalAnswers - correctAnswers;
 
-    final textStyle = TextStyle(
-      color: Theme.of(context).colorScheme.onTertiary.withValues(alpha: .75),
-      fontSize: 18,
+    const textStyle = TextStyle(
+      color: _mutedBlue,
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
     );
 
     return Column(
@@ -188,11 +198,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         const SizedBox(height: 10),
         Container(
           height: context.height * _detailsCardHeightPercentage,
-          decoration: BoxDecoration(
-            boxShadow: _boxShadow,
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(_detailsCardBorderRadius),
-          ),
+          decoration: _cardDecoration,
           child: LayoutBuilder(
             builder: (context, constraints) {
               return Row(
@@ -216,7 +222,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                             Text(
                               statistics.answeredQuestions,
                               style: textStyle.copyWith(
-                                color: Theme.of(context).canvasColor,
+                                color: _textBlue,
                                 fontWeight: FontWeights.bold,
                               ),
                             ),
@@ -245,7 +251,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                             Text(
                               statistics.correctAnswers,
                               style: textStyle.copyWith(
-                                color: Theme.of(context).canvasColor,
+                                color: _textBlue,
                                 fontWeight: FontWeights.bold,
                               ),
                             ),
@@ -262,7 +268,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                             Text(
                               incorrectAnswers.toString(),
                               style: textStyle.copyWith(
-                                color: Theme.of(context).canvasColor,
+                                color: _textBlue,
                                 fontWeight: FontWeights.bold,
                               ),
                             ),
@@ -317,11 +323,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           ),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final textStyle = TextStyle(
-                color: Theme.of(
-                  context,
-                ).colorScheme.onTertiary.withValues(alpha: .75),
-                fontSize: 18,
+              const textStyle = TextStyle(
+                color: _mutedBlue,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
               );
 
               return Row(
@@ -346,8 +351,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                             Text(
                               total.toString(),
                               style: textStyle.copyWith(
-                                color: Theme.of(context).canvasColor,
-                                fontWeight: FontWeight.bold,
+                                color: _textBlue,
+                                fontWeight: FontWeights.bold,
                               ),
                             ),
                             Text(
@@ -372,8 +377,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                             Text(
                               statistics.battleDrawn,
                               style: textStyle.copyWith(
-                                color: Theme.of(context).canvasColor,
-                                fontWeight: FontWeight.bold,
+                                color: _textBlue,
+                                fontWeight: FontWeights.bold,
                               ),
                             ),
                           ],
@@ -386,8 +391,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                             Text(
                               won.toString(),
                               style: textStyle.copyWith(
-                                color: Theme.of(context).canvasColor,
-                                fontWeight: FontWeight.bold,
+                                color: _textBlue,
+                                fontWeight: FontWeights.bold,
                               ),
                             ),
                           ],
@@ -403,8 +408,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                             Text(
                               statistics.battleLoose,
                               style: textStyle.copyWith(
-                                color: Theme.of(context).canvasColor,
-                                fontWeight: FontWeight.bold,
+                                color: _textBlue,
+                                fontWeight: FontWeights.bold,
                               ),
                             ),
                           ],
@@ -493,13 +498,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     required bool showQuestionAndBattleStatistics,
   }) {
     final size = context;
-    const vSpace = SizedBox(height: 20);
+    const vSpace = SizedBox(height: 16);
 
     return ListView(
-      padding: EdgeInsets.symmetric(
-        vertical: size.height * UiUtils.vtMarginPct,
-        horizontal: size.width * UiUtils.hzMarginPct,
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       children: [
         _buildCollectedBadgesContainer(),
         vSpace,
@@ -519,26 +521,88 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     );
   }
 
+  Widget _buildHeader() {
+    return Row(
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => Navigator.of(context).pop(),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: _cardBorder),
+                boxShadow: _boxShadow,
+              ),
+              child: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: _textBlue,
+                size: 18,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          context.tr(statisticsLabelKey)!,
+          style: const TextStyle(
+            color: _textBlue,
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: QAppBar(title: Text(context.tr(statisticsLabelKey)!)),
-      body: BlocConsumer<StatisticCubit, StatisticState>(
-        listener: (context, state) {
-          if (state is StatisticFetchFailure) {
-            if (state.errorMessageCode == errorCodeUnauthorizedAccess) {
-              showAlreadyLoggedInDialog(context);
-            }
-          }
-        },
-        builder: (_, state) {
-          if (state is StatisticInitial || state is StatisticFetchInProgress) {
-            return const Center(child: CircularProgressContainer());
-          }
-          return _buildStatisticsContainer(
-            showQuestionAndBattleStatistics: state is StatisticFetchSuccess,
-          );
-        },
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFDFF1FF), Colors.white],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: BlocConsumer<StatisticCubit, StatisticState>(
+            listener: (context, state) {
+              if (state is StatisticFetchFailure) {
+                if (state.errorMessageCode == errorCodeUnauthorizedAccess) {
+                  showAlreadyLoggedInDialog(context);
+                }
+              }
+            },
+            builder: (_, state) {
+              if (state is StatisticInitial ||
+                  state is StatisticFetchInProgress) {
+                return const Center(child: CircularProgressContainer());
+              }
+
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+                    child: _buildHeader(),
+                  ),
+                  Expanded(
+                    child: _buildStatisticsContainer(
+                      showQuestionAndBattleStatistics:
+                          state is StatisticFetchSuccess,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }

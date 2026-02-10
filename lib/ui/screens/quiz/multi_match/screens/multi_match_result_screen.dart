@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
@@ -7,6 +8,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutterquiz/commons/commons.dart';
 import 'package:flutterquiz/core/core.dart';
 import 'package:flutterquiz/features/ads/blocs/interstitial_ad_cubit.dart';
+import 'package:flutterquiz/features/ads/blocs/rewarded_interstitial_ad_cubit.dart';
 import 'package:flutterquiz/features/profile_management/cubits/update_score_and_coins_cubit.dart';
 import 'package:flutterquiz/features/profile_management/cubits/user_details_cubit.dart';
 import 'package:flutterquiz/features/profile_management/profile_management_repository.dart';
@@ -15,6 +17,8 @@ import 'package:flutterquiz/features/quiz/cubits/subcategory_cubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/unlocked_level_cubit.dart';
 import 'package:flutterquiz/features/quiz/models/quiz_type.dart';
 import 'package:flutterquiz/features/quiz/multi_match/models/multi_match_question_model.dart';
+import 'package:flutterquiz/features/skill_tier/models/skill_tier.dart';
+import 'package:flutterquiz/features/skill_tier/skill_tier_service.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/ui/screens/quiz/multi_match/screens/multi_match_quiz_screen.dart';
 import 'package:flutterquiz/ui/screens/quiz/multi_match/screens/multi_match_review_screen.dart';
@@ -81,6 +85,9 @@ class _MultiMatchResultScreenState extends State<MultiMatchResultScreen> {
   bool _isShareInProgress = false;
   bool _isReviewInProgress = false;
   bool _unlockedReviewAnswersOnce = false;
+  String _skillTierLabel = '--';
+
+  static int _quizCompletionCount = 0;
 
   late final int _currLevel = int.parse(widget.args.questions.first.level);
 
@@ -88,16 +95,82 @@ class _MultiMatchResultScreenState extends State<MultiMatchResultScreen> {
   void initState() {
     super.initState();
 
+    _loadSkillTierLabel();
+
+    if (!widget.args.isPremiumCategory) {
+      log(
+        '[MM_RESULT_ADS] Preparing ads (premium: ${widget.args.isPremiumCategory})',
+      );
+      context.read<RewardedInterstitialAdCubit>().createRewardedInterstitialAd(
+        context,
+      );
+      context.read<InterstitialAdCubit>().createInterstitialAd(context);
+    }
+
     /// show ad
-    Future.delayed(Duration.zero, () {
-      if (!widget.args.isPremiumCategory) {
-        context.read<InterstitialAdCubit>().showAd(context);
+    Future.delayed(Duration.zero, () async {
+      _quizCompletionCount++;
+
+      final adsEnabled = context.read<SystemConfigCubit>().isAdsEnable;
+      final adsRemoved = context.read<UserDetailsCubit>().removeAds();
+
+      log(
+        '[MM_RESULT_ADS] Trigger (count: $_quizCompletionCount, enabled: $adsEnabled, removed: $adsRemoved)',
+      );
+
+      if (!widget.args.isPremiumCategory && adsEnabled && !adsRemoved) {
+        if (_quizCompletionCount % 2 == 0) {
+          final rewardCoins = context.read<SystemConfigCubit>().rewardAdsCoins;
+          final rewardedCubit = context.read<RewardedInterstitialAdCubit>();
+          final interstitialCubit = context.read<InterstitialAdCubit>();
+
+          log(
+            '[MM_RESULT_ADS] Rewarded attempt (state: ${rewardedCubit.state}, reward: $rewardCoins)',
+          );
+
+          if (rewardedCubit.state == RewardedInterstitialAdState.loaded) {
+            await rewardedCubit.showAd(
+              context: context,
+              rewardAmount: rewardCoins,
+              rewardCurrencyLabel: 'coins',
+              onAdDismissedCallback: () {},
+            );
+          } else {
+            await rewardedCubit.createRewardedInterstitialAd(context);
+            if (rewardedCubit.state == RewardedInterstitialAdState.loaded) {
+              log('[MM_RESULT_ADS] Rewarded loaded after create');
+              await rewardedCubit.showAd(
+                context: context,
+                rewardAmount: rewardCoins,
+                rewardCurrencyLabel: 'coins',
+                onAdDismissedCallback: () {},
+              );
+            } else {
+              log(
+                '[MM_RESULT_ADS] Rewarded not loaded, fallback to interstitial',
+              );
+              await interstitialCubit.showAd(context);
+            }
+          }
+        } else {
+          log('[MM_RESULT_ADS] Interstitial attempt');
+          await context.read<InterstitialAdCubit>().showAd(context);
+        }
       }
     });
 
     Future.delayed(Duration.zero, () async {
       await _updateResult();
       await _fetchUserDetails();
+    });
+  }
+
+  Future<void> _loadSkillTierLabel() async {
+    final tier = await SkillTierService.computeTier();
+    if (!mounted) return;
+    final label = tier != null ? SkillTier.label(tier.type) : '--';
+    setState(() {
+      _skillTierLabel = label;
     });
   }
 
@@ -509,7 +582,7 @@ extension on _MultiMatchResultScreenState {
             child: _buildSummaryItem(
               icon: Icons.emoji_events_outlined,
               label: 'Rank',
-              value: '--',
+              value: _skillTierLabel,
             ),
           ),
           Expanded(
