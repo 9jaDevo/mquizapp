@@ -25,6 +25,8 @@ import 'package:flutterquiz/features/quiz/cubits/contest_cubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/quiz_category_cubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/subcategory_cubit.dart';
 import 'package:flutterquiz/features/quiz/models/quiz_type.dart';
+import 'package:flutterquiz/features/skill_tier/models/skill_tier.dart';
+import 'package:flutterquiz/features/skill_tier/skill_tier_service.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/features/wallet/cubit/monetization_cubit.dart';
 import 'package:flutterquiz/features/wallet/models/monetization_models.dart';
@@ -99,6 +101,7 @@ class HomeScreenState extends State<HomeScreen>
   ///
   late String _currLangId;
   late final SystemConfigCubit _sysConfigCubit;
+  late Future<SkillTier> _skillTierFuture;
 
   @override
   void initState() {
@@ -107,6 +110,7 @@ class HomeScreenState extends State<HomeScreen>
     showAppUnderMaintenanceDialog();
 
     _sysConfigCubit = context.read<SystemConfigCubit>();
+    _skillTierFuture = SkillTierService.computeTier();
 
     setQuizMenu();
     _initLocalNotification();
@@ -1333,6 +1337,10 @@ class HomeScreenState extends State<HomeScreen>
                           context.read<MonetizationCubit>().checkDailyStreak();
                         }
 
+                        if (!_isGuest) {
+                          _skillTierFuture = SkillTierService.computeTier();
+                        }
+
                         // Always refresh sponsor banners (guests included)
                         context.read<MonetizationCubit>().getSponsorBanners();
                         setState(() {});
@@ -1532,17 +1540,34 @@ class HomeScreenState extends State<HomeScreen>
           ),
           const SizedBox(height: 16),
           // Badges row
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildBadge('Rank #$_userRank', Icons.emoji_events_rounded),
-                const SizedBox(width: 8),
-                _buildBadge('Silver', Icons.stars_rounded),
-                const SizedBox(width: 8),
-                _buildBadge('70%', Icons.percent_rounded),
-              ],
-            ),
+          FutureBuilder<SkillTier>(
+            future: _skillTierFuture,
+            builder: (context, snapshot) {
+              final tier = snapshot.data;
+              final leagueLabel = tier != null
+                  ? '${SkillTier.label(tier.type)} League'
+                  : '--';
+              final accuracy = tier?.accuracyPercent ?? 0;
+
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildBadge(
+                      'Rank #$_userRank',
+                      Icons.emoji_events_rounded,
+                    ),
+                    const SizedBox(width: 8),
+                    _buildBadge(leagueLabel, Icons.stars_rounded),
+                    const SizedBox(width: 8),
+                    _buildBadge(
+                      '${accuracy.toStringAsFixed(0)}%',
+                      Icons.percent_rounded,
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
           const SizedBox(height: 16),
           // Your Total Score card

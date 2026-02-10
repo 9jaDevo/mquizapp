@@ -24,7 +24,6 @@ import 'package:flutterquiz/features/settings/settings_cubit.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/ui/screens/quiz/multi_match/screens/multi_match_result_screen.dart';
 import 'package:flutterquiz/ui/widgets/all.dart';
-import 'package:flutterquiz/ui/widgets/text_circular_timer.dart';
 import 'package:flutterquiz/utils/answer_encryption.dart';
 import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
@@ -230,6 +229,112 @@ class _MultiMatchQuizScreenState extends State<MultiMatchQuizScreen>
 
   bool _hasSubmittedCurrentQuestion() => currQue.hasSubmittedAnswers;
 
+  Duration get _timer =>
+      timerAnimationController.duration! -
+      (timerAnimationController.lastElapsedDuration ?? Duration.zero);
+
+  Widget _buildCloseButton() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: _onTapBack,
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.close_rounded,
+            color: Color(0xFF1E3A8A),
+            size: 18,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuestionPill({required int current, required int total}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Text(
+        'Question $current/$total',
+        style: const TextStyle(
+          fontWeight: FontWeight.w700,
+          color: Color(0xFF1E3A8A),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimerRing() {
+    return AnimatedBuilder(
+      animation: timerAnimationController,
+      builder: (context, _) {
+        final seconds = _timer.inSeconds.remainder(60);
+        final progress = 1 - timerAnimationController.value;
+        return SizedBox(
+          width: 38,
+          height: 38,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              CircularProgressIndicator(
+                value: progress.clamp(0.0, 1.0),
+                strokeWidth: 4,
+                backgroundColor: const Color(0xFFE6EEF9),
+                valueColor: const AlwaysStoppedAnimation(
+                  Color(0xFF2E6CF6),
+                ),
+              ),
+              Text(
+                seconds.toString().padLeft(2, '0'),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1E3A8A),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTopProgressBar({required int current, required int total}) {
+    final value = total > 0 ? current / total : 0.0;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(999),
+      child: LinearProgressIndicator(
+        value: value.clamp(0.0, 1.0),
+        minHeight: 6,
+        backgroundColor: const Color(0xFFE6EEF9),
+        valueColor: const AlwaysStoppedAnimation(Color(0xFF2E6CF6)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<
@@ -238,6 +343,8 @@ class _MultiMatchQuizScreenState extends State<MultiMatchQuizScreen>
     >(
       builder: (context, state) {
         if (state is MultiMatchQuestionsSuccess) {
+          final totalQuestions = state.questions.length;
+          final currentQuestion = currQuestionIndex + 1;
           return PopScope(
             canPop: false,
             onPopInvokedWithResult: (didPop, _) {
@@ -246,41 +353,82 @@ class _MultiMatchQuizScreenState extends State<MultiMatchQuizScreen>
               _onTapBack();
             },
             child: Scaffold(
-              appBar: QAppBar(
-                roundedAppBar: false,
-                onTapBackButton: _onTapBack,
-                title: TextCircularTimer(
-                  animationController: timerAnimationController,
-                  arcColor: Theme.of(context).primaryColor,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onTertiary.withValues(alpha: 0.2),
+              backgroundColor: Colors.transparent,
+              body: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFFDFF1FF), Colors.white],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
                 ),
-              ),
-              body: SizedBox(
-                width: double.maxFinite,
-                child: Stack(
-                  alignment: Alignment.topCenter,
-                  children: [
-                    MultiMatchQuestionsView(
-                      currQuestionIdx: currQuestionIndex,
-                      questions: state.questions,
-                      timerAnimationController: timerAnimationController,
-                      questionAnimationController: questionAnimationController,
-                      questionContentAnimation: questionContentAnimation,
-                      questionContentAnimationController:
-                          questionAnimationController,
-                      questionScaleDownAnimation: questionScaleDownAnimation,
-                      questionScaleUpAnimation: questionScaleUpAnimation,
-                      questionSlideAnimation: questionSlideAnimation,
-                      toggleOptionSelection: _toggleOptionSelection,
-                      hasSubmittedCurrentQuestion: _hasSubmittedCurrentQuestion,
-                      onReorder: _onReorder,
-                    ),
-
-                    ///
-                    _buildCheckAnswersButton(),
-                  ],
+                child: SafeArea(
+                  child: Stack(
+                    alignment: Alignment.topCenter,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                _buildCloseButton(),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Center(
+                                    child: _buildQuestionPill(
+                                      current: currentQuestion,
+                                      total: totalQuestions,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                _buildTimerRing(),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            _buildTopProgressBar(
+                              current: currentQuestion,
+                              total: totalQuestions,
+                            ),
+                            const SizedBox(height: 16),
+                            Expanded(
+                              child: Align(
+                                alignment: Alignment.topCenter,
+                                child: MultiMatchQuestionsView(
+                                  currQuestionIdx: currQuestionIndex,
+                                  questions: state.questions,
+                                  timerAnimationController:
+                                      timerAnimationController,
+                                  questionAnimationController:
+                                      questionAnimationController,
+                                  questionContentAnimation:
+                                      questionContentAnimation,
+                                  questionContentAnimationController:
+                                      questionAnimationController,
+                                  questionScaleDownAnimation:
+                                      questionScaleDownAnimation,
+                                  questionScaleUpAnimation:
+                                      questionScaleUpAnimation,
+                                  questionSlideAnimation:
+                                      questionSlideAnimation,
+                                  toggleOptionSelection: _toggleOptionSelection,
+                                  hasSubmittedCurrentQuestion:
+                                      _hasSubmittedCurrentQuestion,
+                                  onReorder: _onReorder,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 90),
+                          ],
+                        ),
+                      ),
+                      _buildCheckAnswersButton(),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -429,13 +577,13 @@ class _MultiMatchQuizScreenState extends State<MultiMatchQuizScreen>
               alignment: const FractionalOffset(.5, .98),
               child: CustomRoundedButton(
                 widthPercentage: .9,
-                backgroundColor: Theme.of(context).primaryColor,
+                backgroundColor: const Color(0xFF2E6CF6),
                 buttonTitle: currQue.hasSubmittedAnswers
                     ? context.tr('continueLbl')
                     : context.tr('checkLbl'),
-                radius: 5,
+                radius: 18,
                 showBorder: false,
-                height: 48,
+                height: 52,
                 onTap: onTap,
               ),
             )
@@ -483,25 +631,55 @@ class MultiMatchQuestionsView extends StatefulWidget {
 }
 
 class _MultiMatchQuestionsViewState extends State<MultiMatchQuestionsView> {
-  Widget _buildCurrentQuestionIndex() {
-    final onTertiary = Theme.of(context).colorScheme.onTertiary;
-    return Align(
-      child: RichText(
-        text: TextSpan(
-          children: [
-            TextSpan(
-              text: '${widget.currQuestionIdx + 1}',
-              style: TextStyle(
-                color: onTertiary.withValues(alpha: 0.5),
-                fontSize: 14,
+  Widget _buildQuestionCard(MultiMatchQuestion question) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE8F1FF),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.lightbulb_outline,
+              color: Color(0xFF2E6CF6),
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              question.question,
+              textAlign: TextAlign.start,
+              style: GoogleFonts.nunito(
+                textStyle: TextStyle(
+                  height: 1.2,
+                  color: Theme.of(context).colorScheme.onTertiary,
+                  fontSize: context
+                      .read<SettingsCubit>()
+                      .getSettings()
+                      .playAreaFontSize,
+                ),
               ),
             ),
-            TextSpan(
-              text: ' / ${widget.questions.length}',
-              style: TextStyle(color: onTertiary),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -615,31 +793,10 @@ class _MultiMatchQuestionsViewState extends State<MultiMatchQuestionsView> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 15),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [_buildCurrentQuestionIndex()],
-              ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
 
               /// Question
-              Container(
-                alignment: Alignment.center,
-                child: Text(
-                  question.question,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.nunito(
-                    textStyle: TextStyle(
-                      height: 1.125,
-                      color: Theme.of(context).colorScheme.onTertiary,
-                      fontSize: context
-                          .read<SettingsCubit>()
-                          .getSettings()
-                          .playAreaFontSize,
-                    ),
-                  ),
-                ),
-              ),
+              _buildQuestionCard(question),
 
               /// Show Question Answer Correctness
               SizedBox(height: constraints.maxHeight * .02),
@@ -833,14 +990,14 @@ class _MultiMatchAnswerOptionsState extends State<MultiMatchAnswerOptions> {
 
   Color _optionBackgroundColor(bool isOptionCorrect, bool isOptionSubmitted) {
     if (!widget.hasSubmittedCurrentQuestion()) {
-      return Theme.of(context).colorScheme.surface;
+      return Colors.white;
     }
 
     return isOptionCorrect
         ? kCorrectAnswerColor
         : isOptionSubmitted
         ? kWrongAnswerColor
-        : Theme.of(context).colorScheme.surface;
+        : Colors.white;
   }
 
   Color _optionTextColor(bool isOptionCorrect, bool isOptionSubmitted) {
@@ -927,25 +1084,37 @@ class _MultiMatchAnswerOptionsState extends State<MultiMatchAnswerOptions> {
             return Container(
               key: Key(optionValue.id!),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                color: scheme.surface,
+                borderRadius: BorderRadius.circular(18),
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
               margin: margin,
               child: Row(
                 children: [
-                  Text(
-                    '${option.key.toUpperCase()}.',
-                    style: TextStyle(
-                      color: Theme.of(context).primaryColor,
-                      fontWeight: FontWeights.bold,
-                      fontSize: context
-                          .read<SettingsCubit>()
-                          .getSettings()
-                          .playAreaFontSize,
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2E6CF6),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      option.key.toUpperCase(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       optionValue.title!,
@@ -993,45 +1162,62 @@ class _MultiMatchAnswerOptionsState extends State<MultiMatchAnswerOptions> {
                 _ => null,
               };
 
-              return Row(
-                children: [
-                  if (widget.hasSubmittedCurrentQuestion()) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Icon(
-                        icon,
-                        color: Theme.of(context).primaryColor,
-                        size: 25,
-                      ),
+              final optionLabel = updatedOptions
+                  .firstWhere((e) => e.value.id == option.id)
+                  .key;
+
+              return GestureDetector(
+                onTap: () => _onTapOption(option.id!),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: _optionBorderColor(isOptionSubmitted),
+                      width: 1.5,
                     ),
-                  ],
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => _onTapOption(option.id!),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
+                    color: _optionBackgroundColor(
+                      isOptionCorrect,
+                      isOptionSubmitted,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 16,
+                  ),
+                  margin: option.id == widget.answerOptions.last.id
+                      ? null
+                      : margin,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 34,
+                        height: 34,
                         decoration: BoxDecoration(
+                          color: const Color(0xFF2E6CF6),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: _optionBorderColor(isOptionSubmitted),
-                            width: 1.5,
-                          ),
-                          color: _optionBackgroundColor(
-                            isOptionCorrect,
-                            isOptionSubmitted,
-                          ),
                         ),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 16,
-                          horizontal: 4,
-                        ),
-                        margin: option.id == widget.answerOptions.last.id
-                            ? null
-                            : margin,
                         alignment: Alignment.center,
                         child: Text(
+                          optionLabel.toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
                           option.title!,
-                          textAlign: TextAlign.center,
+                          textAlign: TextAlign.start,
                           style: TextStyle(
                             fontSize: context
                                 .read<SettingsCubit>()
@@ -1044,9 +1230,15 @@ class _MultiMatchAnswerOptionsState extends State<MultiMatchAnswerOptions> {
                           ),
                         ),
                       ),
-                    ),
+                      if (widget.hasSubmittedCurrentQuestion() && icon != null)
+                        Icon(
+                          icon,
+                          color: Theme.of(context).primaryColor,
+                          size: 22,
+                        ),
+                    ],
                   ),
-                ],
+                ),
               );
             })
             .toList(growable: false),

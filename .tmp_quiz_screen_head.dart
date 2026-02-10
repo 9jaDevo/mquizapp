@@ -3,11 +3,10 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutterquiz/commons/commons.dart';
 import 'package:flutterquiz/core/core.dart';
-import 'package:flutterquiz/features/ads/blocs/banner_ad_cubit.dart';
 import 'package:flutterquiz/features/ads/blocs/rewarded_ad_cubit.dart';
-import 'package:flutterquiz/features/ads/widgets/banner_ad_container.dart';
 import 'package:flutterquiz/features/profile_management/cubits/update_score_and_coins_cubit.dart';
 import 'package:flutterquiz/features/profile_management/cubits/user_details_cubit.dart';
 import 'package:flutterquiz/features/profile_management/profile_management_repository.dart';
@@ -19,6 +18,7 @@ import 'package:flutterquiz/features/quiz/models/quiz_type.dart';
 import 'package:flutterquiz/features/quiz/quiz_repository.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/features/wallet/cubit/monetization_cubit.dart';
+import 'package:flutterquiz/utils/answer_encryption.dart';
 import 'package:flutterquiz/features/wallet/widgets/monetization_widgets.dart';
 import 'package:flutterquiz/ui/screens/quiz/widgets/audio_question_container.dart';
 import 'package:flutterquiz/ui/widgets/already_logged_in_dialog.dart';
@@ -27,7 +27,7 @@ import 'package:flutterquiz/ui/widgets/custom_appbar.dart';
 import 'package:flutterquiz/ui/widgets/custom_rounded_button.dart';
 import 'package:flutterquiz/ui/widgets/error_container.dart';
 import 'package:flutterquiz/ui/widgets/questions_container.dart';
-import 'package:flutterquiz/utils/answer_encryption.dart';
+import 'package:flutterquiz/ui/widgets/text_circular_timer.dart';
 import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 
@@ -243,6 +243,13 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
     // Step 7: Fraud detection after quiz
     _evaluateFraudRisk();
 
+    // Step 6: Show boost earnings popup after quiz completion
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        _showBoostEarningsPopup();
+      }
+    });
+
     //move to result page
     //to see the what are the keys to pass in arguments for result screen
     //visit static route function in resultScreen.dart
@@ -280,10 +287,8 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
         );
         return q.attempted && q.submittedAnswerId == ans;
       }).length;
-      final accuracy = questions.isEmpty
-          ? 0.0
-          : (correctAnswers / questions.length) * 100;
-
+      final accuracy = questions.isEmpty ? 0.0 : (correctAnswers / questions.length) * 100;
+      
       final metadata = {
         'quiz_score': correctAnswers.toString(),
         'time_taken': totalSecondsToCompleteQuiz.toString(),
@@ -300,7 +305,73 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
     }
   }
 
-  // Step 6: Boost earnings popup moved to ResultScreen.
+  // Step 6: Boost earnings popup
+  void _showBoostEarningsPopup() {
+    try {
+      final questions = context.read<QuestionsCubit>().questions();
+      final userId = context.read<UserDetailsCubit>().getUserFirebaseId();
+      final correctAnswers = questions.where((q) {
+        final ans = AnswerEncryption.decryptCorrectAnswer(
+          rawKey: userId,
+          correctAnswer: q.correctAnswer!,
+        );
+        return q.attempted && q.submittedAnswerId == ans;
+      }).length;
+      
+      if (correctAnswers > 0) {
+        // Calculate coin value (example: 10 coins per correct answer)
+        final baseCoins = correctAnswers * 10;
+        
+        // Offer boost
+        context.read<MonetizationCubit>().offerBoostEarnings(coinsEarned: baseCoins.toString());
+        
+        // Show dialog when state changes
+        showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) => BlocConsumer<MonetizationCubit, MonetizationState>(
+            listener: (context, state) {
+              // Check if boost earnings were applied (isLoadingBoost goes from true to false with boostEarnings set)
+              if (!state.isLoadingBoost && state.boostEarnings != null) {
+                Navigator.of(dialogContext).pop();
+                // Update user coins with boosted amount
+                final boostedCoins = state.boostEarnings!.boostedCoins;
+                context.read<UpdateCoinsCubit>().updateCoins(
+                  addCoin: true,
+                  coins: boostedCoins,
+                  title: 'Boost Earnings',
+                );
+              }
+            },
+            builder: (context, state) {
+              if (state.boostEarnings != null) {
+                return BoostEarningsDialog(
+                  boost: state.boostEarnings!,
+                  onClaimPressed: () {
+                    context.read<MonetizationCubit>().applyBoostEarnings(
+                      coinsEarned: state.boostEarnings!.boostedCoins.toString(),
+                    );
+                  },
+                  onSkipPressed: () {
+                    Navigator.of(dialogContext).pop();
+                    // Give original coins
+                    context.read<UpdateCoinsCubit>().updateCoins(
+                      addCoin: true,
+                      coins: state.boostEarnings!.originalCoins,
+                      title: 'Quiz Completed',
+                    );
+                  },
+                );
+              }
+              return const Center(child: CircularProgressIndicator());
+            },
+          ),
+        );
+      }
+    } catch (e) {
+      // Silently fail boost earnings
+    }
+  }
 
   void markLifeLineUsed() {
     if (lifelines[fiftyFifty] == LifelineStatus.using) {
@@ -428,12 +499,16 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
             Tween<Offset>(begin: const Offset(0, 1.5), end: Offset.zero),
           ),
           child: Padding(
-            padding: const EdgeInsets.only(bottom: 120, left: 20, right: 20),
+            padding: EdgeInsets.only(
+              bottom: context.height * 0.025,
+              left: context.width * UiUtils.hzMarginPct,
+              right: context.width * UiUtils.hzMarginPct,
+            ),
             child: CustomRoundedButton(
               widthPercentage: context.width,
-              backgroundColor: const Color(0xFF2E6CF6),
+              backgroundColor: Theme.of(context).primaryColor,
               buttonTitle: context.tr(showOptionsKey),
-              titleColor: Colors.white,
+              titleColor: Theme.of(context).colorScheme.surface,
               onTap: () {
                 if (!showOptionAnimationController.isAnimating) {
                   showOptionAnimationController.reverse();
@@ -443,17 +518,58 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
                 }
               },
               showBorder: false,
-              radius: 14,
-              height: 46,
-              elevation: 4,
+              radius: 8,
+              height: 40,
+              elevation: 5,
               fontWeight: FontWeight.w600,
-              textSize: 16,
+              textSize: 18,
             ),
           ),
         ),
       );
     }
     return const SizedBox();
+  }
+
+  Widget _buildLifelineContainer({
+    required String title,
+    required String icon,
+    VoidCallback? onTap,
+  }) {
+    final onTertiary = Theme.of(context).colorScheme.onTertiary;
+
+    return GestureDetector(
+      onTap:
+          title == fiftyFifty &&
+              context
+                      .read<QuestionsCubit>()
+                      .questions()[currentQuestionIndex]
+                      .answerOptions!
+                      .length ==
+                  2
+          ? () {
+              context.showSnack(context.tr('notAvailable')!);
+            }
+          : onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: onTertiary.withValues(alpha: 0.6)),
+        ),
+        width: isSmallDevice ? 65.0 : 75.0,
+        height: isSmallDevice ? 45.0 : 55.0,
+        padding: const EdgeInsets.all(11),
+        child: SvgPicture.asset(
+          icon,
+          colorFilter: ColorFilter.mode(
+            lifelines[title] == LifelineStatus.unused
+                ? onTertiary
+                : onTertiary.withValues(alpha: 0.6),
+            BlendMode.srcIn,
+          ),
+        ),
+      ),
+    );
   }
 
   void onTapBackButton() {
@@ -518,188 +634,222 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
     }
     //stop timer
     timerAnimationController.stop();
-
+    
     // Show rewarded ad with built-in consent dialog
-    context
-        .read<RewardedAdCubit>()
-        .showAd(
-          context: context,
-          rewardAmount: context.read<SystemConfigCubit>().rewardAdsCoins,
-          rewardCurrencyLabel: 'coins',
-          onAdDismissedCallback: _addCoinsAfterRewardAd,
-        )
-        .then((_) {
-          // Resume timer whether user watched ad or skipped it
-          timerAnimationController.forward(
-            from: timerAnimationController.value,
-          );
-        });
+    context.read<RewardedAdCubit>().showAd(
+      context: context,
+      rewardAmount: context.read<SystemConfigCubit>().rewardAdsCoins,
+      rewardCurrencyLabel: 'coins',
+      onAdDismissedCallback: _addCoinsAfterRewardAd,
+    ).then((_) {
+      // Resume timer whether user watched ad or skipped it
+      timerAnimationController.forward(from: timerAnimationController.value);
+    });
   }
 
   bool get isSmallDevice => MediaQuery.sizeOf(context).width <= 360;
 
-  void _handleFiftyFifty() {
-    if (lifelines[fiftyFifty] == LifelineStatus.unused) {
-      /// Can't use 50/50 and audience poll one after one.
-      if (lifelines[audiencePoll] == LifelineStatus.using) {
-        context.showSnack(
-          context.tr('cantUseFiftyFiftyAfterPoll')!,
-        );
-      } else {
-        if (context.read<UserDetailsCubit>().removeAds()) {
-          setState(() {
-            lifelines[fiftyFifty] = LifelineStatus.using;
-          });
-          return;
-        }
+  Widget _buildLifeLines() {
+    if (widget.quizType == QuizTypes.dailyQuiz ||
+        widget.quizType == QuizTypes.quizZone) {
+      return Container(
+        alignment: Alignment.bottomCenter,
+        padding: EdgeInsets.only(
+          bottom: context.height * (isSmallDevice ? .015 : .025),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            if (context
+                    .read<QuestionsCubit>()
+                    .questions()[currentQuestionIndex]
+                    .answerOptions!
+                    .length !=
+                2) ...[
+              _buildLifelineContainer(
+                onTap: () {
+                  if (lifelines[fiftyFifty] == LifelineStatus.unused) {
+                    /// Can't use 50/50 and audience poll one after one.
+                    if (lifelines[audiencePoll] == LifelineStatus.using) {
+                      context.showSnack(
+                        context.tr('cantUseFiftyFiftyAfterPoll')!,
+                      );
+                    } else {
+                      if (context.read<UserDetailsCubit>().removeAds()) {
+                        setState(() {
+                          lifelines[fiftyFifty] = LifelineStatus.using;
+                        });
+                        return;
+                      }
 
-        if (hasEnoughCoinsForLifeline(context)) {
-          if (context
-                  .read<QuestionsCubit>()
-                  .questions()[currentQuestionIndex]
-                  .answerOptions!
-                  .length ==
-              2) {
-            context.showSnack(
-              context.tr('notAvailable')!,
-            );
-          } else {
-            final lifeLineDeductCoins = context
-                .read<SystemConfigCubit>()
-                .lifelinesDeductCoins;
-            //deduct coins for using lifeline
-            context.read<UserDetailsCubit>().updateCoins(
-              addCoin: false,
-              coins: lifeLineDeductCoins,
-            );
-            //mark fiftyFifty lifeline as using
+                      if (hasEnoughCoinsForLifeline(context)) {
+                        if (context
+                                .read<QuestionsCubit>()
+                                .questions()[currentQuestionIndex]
+                                .answerOptions!
+                                .length ==
+                            2) {
+                          context.showSnack(
+                            context.tr('notAvailable')!,
+                          );
+                        } else {
+                          final lifeLineDeductCoins = context
+                              .read<SystemConfigCubit>()
+                              .lifelinesDeductCoins;
+                          //deduct coins for using lifeline
+                          context.read<UserDetailsCubit>().updateCoins(
+                            addCoin: false,
+                            coins: lifeLineDeductCoins,
+                          );
+                          //mark fiftyFifty lifeline as using
 
-            setState(() {
-              lifelines[fiftyFifty] = LifelineStatus.using;
-            });
-          }
-        } else {
-          showAdDialog();
-        }
-      }
-    } else {
-      context.showSnack(
-        context.tr(
-          convertErrorCodeToLanguageKey(errorCodeLifeLineUsed),
-        )!,
+                          setState(() {
+                            lifelines[fiftyFifty] = LifelineStatus.using;
+                          });
+                        }
+                      } else {
+                        showAdDialog();
+                      }
+                    }
+                  } else {
+                    context.showSnack(
+                      context.tr(
+                        convertErrorCodeToLanguageKey(errorCodeLifeLineUsed),
+                      )!,
+                    );
+                  }
+                },
+                title: fiftyFifty,
+                icon: Assets.fiftyFiftyLifeline,
+              ),
+              _buildLifelineContainer(
+                onTap: () {
+                  if (lifelines[audiencePoll] == LifelineStatus.unused) {
+                    /// Can't use 50/50 and audience poll one after one.
+                    if (lifelines[fiftyFifty] == LifelineStatus.using) {
+                      context.showSnack(
+                        context.tr('cantUsePollAfterFiftyFifty')!,
+                      );
+                    } else {
+                      if (context.read<UserDetailsCubit>().removeAds()) {
+                        setState(() {
+                          lifelines[audiencePoll] = LifelineStatus.using;
+                        });
+                        return;
+                      }
+                      if (hasEnoughCoinsForLifeline(context)) {
+                        final lifeLineDeductCoins = context
+                            .read<SystemConfigCubit>()
+                            .lifelinesDeductCoins;
+                        //deduct coins for using lifeline
+                        context.read<UserDetailsCubit>().updateCoins(
+                          addCoin: false,
+                          coins: lifeLineDeductCoins,
+                        );
+                        setState(() {
+                          lifelines[audiencePoll] = LifelineStatus.using;
+                        });
+                      } else {
+                        showAdDialog();
+                      }
+                    }
+                  } else {
+                    context.showSnack(
+                      context.tr(
+                        convertErrorCodeToLanguageKey(errorCodeLifeLineUsed),
+                      )!,
+                    );
+                  }
+                },
+                title: audiencePoll,
+                icon: Assets.audiencePollLifeline,
+              ),
+            ],
+            _buildLifelineContainer(
+              onTap: () {
+                if (lifelines[resetTime] == LifelineStatus.unused) {
+                  if (context.read<UserDetailsCubit>().removeAds()) {
+                    setState(() {
+                      lifelines[resetTime] = LifelineStatus.using;
+                    });
+                    timerAnimationController
+                      ..stop()
+                      ..forward(from: 0);
+                    return;
+                  }
+                  if (hasEnoughCoinsForLifeline(context)) {
+                    final lifeLineDeductCoins = context
+                        .read<SystemConfigCubit>()
+                        .lifelinesDeductCoins;
+                    //deduct coins for using lifeline
+                    context.read<UserDetailsCubit>().updateCoins(
+                      addCoin: false,
+                      coins: lifeLineDeductCoins,
+                    );
+                    //mark fiftyFifty lifeline as using
+
+                    setState(() {
+                      lifelines[resetTime] = LifelineStatus.using;
+                    });
+                    timerAnimationController
+                      ..stop()
+                      ..forward(from: 0);
+                  } else {
+                    showAdDialog();
+                  }
+                } else {
+                  context.showSnack(
+                    context.tr(
+                      convertErrorCodeToLanguageKey(errorCodeLifeLineUsed),
+                    )!,
+                  );
+                }
+              },
+              title: resetTime,
+              icon: Assets.resetTimeLifeline,
+            ),
+            if (context.read<QuestionsCubit>().questions().length > 1) ...[
+              _buildLifelineContainer(
+                onTap: () {
+                  if (lifelines[skip] == LifelineStatus.unused) {
+                    if (context.read<UserDetailsCubit>().removeAds()) {
+                      setState(() {
+                        lifelines[skip] = LifelineStatus.using;
+                      });
+                      submitAnswer('0');
+                      return;
+                    }
+                    if (hasEnoughCoinsForLifeline(context)) {
+                      //deduct coins for using lifeline
+                      context.read<UserDetailsCubit>().updateCoins(
+                        addCoin: false,
+                        coins: 5,
+                      );
+
+                      setState(() {
+                        lifelines[skip] = LifelineStatus.using;
+                      });
+                      submitAnswer('0');
+                    } else {
+                      showAdDialog();
+                    }
+                  } else {
+                    context.showSnack(
+                      context.tr(
+                        convertErrorCodeToLanguageKey(errorCodeLifeLineUsed),
+                      )!,
+                    );
+                  }
+                },
+                title: skip,
+                icon: Assets.skipQueLifeline,
+              ),
+            ],
+          ],
+        ),
       );
     }
-  }
-
-  void _handleAudiencePoll() {
-    if (lifelines[audiencePoll] == LifelineStatus.unused) {
-      /// Can't use 50/50 and audience poll one after one.
-      if (lifelines[fiftyFifty] == LifelineStatus.using) {
-        context.showSnack(
-          context.tr('cantUsePollAfterFiftyFifty')!,
-        );
-      } else {
-        if (context.read<UserDetailsCubit>().removeAds()) {
-          setState(() {
-            lifelines[audiencePoll] = LifelineStatus.using;
-          });
-          return;
-        }
-        if (hasEnoughCoinsForLifeline(context)) {
-          final lifeLineDeductCoins = context
-              .read<SystemConfigCubit>()
-              .lifelinesDeductCoins;
-          //deduct coins for using lifeline
-          context.read<UserDetailsCubit>().updateCoins(
-            addCoin: false,
-            coins: lifeLineDeductCoins,
-          );
-          setState(() {
-            lifelines[audiencePoll] = LifelineStatus.using;
-          });
-        } else {
-          showAdDialog();
-        }
-      }
-    } else {
-      context.showSnack(
-        context.tr(
-          convertErrorCodeToLanguageKey(errorCodeLifeLineUsed),
-        )!,
-      );
-    }
-  }
-
-  void _handleResetTime() {
-    if (lifelines[resetTime] == LifelineStatus.unused) {
-      if (context.read<UserDetailsCubit>().removeAds()) {
-        setState(() {
-          lifelines[resetTime] = LifelineStatus.using;
-        });
-        timerAnimationController
-          ..stop()
-          ..forward(from: 0);
-        return;
-      }
-      if (hasEnoughCoinsForLifeline(context)) {
-        final lifeLineDeductCoins = context
-            .read<SystemConfigCubit>()
-            .lifelinesDeductCoins;
-        //deduct coins for using lifeline
-        context.read<UserDetailsCubit>().updateCoins(
-          addCoin: false,
-          coins: lifeLineDeductCoins,
-        );
-        //mark fiftyFifty lifeline as using
-
-        setState(() {
-          lifelines[resetTime] = LifelineStatus.using;
-        });
-        timerAnimationController
-          ..stop()
-          ..forward(from: 0);
-      } else {
-        showAdDialog();
-      }
-    } else {
-      context.showSnack(
-        context.tr(
-          convertErrorCodeToLanguageKey(errorCodeLifeLineUsed),
-        )!,
-      );
-    }
-  }
-
-  void _handleSkip() {
-    if (lifelines[skip] == LifelineStatus.unused) {
-      if (context.read<UserDetailsCubit>().removeAds()) {
-        setState(() {
-          lifelines[skip] = LifelineStatus.using;
-        });
-        submitAnswer('0');
-        return;
-      }
-      if (hasEnoughCoinsForLifeline(context)) {
-        //deduct coins for using lifeline
-        context.read<UserDetailsCubit>().updateCoins(
-          addCoin: false,
-          coins: 5,
-        );
-
-        setState(() {
-          lifelines[skip] = LifelineStatus.using;
-        });
-        submitAnswer('0');
-      } else {
-        showAdDialog();
-      }
-    } else {
-      context.showSnack(
-        context.tr(
-          convertErrorCodeToLanguageKey(errorCodeLifeLineUsed),
-        )!,
-      );
-    }
+    return const SizedBox();
   }
 
   Duration get timer =>
@@ -708,208 +858,6 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
 
   String get remaining =>
       "${timer.inMinutes.remainder(60).toString().padLeft(2, '0')}:${timer.inSeconds.remainder(60).toString().padLeft(2, '0')}";
-
-  Widget _buildCloseButton() {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTapBackButton,
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 10,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: const Icon(
-            Icons.close_rounded,
-            color: Color(0xFF1E3A8A),
-            size: 18,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuestionPill({required int current, required int total}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Text(
-        'Question $current/$total',
-        style: const TextStyle(
-          fontWeight: FontWeight.w700,
-          color: Color(0xFF1E3A8A),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTimerRing() {
-    return AnimatedBuilder(
-      animation: timerAnimationController,
-      builder: (context, _) {
-        final seconds = timer.inSeconds.remainder(60);
-        final progress = 1 - timerAnimationController.value;
-        return SizedBox(
-          width: 38,
-          height: 38,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              CircularProgressIndicator(
-                value: progress.clamp(0.0, 1.0),
-                strokeWidth: 4,
-                backgroundColor: const Color(0xFFE6EEF9),
-                valueColor: const AlwaysStoppedAnimation(
-                  Color(0xFF2E6CF6),
-                ),
-              ),
-              Text(
-                seconds.toString().padLeft(2, '0'),
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF1E3A8A),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildTopProgressBar({required int current, required int total}) {
-    final value = total > 0 ? current / total : 0.0;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(999),
-      child: LinearProgressIndicator(
-        value: value.clamp(0.0, 1.0),
-        minHeight: 6,
-        backgroundColor: const Color(0xFFE6EEF9),
-        valueColor: const AlwaysStoppedAnimation(Color(0xFF2E6CF6)),
-      ),
-    );
-  }
-
-  Widget _buildDockButton({
-    required IconData icon,
-    VoidCallback? onTap,
-    bool enabled = true,
-  }) {
-    return Expanded(
-      child: Opacity(
-        opacity: enabled ? 1 : 0.4,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(14),
-            onTap: enabled ? onTap : null,
-            child: Container(
-              height: 44,
-              margin: const EdgeInsets.symmetric(horizontal: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F8FE),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(icon, color: const Color(0xFF2E6CF6), size: 22),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomDock() {
-    if (widget.quizType != QuizTypes.dailyQuiz &&
-        widget.quizType != QuizTypes.quizZone) {
-      return const SizedBox.shrink();
-    }
-
-    final canSkip = context.read<QuestionsCubit>().questions().length > 1;
-    final canUseFiftyFifty =
-        context
-            .read<QuestionsCubit>()
-            .questions()[currentQuestionIndex]
-            .answerOptions!
-            .length !=
-        2;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          _buildDockButton(
-            icon: Icons.filter_2_outlined,
-            onTap: canUseFiftyFifty ? _handleFiftyFifty : null,
-            enabled: canUseFiftyFifty,
-          ),
-          _buildDockButton(
-            icon: Icons.bar_chart_rounded,
-            onTap: _handleAudiencePoll,
-          ),
-          _buildDockButton(
-            icon: Icons.restart_alt_rounded,
-            onTap: _handleResetTime,
-          ),
-          _buildDockButton(
-            icon: Icons.skip_next_rounded,
-            onTap: canSkip ? _handleSkip : null,
-            enabled: canSkip,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBannerAdSlot() {
-    final bannerAdLoaded =
-        context.watch<BannerAdCubit>().bannerAdLoaded &&
-        !context.read<UserDetailsCubit>().removeAds() &&
-        !widget.isPremiumCategory;
-
-    if (!bannerAdLoaded) return const SizedBox();
-
-    return SizedBox(
-      height: 60,
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: const BannerAdContainer(),
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -984,12 +932,6 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
             );
           }
 
-          final totalQuestions = context
-              .read<QuestionsCubit>()
-              .questions()
-              .length;
-          final currentQuestion = currentQuestionIndex + 1;
-
           return PopScope(
             canPop: false,
             onPopInvokedWithResult: (didPop, _) {
@@ -998,106 +940,77 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
               onTapBackButton();
             },
             child: Scaffold(
-              backgroundColor: Colors.transparent,
-              body: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFFDFF1FF), Colors.white],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
-                child: SafeArea(
-                  child: Stack(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 16,
+              appBar: QAppBar(
+                onTapBackButton: onTapBackButton,
+                roundedAppBar: false,
+                title: widget.quizType == QuizTypes.funAndLearn
+                    ? AnimatedBuilder(
+                        builder: (context, c) => Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onTertiary.withValues(alpha: 0.4),
+                              width: 4,
+                            ),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          child: Text(
+                            remaining,
+                            style: TextStyle(
+                              color: Theme.of(context).primaryColor,
+                            ),
+                          ),
                         ),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                _buildCloseButton(),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Center(
-                                    child: _buildQuestionPill(
-                                      current: currentQuestion,
-                                      total: totalQuestions,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                _buildTimerRing(),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            _buildTopProgressBar(
-                              current: currentQuestion,
-                              total: totalQuestions,
-                            ),
-                            const SizedBox(height: 16),
-                            Expanded(
-                              child: Align(
-                                alignment: Alignment.topCenter,
-                                child: QuestionsContainer(
-                                  audioQuestionContainerKeys:
-                                      audioQuestionContainerKeys,
-                                  quizType: widget.quizType,
-                                  answerMode: context
-                                      .read<SystemConfigCubit>()
-                                      .answerMode,
-                                  lifeLines: getLifeLines(),
-                                  timerAnimationController:
-                                      timerAnimationController,
-                                  topPadding:
-                                      context.height *
-                                      UiUtils.getQuestionContainerTopPaddingPercentage(
-                                        context.height,
-                                      ),
-                                  hasSubmittedAnswerForCurrentQuestion:
-                                      hasSubmittedAnswerForCurrentQuestion,
-                                  questions: context
-                                      .read<QuestionsCubit>()
-                                      .questions(),
-                                  submitAnswer: submitAnswer,
-                                  questionContentAnimation:
-                                      questionContentAnimation,
-                                  questionScaleDownAnimation:
-                                      questionScaleDownAnimation,
-                                  questionScaleUpAnimation:
-                                      questionScaleUpAnimation,
-                                  questionSlideAnimation:
-                                      questionSlideAnimation,
-                                  currentQuestionIndex: currentQuestionIndex,
-                                  questionAnimationController:
-                                      questionAnimationController,
-                                  questionContentAnimationController:
-                                      questionContentAnimationController,
-                                  guessTheWordQuestions: const [],
-                                  guessTheWordQuestionContainerKeys: const [],
-                                  level: widget.level,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            _buildBannerAdSlot(),
-                            const SizedBox(height: 90),
-                          ],
-                        ),
+                        animation: timerAnimationController,
+                      )
+                    : TextCircularTimer(
+                        animationController: timerAnimationController,
+                        arcColor: Theme.of(context).primaryColor,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onTertiary.withValues(alpha: 0.2),
                       ),
-                      Positioned(
-                        left: 20,
-                        right: 20,
-                        bottom: 16,
-                        child: _buildBottomDock(),
-                      ),
-                      _buildShowOptionButton(),
-                    ],
+              ),
+              body: Stack(
+                children: [
+                  Align(
+                    alignment: Alignment.topCenter,
+                    child: QuestionsContainer(
+                      audioQuestionContainerKeys: audioQuestionContainerKeys,
+                      quizType: widget.quizType,
+                      answerMode: context.read<SystemConfigCubit>().answerMode,
+                      lifeLines: getLifeLines(),
+                      timerAnimationController: timerAnimationController,
+                      topPadding:
+                          context.height *
+                          UiUtils.getQuestionContainerTopPaddingPercentage(
+                            context.height,
+                          ),
+                      hasSubmittedAnswerForCurrentQuestion:
+                          hasSubmittedAnswerForCurrentQuestion,
+                      questions: context.read<QuestionsCubit>().questions(),
+                      submitAnswer: submitAnswer,
+                      questionContentAnimation: questionContentAnimation,
+                      questionScaleDownAnimation: questionScaleDownAnimation,
+                      questionScaleUpAnimation: questionScaleUpAnimation,
+                      questionSlideAnimation: questionSlideAnimation,
+                      currentQuestionIndex: currentQuestionIndex,
+                      questionAnimationController: questionAnimationController,
+                      questionContentAnimationController:
+                          questionContentAnimationController,
+                      guessTheWordQuestions: const [],
+                      guessTheWordQuestionContainerKeys: const [],
+                      level: widget.level,
+                    ),
                   ),
-                ),
+                  _buildLifeLines(),
+                  _buildShowOptionButton(),
+                ],
               ),
             ),
           );

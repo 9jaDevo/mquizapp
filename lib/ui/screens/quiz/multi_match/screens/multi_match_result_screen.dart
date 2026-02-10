@@ -18,11 +18,9 @@ import 'package:flutterquiz/features/quiz/multi_match/models/multi_match_questio
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/ui/screens/quiz/multi_match/screens/multi_match_quiz_screen.dart';
 import 'package:flutterquiz/ui/screens/quiz/multi_match/screens/multi_match_review_screen.dart';
-import 'package:flutterquiz/ui/screens/quiz/widgets/radial_result_container.dart';
 import 'package:flutterquiz/ui/widgets/all.dart';
 import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
-import 'package:lottie/lottie.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
@@ -82,6 +80,7 @@ class _MultiMatchResultScreenState extends State<MultiMatchResultScreen> {
   bool _isWinner = false;
   bool _isShareInProgress = false;
   bool _isReviewInProgress = false;
+  bool _unlockedReviewAnswersOnce = false;
 
   late final int _currLevel = int.parse(widget.args.questions.first.level);
 
@@ -148,307 +147,266 @@ class _MultiMatchResultScreenState extends State<MultiMatchResultScreen> {
         _onBack();
       },
       child: Scaffold(
-        appBar: QAppBar(
-          roundedAppBar: false,
-          title: Text(context.tr('multiMatchQuizResultLbl')!),
-          onTapBackButton: _onBack,
-        ),
-        body: SingleChildScrollView(
-          child: Column(
-            children: [
-              Center(child: _buildResultContainer(context)),
-              const SizedBox(height: 20),
-              _buildResultButtons(context),
+        backgroundColor: Colors.transparent,
+        body: _buildRedesignedBody(),
+      ),
+    );
+  }
+}
+
+class _ResultViewData {
+  const _ResultViewData({
+    required this.percentage,
+    required this.correct,
+    required this.total,
+    required this.score,
+    required this.coins,
+    required this.timeLabel,
+  });
+
+  final int percentage;
+  final int correct;
+  final int total;
+  final int score;
+  final int coins;
+  final String timeLabel;
+
+  int get wrong => total - correct;
+}
+
+extension on _MultiMatchResultScreenState {
+  String _formatTime(int? totalSeconds) {
+    final total = totalSeconds ?? 0;
+    if (total <= 0) return '--';
+    final minutes = total ~/ 60;
+    final seconds = total % 60;
+    final minutesText = minutes < 10 ? '0$minutes' : '$minutes';
+    final secondsText = seconds < 10 ? '0$seconds' : '$seconds';
+    return '$minutesText:$secondsText';
+  }
+
+  Widget _buildConfettiDots() {
+    return IgnorePointer(
+      child: Stack(
+        children: const [
+          Positioned(
+            top: 40,
+            left: 30,
+            child: _ConfettiDot(size: 8, color: Color(0xFFB9E3FF)),
+          ),
+          Positioned(
+            top: 120,
+            right: 40,
+            child: _ConfettiDot(size: 6, color: Color(0xFFCCEAD6)),
+          ),
+          Positioned(
+            top: 210,
+            left: 60,
+            child: _ConfettiDot(size: 10, color: Color(0xFFFFE1B8)),
+          ),
+          Positioned(
+            top: 280,
+            right: 80,
+            child: _ConfettiDot(size: 7, color: Color(0xFFFAD4E8)),
+          ),
+          Positioned(
+            bottom: 180,
+            left: 40,
+            child: _ConfettiDot(size: 9, color: Color(0xFFBFE7FF)),
+          ),
+          Positioned(
+            bottom: 120,
+            right: 50,
+            child: _ConfettiDot(size: 6, color: Color(0xFFDCEBFF)),
+          ),
+          Positioned(
+            bottom: 60,
+            left: 120,
+            child: _ConfettiDot(size: 5, color: Color(0xFFE5F6D6)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBackButton() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: _onBack,
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 6),
+              ),
             ],
+          ),
+          child: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Color(0xFF1E3A8A),
+            size: 18,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildGreetingMessage(int scorePct, String userName) {
-    final (title, message) = switch (scorePct) {
-      <= 30 => (goodEffort, keepLearning),
-      <= 50 => (wellDone, makingProgress),
-      <= 70 => (greatJob, closerToMastery),
-      <= 90 => (excellentWork, keepGoing),
-      _ => (fantasticJob, achievedMastery),
-    };
-
-    final titleStyle = TextStyle(
-      fontSize: 26,
-      color: Theme.of(context).colorScheme.onTertiary,
-      fontWeight: FontWeights.bold,
-    );
-
+  Widget _buildHeaderSection() {
     return Column(
-      mainAxisSize: MainAxisSize.min,
       children: [
-        const SizedBox(height: 30),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 5),
-          alignment: Alignment.center,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                context.tr(title)!,
-                textAlign: TextAlign.center,
-                style: titleStyle,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF86F1B6).withValues(alpha: 0.4),
+                blurRadius: 18,
+                spreadRadius: 2,
+                offset: const Offset(0, 8),
               ),
-              Flexible(
-                child: Text(
-                  " ${userName.split(' ').first}",
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  style: TextStyle(
-                    fontSize: 26,
-                    color: Theme.of(context).primaryColor,
-                    overflow: TextOverflow.ellipsis,
-                    fontWeight: FontWeights.bold,
-                  ),
-                ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
+          child: const Icon(
+            Icons.emoji_events_rounded,
+            color: Color(0xFF2E6CF6),
+            size: 38,
+          ),
         ),
-        const SizedBox(height: 5),
-        Container(
-          alignment: Alignment.center,
-          width: context.shortestSide * .85,
-          child: Text(
-            context.tr(message)!,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 19,
-              color: Theme.of(context).colorScheme.onTertiary,
-            ),
+        const SizedBox(height: 16),
+        const Text(
+          'Excellent Work!',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF1E3A8A),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Congratulations ${userName.split(' ').first}, you passed!',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 16,
+            color: const Color(0xFF1E3A8A).withValues(alpha: 0.7),
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildResultContainer(BuildContext context) {
-    final userProfileUrl =
-        context.read<UserDetailsCubit>().getUserProfile().profileUrl ?? '';
-
-    return Screenshot(
-      controller: screenshotController,
-      child: BlocConsumer<SetCoinScoreCubit, SetCoinScoreState>(
-        listener: (context, state) {
-          if (state is SetCoinScoreSuccess) {
-            setState(() {
-              _isWinner =
-                  state.percentage >=
-                  context.read<SystemConfigCubit>().quizWinningPercentage;
-            });
-          }
-        },
-        builder: (context, state) {
-          if (state is SetCoinScoreFailure) {
-            return Container(
-              height: context.height * 0.560,
-              width: context.width * 0.90,
-              decoration: BoxDecoration(
-                color: _isWinner
-                    ? context.surfaceColor
-                    : context.primaryTextColor.withValues(alpha: .05),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Center(
-                child: ErrorContainer(
-                  showBackButton: true,
-                  errorMessageColor: Theme.of(context).primaryColor,
-                  errorMessage: convertErrorCodeToLanguageKey(state.error),
-                  onTapRetry: () async {
-                    await _updateResult();
-                  },
-                  showErrorImage: true,
+  Widget _buildScoreDonut(int percentage) {
+    return SizedBox(
+      width: 200,
+      height: 200,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox(
+            width: 200,
+            height: 200,
+            child: CircularProgressIndicator(
+              value: percentage / 100,
+              strokeWidth: 14,
+              backgroundColor: const Color(0xFFE6EEF9),
+              valueColor: const AlwaysStoppedAnimation(Color(0xFF2E6CF6)),
+            ),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '$percentage%',
+                style: const TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF1E3A8A),
                 ),
               ),
-            );
-          }
-
-          if (state is SetCoinScoreSuccess) {
-            final confetti = _isWinner
-                ? Assets.winConfetti
-                : Assets.loseConfetti;
-
-            return Container(
-              height: context.height * 0.560,
-              width: context.width * 0.90,
-              decoration: BoxDecoration(
-                color: _isWinner
-                    ? context.surfaceColor
-                    : context.primaryTextColor.withValues(alpha: .05),
-                borderRadius: BorderRadius.circular(10),
+              const Text(
+                'Score',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF7B8BB5),
+                ),
               ),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  /// Confetti
-                  Align(
-                    alignment: Alignment.topCenter,
-                    child: Lottie.asset(confetti, fit: BoxFit.fill),
-                  ),
-
-                  /// Greeting and User Profile Image
-                  Align(
-                    alignment: Alignment.topCenter,
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        var verticalSpacePercentage = 0.0;
-
-                        if (constraints.maxHeight <
-                            UiUtils.profileHeightBreakPointResultScreen) {
-                          verticalSpacePercentage = 0.015;
-                        } else {
-                          verticalSpacePercentage = 0.035;
-                        }
-
-                        return Column(
-                          children: [
-                            _buildGreetingMessage(state.percentage, userName),
-                            SizedBox(
-                              height:
-                                  constraints.maxHeight *
-                                  verticalSpacePercentage,
-                            ),
-                            Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                QImage.circular(
-                                  imageUrl: userProfileUrl,
-                                  width: 107,
-                                  height: 107,
-                                ),
-                                SvgPicture.asset(
-                                  Assets.hexagonFrame,
-                                  width: 132,
-                                  height: 132,
-                                ),
-                              ],
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-
-                  /// Correct Answer
-                  Align(
-                    alignment: AlignmentDirectional.bottomStart,
-                    child: _buildResultDataWithIconContainer(
-                      '${state.correctAnswer}/${state.totalQuestions}',
-                      Assets.correct,
-                      const EdgeInsetsDirectional.only(start: 15, bottom: 60),
-                    ),
-                  ),
-
-                  /// Incorrect Answer
-                  Align(
-                    alignment: AlignmentDirectional.bottomStart,
-                    child: _buildResultDataWithIconContainer(
-                      '${state.totalQuestions - state.correctAnswer}/${state.totalQuestions}',
-                      Assets.wrong,
-                      const EdgeInsetsDirectional.only(start: 15, bottom: 20),
-                    ),
-                  ),
-
-                  /// Score
-                  Align(
-                    alignment: AlignmentDirectional.bottomEnd,
-                    child: _buildResultDataWithIconContainer(
-                      '${state.earnScore}',
-                      Assets.score,
-                      const EdgeInsetsDirectional.only(end: 15, bottom: 60),
-                    ),
-                  ),
-
-                  /// Coins
-                  Align(
-                    alignment: AlignmentDirectional.bottomEnd,
-                    child: _buildResultDataWithIconContainer(
-                      '${state.earnCoin}',
-                      Assets.earnedCoin,
-                      const EdgeInsetsDirectional.only(end: 15, bottom: 20),
-                    ),
-                  ),
-
-                  /// Radial Percentage
-                  Align(
-                    alignment: Alignment.bottomCenter,
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final mh = constraints.maxHeight;
-                        final double radialSizePercentage;
-                        if (mh < UiUtils.profileHeightBreakPointResultScreen) {
-                          radialSizePercentage = 0.4;
-                        } else {
-                          radialSizePercentage = 0.325;
-                        }
-
-                        return Transform.translate(
-                          offset: const Offset(0, 15),
-                          child: RadialPercentageResultContainer(
-                            percentage: state.percentage.toDouble(),
-                            timeTakenToCompleteQuizInSeconds:
-                                widget.args.timeTakenToCompleteQuiz,
-                            size: Size(
-                              mh * radialSizePercentage,
-                              mh * radialSizePercentage,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return const Center(child: CircularProgressContainer());
-        },
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildResultDataWithIconContainer(
-    String title,
-    String icon,
-    EdgeInsetsGeometry margin,
-  ) {
+  Widget _buildStatCard({
+    required String label,
+    required String value,
+    required String icon,
+    required Color color,
+  }) {
     return Container(
-      margin: margin,
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: context.scaffoldBackgroundColor,
-        borderRadius: BorderRadius.circular(10),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
-      width: context.width * 0.2125,
-      height: 32,
-      alignment: Alignment.center,
-      child: Row(
+      child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SvgPicture.asset(
-            icon,
-            colorFilter: ColorFilter.mode(
-              context.primaryTextColor,
-              BlendMode.srcIn,
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
             ),
-            width: 20,
-            height: 20,
+            alignment: Alignment.center,
+            child: SvgPicture.asset(
+              icon,
+              width: 20,
+              height: 20,
+              colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+            ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(height: 10),
           Text(
-            title,
-            style: TextStyle(
-              color: context.primaryTextColor,
-              fontWeight: FontWeights.bold,
-              fontSize: 18,
-              height: 1.2,
+            value,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF1E3A8A),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF7B8BB5),
             ),
           ),
         ],
@@ -456,19 +414,273 @@ class _MultiMatchResultScreenState extends State<MultiMatchResultScreen> {
     );
   }
 
-  Widget _buildButton(String buttonTitle, VoidCallback onTap) {
-    return CustomRoundedButton(
-      widthPercentage: 0.90,
-      backgroundColor: context.primaryColor,
-      buttonTitle: buttonTitle,
-      radius: 8,
-      elevation: 5,
-      showBorder: false,
-      fontWeight: FontWeights.regular,
-      height: 50,
-      titleColor: Theme.of(context).colorScheme.surface,
-      onTap: onTap,
-      textSize: 20,
+  Widget _buildStatGrid(_ResultViewData data) {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 16,
+      crossAxisSpacing: 16,
+      childAspectRatio: 1.25,
+      children: [
+        _buildStatCard(
+          label: 'Correct',
+          value: '${data.correct}/${data.total}',
+          icon: Assets.correct,
+          color: const Color(0xFF35C78A),
+        ),
+        _buildStatCard(
+          label: 'Wrong',
+          value: '${data.wrong}/${data.total}',
+          icon: Assets.wrong,
+          color: const Color(0xFFF16060),
+        ),
+        _buildStatCard(
+          label: 'Score',
+          value: '${data.score}',
+          icon: Assets.score,
+          color: const Color(0xFFF59E0B),
+        ),
+        _buildStatCard(
+          label: 'Coins',
+          value: '${data.coins}',
+          icon: Assets.earnedCoin,
+          color: const Color(0xFFFACC15),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSummaryItem({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Column(
+      children: [
+        Icon(icon, color: const Color(0xFF2E6CF6), size: 20),
+        const SizedBox(height: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF7B8BB5),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1E3A8A),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSummaryRow(_ResultViewData data) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 14,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: _buildSummaryItem(
+              icon: Icons.check_circle_outline,
+              label: 'Accuracy',
+              value: '${data.percentage}%',
+            ),
+          ),
+          Expanded(
+            child: _buildSummaryItem(
+              icon: Icons.emoji_events_outlined,
+              label: 'Rank',
+              value: '--',
+            ),
+          ),
+          Expanded(
+            child: _buildSummaryItem(
+              icon: Icons.schedule,
+              label: 'Time',
+              value: data.timeLabel,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required String title,
+    required VoidCallback onTap,
+    IconData? leadingIcon,
+    IconData? trailingIcon,
+    bool isPrimary = false,
+    bool isTertiary = false,
+  }) {
+    final background = isPrimary ? const Color(0xFF2E6CF6) : Colors.white;
+    final textColor = isPrimary ? Colors.white : const Color(0xFF1E3A8A);
+    final borderColor = isPrimary
+        ? Colors.transparent
+        : (isTertiary ? const Color(0xFFE7EEF8) : const Color(0xFFDCE6F6));
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          height: 54,
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: borderColor),
+            boxShadow: [
+              if (!isTertiary)
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 14,
+                  offset: const Offset(0, 8),
+                ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (leadingIcon != null) ...[
+                Icon(leadingIcon, color: textColor, size: 20),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              if (trailingIcon != null) ...[
+                const SizedBox(width: 10),
+                Icon(trailingIcon, color: textColor, size: 22),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildResultContent() {
+    return BlocConsumer<SetCoinScoreCubit, SetCoinScoreState>(
+      listener: (context, state) {
+        if (state is SetCoinScoreSuccess) {
+          setState(() {
+            _isWinner =
+                state.percentage >=
+                context.read<SystemConfigCubit>().quizWinningPercentage;
+          });
+        }
+      },
+      builder: (context, state) {
+        if (state is SetCoinScoreFailure) {
+          return ErrorContainer(
+            showBackButton: true,
+            errorMessageColor: Theme.of(context).primaryColor,
+            errorMessage: convertErrorCodeToLanguageKey(state.error),
+            onTapRetry: () async {
+              await _updateResult();
+            },
+            showErrorImage: true,
+          );
+        }
+
+        if (state is SetCoinScoreSuccess) {
+          final data = _ResultViewData(
+            percentage: state.percentage,
+            correct: state.correctAnswer,
+            total: state.totalQuestions,
+            score: state.earnScore,
+            coins: state.earnCoin,
+            timeLabel: _formatTime(widget.args.timeTakenToCompleteQuiz),
+          );
+
+          return Column(
+            children: [
+              _buildHeaderSection(),
+              const SizedBox(height: 24),
+              _buildScoreDonut(data.percentage),
+              const SizedBox(height: 24),
+              _buildStatGrid(data),
+              const SizedBox(height: 24),
+              _buildSummaryRow(data),
+            ],
+          );
+        }
+
+        return const Center(child: CircularProgressContainer());
+      },
+    );
+  }
+
+  Widget _buildRedesignedBody() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFFDFF1FF), Colors.white],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
+      child: SafeArea(
+        child: Stack(
+          children: [
+            _buildConfettiDots(),
+            SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
+                child: Column(
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: _buildBackButton(),
+                    ),
+                    const SizedBox(height: 12),
+                    Screenshot(
+                      controller: screenshotController,
+                      child: _buildResultContent(),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildResultButtons(context),
+                    const SizedBox(height: 12),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -492,43 +704,70 @@ class _MultiMatchResultScreenState extends State<MultiMatchResultScreen> {
     );
   }
 
+  Widget _buildButton(
+    String title,
+    VoidCallback onTap, {
+    IconData? leadingIcon,
+    IconData? trailingIcon,
+    bool isPrimary = false,
+    bool isTertiary = false,
+  }) {
+    return _buildActionButton(
+      title: title,
+      onTap: onTap,
+      leadingIcon: leadingIcon,
+      trailingIcon: trailingIcon,
+      isPrimary: isPrimary,
+      isTertiary: isTertiary,
+    );
+  }
+
   Widget _buildPlayAgainButton() {
-    return _buildButton(context.tr('playAgainBtn')!, () {
-      context.pushReplacementNamed(
-        Routes.multiMatchQuiz,
-        arguments: MultiMatchQuizArgs(
-          categoryId: widget.args.categoryId,
-          subcategoryId: widget.args.subcategoryId,
-          level: _currLevel.toString(),
-          unlockedLevel: widget.args.unlockedLevel,
-          totalLevels: widget.args.totalLevels,
-          isPremiumCategory: widget.args.isPremiumCategory,
-        ),
-      );
-    });
+    return _buildButton(
+      context.tr('playAgainBtn')!,
+      () {
+        context.pushReplacementNamed(
+          Routes.multiMatchQuiz,
+          arguments: MultiMatchQuizArgs(
+            categoryId: widget.args.categoryId,
+            subcategoryId: widget.args.subcategoryId,
+            level: _currLevel.toString(),
+            unlockedLevel: widget.args.unlockedLevel,
+            totalLevels: widget.args.totalLevels,
+            isPremiumCategory: widget.args.isPremiumCategory,
+          ),
+        );
+      },
+      isPrimary: true,
+      trailingIcon: Icons.chevron_right,
+    );
   }
 
   Widget _buildPlayNextLevelButton() {
-    return _buildButton(context.tr('nextLevelBtn')!, () {
-      final unlockedLevel = _currLevel == widget.args.unlockedLevel
-          ? _currLevel + 1
-          : widget.args.unlockedLevel;
+    return _buildButton(
+      'Continue to Next Level',
+      () {
+        final unlockedLevel = _currLevel == widget.args.unlockedLevel
+            ? _currLevel + 1
+            : widget.args.unlockedLevel;
 
-      context.pushReplacementNamed(
-        Routes.multiMatchQuiz,
-        arguments: MultiMatchQuizArgs(
-          categoryId: widget.args.categoryId,
-          subcategoryId: widget.args.subcategoryId,
-          level: (_currLevel + 1).toString(),
-          unlockedLevel: unlockedLevel,
-          totalLevels: widget.args.totalLevels,
-          isPremiumCategory: widget.args.isPremiumCategory,
-        ),
-      );
-    });
+        context.pushReplacementNamed(
+          Routes.multiMatchQuiz,
+          arguments: MultiMatchQuizArgs(
+            categoryId: widget.args.categoryId,
+            subcategoryId: widget.args.subcategoryId,
+            level: (_currLevel + 1).toString(),
+            unlockedLevel: unlockedLevel,
+            totalLevels: widget.args.totalLevels,
+            isPremiumCategory: widget.args.isPremiumCategory,
+          ),
+        );
+      },
+      isPrimary: true,
+      trailingIcon: Icons.chevron_right,
+    );
   }
 
-  bool _unlockedReviewAnswersOnce = false;
   Widget _buildReviewAnswersButton() {
     Future<void> onTapYesReviewAnswers() async {
       final reviewAnswersDeductCoins = context
@@ -611,6 +850,7 @@ class _MultiMatchResultScreenState extends State<MultiMatchResultScreen> {
           }
         }
       },
+      leadingIcon: Icons.article_outlined,
     );
   }
 
@@ -660,7 +900,11 @@ class _MultiMatchResultScreenState extends State<MultiMatchResultScreen> {
 
     return Builder(
       builder: (context) {
-        return _buildButton(context.tr('shareScoreBtn')!, onTap);
+        return _buildButton(
+          context.tr('shareScoreBtn')!,
+          onTap,
+          leadingIcon: Icons.share_outlined,
+        );
       },
     );
   }
@@ -671,6 +915,30 @@ class _MultiMatchResultScreenState extends State<MultiMatchResultScreen> {
       context.pushNamedAndRemoveUntil(Routes.home, predicate: (_) => false);
     }
 
-    return _buildButton(context.tr('homeBtn')!, onTapHomeButton);
+    return _buildButton(
+      context.tr('homeBtn')!,
+      onTapHomeButton,
+      leadingIcon: Icons.home_outlined,
+      isTertiary: true,
+    );
+  }
+}
+
+class _ConfettiDot extends StatelessWidget {
+  const _ConfettiDot({required this.size, required this.color});
+
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.45),
+        shape: BoxShape.circle,
+      ),
+    );
   }
 }

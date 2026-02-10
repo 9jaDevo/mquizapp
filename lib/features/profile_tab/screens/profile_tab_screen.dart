@@ -3,10 +3,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/commons/commons.dart';
 import 'package:flutterquiz/core/core.dart';
 import 'package:flutterquiz/features/auth/cubits/auth_cubit.dart';
+import 'package:flutterquiz/features/badges/blocs/badges_cubit.dart';
 import 'package:flutterquiz/features/profile_management/cubits/user_details_cubit.dart';
 import 'package:flutterquiz/features/settings/settings_cubit.dart';
 import 'package:flutterquiz/features/skill_tier/models/skill_tier.dart';
 import 'package:flutterquiz/features/skill_tier/skill_tier_service.dart';
+import 'package:flutterquiz/features/statistic/cubits/statistics_cubit.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/ui/screens/app_settings_screen.dart';
 import 'package:flutterquiz/ui/screens/profile/create_or_edit_profile_screen.dart';
@@ -35,6 +37,10 @@ final class ProfileTabScreenState extends State<ProfileTabScreen>
   @override
   void initState() {
     super.initState();
+    if (!_isGuest) {
+      context.read<StatisticCubit>().getStatistic();
+      context.read<BadgesCubit>().getBadges();
+    }
   }
 
   @override
@@ -162,8 +168,6 @@ final class ProfileTabScreenState extends State<ProfileTabScreen>
               const SizedBox(height: 16),
               _buildQuickActionsRow(),
               const SizedBox(height: 16),
-              _buildWeeklyProgressCard(),
-              const SizedBox(height: 16),
               _buildBookmarksBadgesRow(),
               const SizedBox(height: 16),
               _buildPreferencesCard(),
@@ -182,6 +186,20 @@ final class ProfileTabScreenState extends State<ProfileTabScreen>
         var profileUrl = '';
         var username = context.tr('helloGuest')!;
         var gamesCount = 0;
+        var accuracy = 0.0;
+        var badgeCount = 0;
+
+        final statisticState = context.watch<StatisticCubit>().state;
+        if (statisticState is StatisticFetchSuccess) {
+          final stats = statisticState.statisticModel;
+          final answered = int.tryParse(stats.answeredQuestions) ?? 0;
+          final correct = int.tryParse(stats.correctAnswers) ?? 0;
+          gamesCount = answered;
+          accuracy = answered > 0 ? (correct / answered) * 100 : 0;
+        }
+
+        final badges = context.watch<BadgesCubit>().getUnlockedBadges();
+        badgeCount = badges.length;
 
         if (state is UserDetailsFetchSuccess) {
           profileUrl = state.userProfile.profileUrl ?? '';
@@ -196,7 +214,9 @@ final class ProfileTabScreenState extends State<ProfileTabScreen>
             final leagueLabel = tier != null
                 ? '${SkillTier.label(tier.type)} League'
                 : 'Platinum League';
-            final accuracy = tier?.accuracyPercent ?? 0;
+            final tierAccuracy = accuracy > 0
+                ? accuracy
+                : (tier?.accuracyPercent ?? 0);
 
             return Container(
               height: 280,
@@ -394,7 +414,7 @@ final class ProfileTabScreenState extends State<ProfileTabScreen>
                               const SizedBox(width: 12),
                               Expanded(
                                 child: _buildMiniStatCard(
-                                  value: '${accuracy.toStringAsFixed(0)}%',
+                                  value: '${tierAccuracy.toStringAsFixed(0)}%',
                                   label: 'Accuracy',
                                   color: const Color(0xFFFFA800),
                                 ),
@@ -402,7 +422,7 @@ final class ProfileTabScreenState extends State<ProfileTabScreen>
                               const SizedBox(width: 12),
                               Expanded(
                                 child: _buildMiniStatCard(
-                                  value: '14',
+                                  value: UiUtils.formatNumber(badgeCount),
                                   label: 'Badges',
                                   color: const Color(0xFF2E5BEA),
                                 ),
@@ -604,86 +624,6 @@ final class ProfileTabScreenState extends State<ProfileTabScreen>
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildWeeklyProgressCard() {
-    const progressValue = 0.68;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 28,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              const Text(
-                'Weekly Progress',
-                style: TextStyle(
-                  color: Color(0xFF1E4FD9),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const Spacer(),
-              Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEAF0FF),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.trending_up_rounded,
-                  color: Color(0xFF2E5BEA),
-                  size: 16,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: progressValue,
-              minHeight: 8,
-              backgroundColor: const Color(0xFFE7ECFF),
-              valueColor: const AlwaysStoppedAnimation(Color(0xFF2E5BEA)),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: const [
-              Text(
-                '34 of 50 quizzes completed',
-                style: TextStyle(
-                  color: Color(0xFF7E8AA8),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Spacer(),
-              Text(
-                '68%',
-                style: TextStyle(
-                  color: Color(0xFF2E5BEA),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }

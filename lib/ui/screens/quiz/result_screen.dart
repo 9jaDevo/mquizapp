@@ -28,7 +28,11 @@ import 'package:flutterquiz/features/quiz/models/guess_the_word_question.dart';
 import 'package:flutterquiz/features/quiz/models/question.dart';
 import 'package:flutterquiz/features/quiz/models/quiz_type.dart';
 import 'package:flutterquiz/features/quiz/models/user_battle_room_details.dart';
+import 'package:flutterquiz/features/skill_tier/models/skill_tier.dart';
+import 'package:flutterquiz/features/skill_tier/skill_tier_service.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
+import 'package:flutterquiz/features/wallet/cubit/monetization_cubit.dart';
+import 'package:flutterquiz/features/wallet/widgets/monetization_widgets.dart';
 import 'package:flutterquiz/ui/screens/quiz/guess_the_word_quiz_screen.dart';
 import 'package:flutterquiz/ui/screens/quiz/review_answers_screen.dart';
 import 'package:flutterquiz/ui/screens/quiz/widgets/radial_result_container.dart';
@@ -165,6 +169,8 @@ class _ResultScreenState extends State<ResultScreen> {
   bool _isWinner = false;
   bool _isShareInProgress = false;
   bool _isReviewInProgress = false;
+  bool _hasShownBoostDialog = false;
+  String _skillTierLabel = '--';
 
   bool _displayedAlreadyLoggedInDialog = false;
 
@@ -216,6 +222,7 @@ class _ResultScreenState extends State<ResultScreen> {
   @override
   void initState() {
     super.initState();
+    _loadSkillTierLabel();
 
     SchedulerBinding.instance.addPostFrameCallback((_) async {
       // Increment quiz completion counter
@@ -253,7 +260,102 @@ class _ResultScreenState extends State<ResultScreen> {
       await _updateResult();
 
       await fetchUpdateUserDetails();
+
+      _maybeShowBoostEarningsPopup();
     });
+  }
+
+  Future<void> _loadSkillTierLabel() async {
+    final tier = await SkillTierService.computeTier();
+    if (!mounted) return;
+    final label = tier != null ? '${SkillTier.label(tier.type)} League' : '--';
+    setState(() {
+      _skillTierLabel = label;
+    });
+  }
+
+  void _maybeShowBoostEarningsPopup() {
+    if (_hasShownBoostDialog) return;
+    if (widget.quizType == QuizTypes.selfChallenge ||
+        widget.quizType == QuizTypes.exam) {
+      return;
+    }
+
+    _hasShownBoostDialog = true;
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (mounted) {
+        _showBoostEarningsPopup();
+      }
+    });
+  }
+
+  void _showBoostEarningsPopup() {
+    try {
+      final questions = widget.questions ?? const <Question>[];
+      final userId = context.read<UserDetailsCubit>().getUserFirebaseId();
+      final correctAnswers = questions.where((q) {
+        final ans = AnswerEncryption.decryptCorrectAnswer(
+          rawKey: userId,
+          correctAnswer: q.correctAnswer!,
+        );
+        return q.attempted && q.submittedAnswerId == ans;
+      }).length;
+
+      if (correctAnswers <= 0) return;
+
+      final updateCoinsCubit = context.read<UpdateCoinsCubit>();
+      // Calculate coin value (example: 10 coins per correct answer)
+      final baseCoins = correctAnswers * 10;
+
+      // Offer boost
+      context.read<MonetizationCubit>().offerBoostEarnings(
+        coinsEarned: baseCoins.toString(),
+      );
+
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => BlocProvider.value(
+          value: updateCoinsCubit,
+          child: BlocConsumer<MonetizationCubit, MonetizationState>(
+            listener: (context, state) {
+              if (!state.isLoadingBoost && state.boostEarnings != null) {
+                Navigator.of(dialogContext).pop();
+                final boostedCoins = state.boostEarnings!.boostedCoins;
+                updateCoinsCubit.updateCoins(
+                  addCoin: true,
+                  coins: boostedCoins,
+                  title: 'Boost Earnings',
+                );
+              }
+            },
+            builder: (context, state) {
+              if (state.boostEarnings != null) {
+                return BoostEarningsDialog(
+                  boost: state.boostEarnings!,
+                  onClaimPressed: () {
+                    context.read<MonetizationCubit>().applyBoostEarnings(
+                      coinsEarned: state.boostEarnings!.boostedCoins.toString(),
+                    );
+                  },
+                  onSkipPressed: () {
+                    Navigator.of(dialogContext).pop();
+                    updateCoinsCubit.updateCoins(
+                      addCoin: true,
+                      coins: state.boostEarnings!.originalCoins,
+                      title: 'Quiz Completed',
+                    );
+                  },
+                );
+              }
+              return const Center(child: CircularProgressIndicator());
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      // Silently fail boost earnings
+    }
   }
 
   Future<void> _updateResult() async {
@@ -419,15 +521,6 @@ class _ResultScreenState extends State<ResultScreen> {
     return '$minutesText:$secondsText';
   }
 
-  String _resolveRankLabel(List<BattleUserRank> ranks) {
-    if (ranks.isEmpty) return '--';
-    final currentUserId = context.read<UserDetailsCubit>().userId();
-    final match = ranks.where((rank) => rank.userId == currentUserId);
-    if (match.isEmpty) return '--';
-    final rank = match.first.rank;
-    return rank > 0 ? '#$rank' : '--';
-  }
-
   _ResultViewData _buildResultViewDataFromState(SetCoinScoreSuccess state) {
     final seconds = widget.timeTakenToCompleteQuiz?.round();
     return _ResultViewData(
@@ -436,7 +529,7 @@ class _ResultScreenState extends State<ResultScreen> {
       total: state.totalQuestions,
       score: state.earnScore,
       coins: state.earnCoin,
-      rankLabel: _resolveRankLabel(state.userRanks),
+      rankLabel: _skillTierLabel,
       timeLabel: _formatTime(seconds),
     );
   }
@@ -452,7 +545,7 @@ class _ResultScreenState extends State<ResultScreen> {
       total: totalQuestions,
       score: score,
       coins: 0,
-      rankLabel: '--',
+      rankLabel: _skillTierLabel,
       timeLabel: _formatTime(seconds),
     );
   }

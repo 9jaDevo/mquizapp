@@ -146,6 +146,7 @@ class _QuestionsContainerState extends State<QuestionsContainer> {
         children: (_usingFiftyFifty ? filteredOptions : question.answerOptions!)
             .map((option) {
               final idx = question.answerOptions!.indexOf(option);
+              final label = String.fromCharCode(65 + idx);
               return OptionContainer(
                 quizType: widget.quizType,
                 submittedAnswerId: question.submittedAnswerId,
@@ -161,6 +162,8 @@ class _QuestionsContainerState extends State<QuestionsContainer> {
                 correctOptionId: correctAnswerId,
                 submitAnswer: widget.submitAnswer,
                 trueFalseOption: question.questionType == '2',
+                leadingLabel: label,
+                useModernStyle: true,
               );
             })
             .toList(),
@@ -168,67 +171,10 @@ class _QuestionsContainerState extends State<QuestionsContainer> {
     }
   }
 
-  Widget _buildCurrentCoins() {
-    return BlocBuilder<UserDetailsCubit, UserDetailsState>(
-      bloc: context.read<UserDetailsCubit>(),
-      builder: (context, state) {
-        if (state is UserDetailsFetchSuccess) {
-          return Align(
-            alignment: AlignmentDirectional.topEnd,
-            child: RichText(
-              text: TextSpan(
-                children: [
-                  TextSpan(
-                    text: "${context.tr("coinsLbl")!} : ",
-                    style: TextStyle(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onTertiary.withValues(alpha: 0.5),
-                      fontSize: 14,
-                    ),
-                  ),
-                  TextSpan(
-                    text: '${state.userProfile.coins}',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onTertiary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-        return const SizedBox();
-      },
-    );
-  }
-
-  Widget _buildCurrentQuestionIndex() {
-    final onTertiary = Theme.of(context).colorScheme.onTertiary;
-    return Align(
-      child: RichText(
-        text: TextSpan(
-          children: [
-            TextSpan(
-              text: '${widget.currentQuestionIndex + 1}',
-              style: TextStyle(
-                color: onTertiary.withValues(alpha: 0.5),
-                fontSize: 14,
-              ),
-            ),
-            TextSpan(
-              text: ' / ${widget.questions.length}',
-              style: TextStyle(color: onTertiary),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildQuestionText({
     required String questionText,
     required String questionType,
+    TextAlign textAlign = TextAlign.start,
   }) {
     return _isLatex
         ? TeXView(
@@ -241,21 +187,67 @@ class _QuestionsContainerState extends State<QuestionsContainer> {
             style: TeXViewStyle(
               contentColor: Theme.of(context).colorScheme.onTertiary,
               sizeUnit: TeXViewSizeUnit.pixels,
-              textAlign: TeXViewTextAlign.center,
+              textAlign: textAlign == TextAlign.center
+                  ? TeXViewTextAlign.center
+                  : TeXViewTextAlign.left,
               fontStyle: TeXViewFontStyle(fontSize: textSize.toInt() + 5),
             ),
           )
         : Text(
             questionText,
-            textAlign: TextAlign.center,
+            textAlign: textAlign,
             style: GoogleFonts.nunito(
               textStyle: TextStyle(
-                height: 1.125,
+                height: 1.2,
                 color: Theme.of(context).colorScheme.onTertiary,
                 fontSize: textSize,
               ),
             ),
           );
+  }
+
+  Widget _buildQuestionCard(Question question) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE8F1FF),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.lightbulb_outline,
+              color: Color(0xFF2E6CF6),
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildQuestionText(
+              questionText: question.question!,
+              questionType: question.questionType!,
+              textAlign: TextAlign.start,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildQuestionContainer(
@@ -309,28 +301,8 @@ class _QuestionsContainerState extends State<QuestionsContainer> {
                     widget.quizType == QuizTypes.groupPlay)
                   const SizedBox()
                 else
-                  const SizedBox(height: 15),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    if (widget.lifeLines.isNotEmpty) ...[_buildCurrentCoins()],
-                    if (widget.quizType == QuizTypes.groupPlay) ...[
-                      const SizedBox(),
-                    ],
-                    _buildCurrentQuestionIndex(),
-                    if (widget.quizType == QuizTypes.groupPlay) ...[
-                      const SizedBox(),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Container(
-                  alignment: Alignment.center,
-                  child: _buildQuestionText(
-                    questionText: question.question!,
-                    questionType: question.questionType!,
-                  ),
-                ),
+                  const SizedBox(height: 10),
+                _buildQuestionCard(question),
                 SizedBox(
                   height: constraints.maxHeight * (hasImage ? .0175 : .02),
                 ),
@@ -342,7 +314,7 @@ class _QuestionsContainerState extends State<QuestionsContainer> {
                         (widget.quizType == QuizTypes.groupPlay ? 0.25 : 0.325),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     child: InteractiveViewer(
                       boundaryMargin: const EdgeInsets.all(20),
@@ -359,7 +331,7 @@ class _QuestionsContainerState extends State<QuestionsContainer> {
                                     ? BoxFit.contain
                                     : BoxFit.cover,
                               ),
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(14),
                             ),
                           );
                         },

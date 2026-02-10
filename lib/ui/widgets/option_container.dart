@@ -24,6 +24,8 @@ class OptionContainer extends StatefulWidget {
     this.canResubmitAnswer = false,
     this.audiencePollPercentage,
     this.trueFalseOption = false,
+    this.leadingLabel,
+    this.useModernStyle = false,
     super.key,
   });
 
@@ -39,6 +41,8 @@ class OptionContainer extends StatefulWidget {
   final bool canResubmitAnswer;
   final QuizTypes quizType;
   final bool trueFalseOption;
+  final String? leadingLabel;
+  final bool useModernStyle;
 
   @override
   State<OptionContainer> createState() => _OptionContainerState();
@@ -229,25 +233,76 @@ class _OptionContainerState extends State<OptionContainer>
             : widget.constraints.maxHeight * heightPercentage,
         width: optionWidth,
         alignment: Alignment.center,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 15,
-                  vertical: maxLines > 2 ? 7.50 : 0,
+        child: widget.useModernStyle
+            ? Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
                 ),
-                color: _buildOptionBackgroundColor(),
-                alignment: AlignmentDirectional.centerStart,
-                child: Center(
-                  child: RichText(text: textSpan, textAlign: TextAlign.center),
+                decoration: BoxDecoration(
+                  color: _buildOptionBackgroundColor(),
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    if (widget.leadingLabel != null) ...[
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2E6CF6),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          widget.leadingLabel!,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
+                    Expanded(
+                      child: RichText(
+                        text: textSpan,
+                        textAlign: TextAlign.left,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 15,
+                        vertical: maxLines > 2 ? 7.50 : 0,
+                      ),
+                      color: _buildOptionBackgroundColor(),
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Center(
+                        child: RichText(
+                          text: textSpan,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ),
       ),
     );
   }
