@@ -8978,17 +8978,21 @@ class Api extends REST_Controller
                     $correct_answer = $question['answer'];
                     $correct_answer_text = $options[$correct_answer];
                     
-                    $shuffled_options = $options;
-                    shuffle($shuffled_options);
+                    // Shuffle the values while preserving keys
+                    $option_values = array_values($options);
+                    shuffle($option_values);
                     
-                    $new_answer = array_search($correct_answer_text, $shuffled_options);
-                    $question['answer'] = $new_answer;
+                    // Find new position of correct answer
+                    $new_answer = array_search($correct_answer_text, $option_values);
+                    $answer_keys = ['a', 'b', 'c', 'd', 'e'];
+                    $question['answer'] = $answer_keys[$new_answer] ?? 'a';
                     
-                    $question['optiona'] = $shuffled_options['a'] ?? '';
-                    $question['optionb'] = $shuffled_options['b'] ?? '';
-                    $question['optionc'] = $shuffled_options['c'] ?? '';
-                    $question['optiond'] = $shuffled_options['d'] ?? '';
-                    $question['optione'] = $shuffled_options['e'] ?? '';
+                    // Assign shuffled values back to options
+                    $question['optiona'] = $option_values[0] ?? '';
+                    $question['optionb'] = $option_values[1] ?? '';
+                    $question['optionc'] = $option_values[2] ?? '';
+                    $question['optiond'] = $option_values[3] ?? '';
+                    $question['optione'] = $option_values[4] ?? '';
                 }
             }
 

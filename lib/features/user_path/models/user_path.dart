@@ -103,7 +103,7 @@ final class UserPath {
           // Parse JSON string
           final decoded = json['topics_preference'] as String;
           if (decoded.isNotEmpty && decoded != '[]') {
-            topics = (decoded as String)
+            topics = decoded
                 .replaceAll('[', '')
                 .replaceAll(']', '')
                 .replaceAll('"', '')
