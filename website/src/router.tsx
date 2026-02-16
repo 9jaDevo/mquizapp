@@ -7,6 +7,7 @@ import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import Contact from './pages/Contact';
 import Download from './pages/Download';
+import Competition from './pages/Competition';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import NotFound from './pages/NotFound';
@@ -43,6 +44,10 @@ export const router = createBrowserRouter([
       {
         path: 'download',
         element: <Download />,
+      },
+      {
+        path: 'competition',
+        element: <Competition />,
       },
       {
         path: 'privacy-policy',

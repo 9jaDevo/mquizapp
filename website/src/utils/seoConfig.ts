@@ -41,6 +41,13 @@ export const seoConfig: Record<string, PageSEO> = {
         type: 'website',
     },
 
+    competition: {
+        title: 'mQuiz Battle for 100K - Competition Details & Prizes',
+        description: 'Learn about the mQuiz Battle for 100K contest timeline, entry requirements, prizes, and social ambassador award. Compete on the mQuiz app to win real cash.',
+        keywords: 'mquiz competition, quiz contest, battle for 100k, mquiz prizes, leaderboard contest, social ambassador award, skill-based quiz challenge',
+        type: 'website',
+    },
+
     contact: {
         title: 'Contact mQuiz - Get in Touch',
         description: 'Have questions? Contact the mQuiz team. We\'re here to help with any queries about our quiz learning platform.',

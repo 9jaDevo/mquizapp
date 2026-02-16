@@ -92,6 +92,14 @@ const Footer: React.FC = () => {
               </li>
               <li>
                 <Link
+                  to="/competition"
+                  className="text-sm text-slate-400 hover:text-primary transition-colors"
+                >
+                  Competition
+                </Link>
+              </li>
+              <li>
+                <Link
                   to="/download"
                   className="text-sm text-slate-400 hover:text-primary transition-colors"
                 >
