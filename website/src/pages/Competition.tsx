@@ -52,7 +52,7 @@ const consistencyAwards = [
 const howItWorks = [
   'Use your Instagram handle as your team keyword.',
   'Tell friends to follow our official Instagram page.',
-  'Ask them to comment your team keyword on the giveaway post.',
+  'Ask them to comment your team keyword on the battle for 100k post.',
   'Each valid comment counts as 1 referral point.',
 ];
 
@@ -237,13 +237,16 @@ const Competition: React.FC = () => {
                 <Share2 className="w-6 h-6 text-primary" />
                 <h3 className="text-2xl font-heading font-bold">How It Works</h3>
               </div>
-              <p className="text-slate-700 dark:text-slate-300 mb-4">
-                Want to win by growing the mQuiz community? Earn the Social Ambassador Award through referrals on Instagram.
-              </p>
+              <div className="mb-4">
+                <p className="text-slate-700 dark:text-slate-300 mb-3">
+                  Want to win by growing the mQuiz community? Earn the Social Ambassador Award through referrals on Instagram.
+                </p>
+                <p className="text-2xl font-semibold text-primary">₦10,000</p>
+              </div>
               <div className="bg-slate-900/5 dark:bg-white/5 rounded-2xl p-4 mb-4">
                 <p className="font-semibold">Example</p>
                 <p className="text-slate-700 dark:text-slate-300">
-                  If your handle is @alexfit, your keyword becomes: <span className="font-semibold">TEAM ALEXFIT</span>
+                  If your handle is @alexfit, your keyword becomes: <span className="font-semibold">TEAM ALEXFIT #mQuiz</span>
                 </p>
               </div>
               <ul className="space-y-3 text-slate-700 dark:text-slate-300">
@@ -360,9 +363,6 @@ const Competition: React.FC = () => {
               <GlassButton href="/download" variant="primary" size="lg">
                 Download mQuiz Now
               </GlassButton>
-              <div className="text-sm text-slate-600 dark:text-slate-400">
-                Scan the QR code or download from the App Store / Play Store.
-              </div>
             </div>
             <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-slate-600 dark:text-slate-400">
               <div className="flex items-center justify-center gap-2">
