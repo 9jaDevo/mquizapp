@@ -16,14 +16,13 @@ import 'package:flutterquiz/features/wallet/blocs/transactions_cubit.dart';
 import 'package:flutterquiz/features/wallet/cubit/monetization_cubit.dart';
 import 'package:flutterquiz/features/wallet/models/payment_request.dart';
 import 'package:flutterquiz/features/wallet/repos/wallet_repository.dart';
-import 'package:flutterquiz/features/wallet/widgets/animated_coin_display.dart';
-import 'package:flutterquiz/features/wallet/widgets/monetization_widgets.dart';
 import 'package:flutterquiz/features/wallet/widgets/cancel_redeem_request_dialog.dart';
 import 'package:flutterquiz/features/wallet/widgets/redeem_amount_request_bottom_sheet_container.dart';
 import 'package:flutterquiz/ui/widgets/all.dart';
 import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -111,10 +110,9 @@ class _WalletScreenState extends State<WalletScreen>
         ).toString(),
       );
 
-      //InterstitialAds show
-      Future.delayed(Duration.zero, () async {
-        await context.read<InterstitialAdCubit>().showAd(context);
-      });
+      // InterstitialAds show - Recurring visit gate: show only on 2nd+ session visit
+      // to reduce financial screen friction
+      _maybeShowInterstitialAdOnRecurringVisit();
 
       setState(() {});
     });
@@ -126,6 +124,31 @@ class _WalletScreenState extends State<WalletScreen>
       amount: coinAmount,
       coins: perCoin,
     );
+  }
+
+  /// Shows interstitial ad only on 2nd+ visit to wallet screen per session
+  /// First visit: no ad (better UX when user wants to check balance or redeem)
+  /// Subsequent visits: shows ad (more engaged users, better engagement)
+  Future<void> _maybeShowInterstitialAdOnRecurringVisit() async {
+    try {
+      // Increment wallet visit count (resets daily via SharedPreferences)
+      const walletVisitCountKey = 'wallet_session_visit_count';
+      final sharedPreferences = await SharedPreferences.getInstance();
+      final currentVisitCount =
+          sharedPreferences.getInt(walletVisitCountKey) ?? 0;
+      final newVisitCount = currentVisitCount + 1;
+      await sharedPreferences.setInt(walletVisitCountKey, newVisitCount);
+
+      // Show ad only on 2nd+ visit (newVisitCount >= 2)
+      if (newVisitCount >= 2 && mounted) {
+        await context.read<InterstitialAdCubit>().showAd(context);
+      }
+    } on Object catch (e) {
+      dev.log(
+        'Error in wallet ad recurring visit logic: $e',
+        name: 'WalletScreen',
+      );
+    }
   }
 
   @override
@@ -211,347 +234,291 @@ class _WalletScreenState extends State<WalletScreen>
       ),
       child: Column(
         children: [
-          // Step 8: Payout Eligibility Widget
+          // Step 8: Total Coins Available
           BlocBuilder<MonetizationCubit, MonetizationState>(
             builder: (context, state) {
-              final eligibility = state.payoutEligibility;
-              if (eligibility == null) {
-                return const SizedBox.shrink();
-              }
-
-              final requiredDays = eligibility.requiredDays == 0
-                  ? 1
-                  : eligibility.requiredDays;
-              final progressValue = (eligibility.activeDays / requiredDays)
-                  .clamp(0.0, 1.0);
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF7ED),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFFED7AA)),
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.tr(totalCoinsKey)!,
+                    style: TextStyle(
+                      color: context.primaryTextColor.withValues(alpha: 0.6),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.3,
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: const Color(
-                            0xFFF59E0B,
-                          ).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: const Color(
-                              0xFFF59E0B,
-                            ).withValues(alpha: 0.35),
+                  const SizedBox(height: 10),
+                  BlocSelector<UserDetailsCubit, UserDetailsState, String?>(
+                    selector: (state) {
+                      if (state is UserDetailsFetchSuccess) {
+                        return state.userProfile.coins;
+                      }
+                      return null;
+                    },
+                    builder: (context, coins) {
+                      if (coins == null) return const SizedBox.shrink();
+
+                      return Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF4CC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(
+                                  0xFFF59E0B,
+                                ).withValues(alpha: 0.3),
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: const QImage(
+                              imageUrl: Assets.coin,
+                              width: 22,
+                              height: 22,
+                            ),
                           ),
-                        ),
-                        child: const Icon(
-                          Icons.hourglass_top_rounded,
-                          color: Color(0xFFF59E0B),
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              eligibility.message,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              NumberFormat('#,###').format(
+                                int.tryParse(coins) ?? 0,
+                              ),
                               style: TextStyle(
-                                color: const Color(0xFF92400E),
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
+                                color: context.primaryTextColor,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 28,
+                                letterSpacing: 0.2,
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: LinearProgressIndicator(
-                                value: progressValue,
-                                minHeight: 8,
-                                backgroundColor: const Color(0xFFFDE68A),
-                                valueColor: const AlwaysStoppedAnimation<Color>(
-                                  Color(0xFFF59E0B),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              '${eligibility.activeDays}/${eligibility.requiredDays}',
-                              style: TextStyle(
-                                color: const Color(0xFFB45309),
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 18),
+                  Divider(
+                    color: context.primaryTextColor.withValues(alpha: 0.08),
+                    height: 1,
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    context.tr(redeemableAmountKey)!,
+                    style: TextStyle(
+                      color: context.primaryTextColor,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: context.scaffoldBackgroundColor.withValues(
+                        alpha: 0.7,
                       ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: context.surfaceColor,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: context.primaryTextColor.withValues(alpha: 0.08),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  context.tr(totalCoinsKey)!,
-                  style: TextStyle(
-                    color: context.primaryTextColor.withValues(alpha: 0.6),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                BlocSelector<UserDetailsCubit, UserDetailsState, String?>(
-                  selector: (state) {
-                    if (state is UserDetailsFetchSuccess) {
-                      return state.userProfile.coins;
-                    }
-                    return null;
-                  },
-                  builder: (context, coins) {
-                    if (coins == null) return const SizedBox.shrink();
-
-                    return Row(
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: context.primaryColor.withValues(alpha: 0.22),
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    child: Row(
                       children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFF4CC),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: const Color(
-                                0xFFF59E0B,
-                              ).withValues(alpha: 0.3),
-                            ),
-                          ),
-                          alignment: Alignment.center,
-                          child: const QImage(
-                            imageUrl: Assets.coin,
-                            width: 22,
-                            height: 22,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            NumberFormat('#,###').format(
-                              int.tryParse(coins) ?? 0,
-                            ),
-                            style: TextStyle(
-                              color: context.primaryTextColor,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 28,
-                              letterSpacing: 0.2,
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-                const SizedBox(height: 18),
-                Divider(
-                  color: context.primaryTextColor.withValues(alpha: 0.08),
-                  height: 1,
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  context.tr(redeemableAmountKey)!,
-                  style: TextStyle(
-                    color: context.primaryTextColor,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Container(
-                  decoration: BoxDecoration(
-                    color: context.scaffoldBackgroundColor.withValues(
-                      alpha: 0.7,
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: context.primaryColor.withValues(alpha: 0.22),
-                    ),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  child: Row(
-                    children: [
-                      Text(
-                        payoutRequestCurrency,
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          color: context.primaryColor,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextField(
+                        Text(
+                          payoutRequestCurrency,
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w800,
-                            color: context.primaryTextColor,
-                            letterSpacing: 0.3,
+                            color: context.primaryColor,
                           ),
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          controller: redeemableAmountTextEditingController,
-                          decoration: InputDecoration(
-                            border: InputBorder.none,
-                            hintText: '0.00',
-                            isDense: true,
-                            contentPadding: EdgeInsets.zero,
-                            hintStyle: TextStyle(
-                              color: context.primaryTextColor.withValues(
-                                alpha: 0.25,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: context.primaryTextColor,
+                              letterSpacing: 0.3,
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            controller: redeemableAmountTextEditingController,
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              hintText: '0.00',
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                              hintStyle: TextStyle(
+                                color: context.primaryTextColor.withValues(
+                                  alpha: 0.25,
+                                ),
+                                fontWeight: FontWeight.w600,
                               ),
-                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
-                      ),
-                      Container(
-                        width: 34,
-                        height: 34,
-                        decoration: BoxDecoration(
-                          color: context.primaryColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
+                        Container(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            color: context.primaryColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.edit_outlined,
+                            color: context.primaryColor,
+                            size: 16,
+                          ),
                         ),
-                        child: Icon(
-                          Icons.edit_outlined,
-                          color: context.primaryColor,
-                          size: 16,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                ...payoutRequestNotes(
-                  payoutRequestCurrency,
-                  (minimumCoinLimit / perCoin).toString(),
-                  minimumCoinLimit.toString(),
-                ).map(_buildPayoutRequestNote),
-              ],
-            ),
+                  const SizedBox(height: 16),
+                  ...payoutRequestNotes(
+                    payoutRequestCurrency,
+                    (minimumCoinLimit / perCoin).toString(),
+                    minimumCoinLimit.toString(),
+                  ).map(_buildPayoutRequestNote),
+                ],
+              );
+            },
           ),
 
           SizedBox(height: context.height * 0.03),
 
           /// Redeem Now Btn
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () {
-                unawaited(HapticFeedback.mediumImpact());
-                final enteredRedeemAmount =
-                    double.tryParse(
-                      redeemableAmountTextEditingController!.text.trim(),
-                    ) ??
-                    0;
+          BlocBuilder<MonetizationCubit, MonetizationState>(
+            builder: (context, state) {
+              final eligibility = state.payoutEligibility;
+              final requiredDays = eligibility?.requiredDays ?? 0;
+              final normalizedRequiredDays = requiredDays == 0
+                  ? 1
+                  : requiredDays;
+              final isEligibleForPayout =
+                  eligibility != null &&
+                  (eligibility.eligible ||
+                      eligibility.activeDays >= normalizedRequiredDays);
 
-                if (enteredRedeemAmount < _minimumRedeemableAmount()) {
-                  context.showSnack(
-                    '${context.tr(minimumRedeemableAmountKey)} $payoutRequestCurrency${_minimumRedeemableAmount()} ',
-                  );
-                  return;
-                }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: isEligibleForPayout
+                          ? () {
+                              unawaited(HapticFeedback.mediumImpact());
+                              final enteredRedeemAmount =
+                                  double.tryParse(
+                                    redeemableAmountTextEditingController!.text
+                                        .trim(),
+                                  ) ??
+                                  0;
 
-                final userCoins = int.parse(
-                  context.read<UserDetailsCubit>().getCoins()!,
-                );
+                              if (enteredRedeemAmount <
+                                  _minimumRedeemableAmount()) {
+                                context.showSnack(
+                                  '${context.tr(minimumRedeemableAmountKey)} $payoutRequestCurrency${_minimumRedeemableAmount()} ',
+                                );
+                                return;
+                              }
 
-                final maxRedeemableAmount = UiUtils.calculateAmountPerCoins(
-                  userCoins: userCoins,
-                  amount: coinAmount,
-                  coins: perCoin,
-                );
+                              final userCoins = int.parse(
+                                context.read<UserDetailsCubit>().getCoins()!,
+                              );
 
-                if (enteredRedeemAmount > maxRedeemableAmount) {
-                  context.showSnack(
-                    context.tr(notEnoughCoinsToRedeemAmountKey)!,
-                  );
-                  return;
-                }
+                              final maxRedeemableAmount =
+                                  UiUtils.calculateAmountPerCoins(
+                                    userCoins: userCoins,
+                                    amount: coinAmount,
+                                    coins: perCoin,
+                                  );
 
-                showRedeemRequestAmountBottomSheet(
-                  deductedCoins:
-                      UiUtils.calculateDeductedCoinsForRedeemableAmount(
-                        amount: coinAmount,
-                        coins: perCoin,
-                        userEnteredAmount: enteredRedeemAmount,
+                              if (enteredRedeemAmount > maxRedeemableAmount) {
+                                context.showSnack(
+                                  context.tr(notEnoughCoinsToRedeemAmountKey)!,
+                                );
+                                return;
+                              }
+
+                              showRedeemRequestAmountBottomSheet(
+                                deductedCoins:
+                                    UiUtils.calculateDeductedCoinsForRedeemableAmount(
+                                      amount: coinAmount,
+                                      coins: perCoin,
+                                      userEnteredAmount: enteredRedeemAmount,
+                                    ),
+                                redeemableAmount: enteredRedeemAmount,
+                              );
+                            }
+                          : null,
+                      child: Container(
+                        width: double.infinity,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: isEligibleForPayout
+                                ? const [Color(0xFF4F46E5), Color(0xFF22D3EE)]
+                                : [
+                                    const Color(
+                                      0xFF94A3B8,
+                                    ).withValues(alpha: 0.6),
+                                    const Color(
+                                      0xFF94A3B8,
+                                    ).withValues(alpha: 0.35),
+                                  ],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: isEligibleForPayout
+                              ? [
+                                  BoxShadow(
+                                    color: const Color(
+                                      0xFF4F46E5,
+                                    ).withValues(alpha: 0.3),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ]
+                              : [],
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          context.tr(redeemNowKey)!,
+                          style: TextStyle(
+                            color: Colors.white.withValues(
+                              alpha: isEligibleForPayout ? 1 : 0.7,
+                            ),
+                            fontWeight: FontWeight.w800,
+                            fontSize: 18,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
                       ),
-                  redeemableAmount: enteredRedeemAmount,
-                );
-              },
-              child: Container(
-                width: double.infinity,
-                height: 56,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF4F46E5), Color(0xFF22D3EE)],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF4F46E5).withValues(alpha: 0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
+                  if (!isEligibleForPayout && eligibility != null) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      eligibility.message,
+                      style: TextStyle(
+                        color: context.primaryTextColor.withValues(alpha: 0.6),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  context.tr(redeemNowKey)!,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 18,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ),
-            ),
+                ],
+              );
+            },
           ),
         ],
       ),

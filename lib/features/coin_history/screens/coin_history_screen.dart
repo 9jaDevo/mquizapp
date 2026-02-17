@@ -14,7 +14,6 @@ import 'package:flutterquiz/ui/widgets/already_logged_in_dialog.dart';
 import 'package:flutterquiz/ui/widgets/circular_progress_container.dart';
 import 'package:flutterquiz/ui/widgets/error_container.dart';
 import 'package:flutterquiz/utils/datetime_utils.dart';
-import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 
 enum _HistoryFilter { all, earned, spent, bonus }
@@ -42,6 +41,8 @@ final class _CoinHistoryScreenState extends State<CoinHistoryScreen> {
   final TextEditingController _searchController = TextEditingController();
   _HistoryFilter _activeFilter = _HistoryFilter.all;
   String _searchQuery = '';
+  int _itemsViewedForAd = 0;
+  bool _adShownThisSession = false;
 
   @override
   void initState() {
@@ -297,7 +298,7 @@ final class _CoinHistoryScreenState extends State<CoinHistoryScreen> {
       ),
       child: Row(
         children: [
-          Icon(
+          const Icon(
             Icons.search_rounded,
             color: const Color(0xFF94A3B8),
           ),
@@ -403,7 +404,7 @@ final class _CoinHistoryScreenState extends State<CoinHistoryScreen> {
   }
 
   bool _isBonusType(CoinHistory item) {
-    final type = (item.type).toLowerCase();
+    final type = item.type.toLowerCase();
     return type.contains('bonus') ||
         type.contains('admin') ||
         type.contains('reward') ||
@@ -464,9 +465,13 @@ final class _CoinHistoryScreenState extends State<CoinHistoryScreen> {
         SliverList.separated(
           itemCount: filtered.length,
           separatorBuilder: (context, _) => const SizedBox(height: 12),
-          itemBuilder: (context, index) => _buildListItem(
-            transaction: filtered[index],
-          ),
+          itemBuilder: (context, index) {
+            // Track items viewed and show interstitial after 5 items
+            _maybeShowInterstitialAfterViewingItems(index);
+            return _buildListItem(
+              transaction: filtered[index],
+            );
+          },
         ),
         if (state.hasMore)
           SliverToBoxAdapter(
@@ -491,7 +496,6 @@ final class _CoinHistoryScreenState extends State<CoinHistoryScreen> {
       body: Stack(
         children: [
           SafeArea(
-            top: true,
             bottom: false,
             child: Padding(
               padding: EdgeInsets.only(bottom: showBannerAd ? 60 : 0),
@@ -505,6 +509,22 @@ final class _CoinHistoryScreenState extends State<CoinHistoryScreen> {
         ],
       ),
     );
+  }
+
+  /// Shows interstitial ad after user has viewed 5+ transactions
+  /// Non-intrusive trigger: natural break point when user scrolls through history
+  void _maybeShowInterstitialAfterViewingItems(int itemIndex) {
+    _itemsViewedForAd = itemIndex + 1;
+
+    // Show ad after viewing 5 items, but only once per session
+    if (_itemsViewedForAd >= 5 && !_adShownThisSession) {
+      _adShownThisSession = true;
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          unawaited(context.read<InterstitialAdCubit>().showAd(context));
+        }
+      });
+    }
   }
 }
 
@@ -691,7 +711,7 @@ class _TransactionStyle {
   final Color accent;
   final IconData icon;
 
-  static _TransactionStyle from(CoinHistory transaction) {
+  factory _TransactionStyle.from(CoinHistory transaction) {
     final type = transaction.type.toLowerCase();
     final isBonus =
         type.contains('bonus') ||
@@ -745,7 +765,6 @@ class _GlassIconButton extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: const Color(0xFF1F51D9).withValues(alpha: 0.25),
-                width: 1,
               ),
             ),
             child: Icon(

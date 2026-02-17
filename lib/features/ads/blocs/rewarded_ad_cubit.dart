@@ -96,6 +96,8 @@ class RewardedAdCubit extends Cubit<RewardedAdState>
 
   RewardedAd? _rewardedAd;
   late LevelPlayRewardedAd _ironSourceAd;
+  VoidCallback? _rewardEarnedCallback;
+  bool _rewardEarned = false;
 
   RewardedAd? get rewardedAd => _rewardedAd;
 
@@ -303,11 +305,15 @@ class RewardedAdCubit extends Cubit<RewardedAdState>
     required BuildContext context,
     int rewardAmount = 3,
     String rewardCurrencyLabel = 'coins',
+    VoidCallback? onUserEarnedReward,
   }) async {
     //if ads is enable
     final sysConfigCubit = context.read<SystemConfigCubit>();
     if (sysConfigCubit.isAdsEnable &&
         !context.read<UserDetailsCubit>().removeAds()) {
+      _rewardEarnedCallback = onUserEarnedReward;
+      _rewardEarned = false;
+
       if (state is RewardedAdLoaded) {
         // Show consent dialog with reward details (AdMob compliance)
         final userConsented = await _showConsentDialog(
@@ -318,6 +324,7 @@ class RewardedAdCubit extends Cubit<RewardedAdState>
 
         if (!userConsented) {
           log('User skipped rewarded ad', name: 'RewardedAd');
+          _resetRewardTracking();
           return; // User declined, don't show ad
         }
 
@@ -326,6 +333,7 @@ class RewardedAdCubit extends Cubit<RewardedAdState>
           _rewardedAd?.fullScreenContentCallback = FullScreenContentCallback(
             onAdDismissedFullScreenContent: (ad) {
               ad.dispose();
+              _resetRewardTracking();
               onAdDismissedCallback();
               createRewardedAd(context);
             },
@@ -333,14 +341,17 @@ class RewardedAdCubit extends Cubit<RewardedAdState>
               ad.dispose();
               //need to show this reason to user
               emit(const RewardedAdFailure());
+              _resetRewardTracking();
               createRewardedAd(context);
             },
           );
-          rewardedAd?.show(onUserEarnedReward: (_, _) => {});
+          rewardedAd?.show(onUserEarnedReward: (_, _) => _handleRewardEarned());
         } else if (sysConfigCubit.adsType == AdType.unity) {
           UnityAds.showVideoAd(
             placementId: unityPlacementName,
             onComplete: (placementId) {
+              _handleRewardEarned();
+              _resetRewardTracking();
               onAdDismissedCallback();
               createRewardedAd(context);
             },
@@ -352,6 +363,7 @@ class RewardedAdCubit extends Cubit<RewardedAdState>
         } else if (sysConfigCubit.adsType == AdType.ironSource) {
           if (await _ironSourceAd.isAdReady()) {
             await _ironSourceAd.showAd().then((_) async {
+              _resetRewardTracking();
               onAdDismissedCallback();
               await createDailyRewardAd(context);
             });
@@ -359,12 +371,25 @@ class RewardedAdCubit extends Cubit<RewardedAdState>
         }
       } else if (state is RewardedAdFailure) {
         //create reward ad if ad is not loaded successfully
+        _resetRewardTracking();
         createRewardedAd(context);
       } else if (state is RewardedAdInitial) {
         //create ad if not initialized yet
+        _resetRewardTracking();
         createRewardedAd(context);
       }
     }
+  }
+
+  void _handleRewardEarned() {
+    if (_rewardEarned) return;
+    _rewardEarned = true;
+    _rewardEarnedCallback?.call();
+  }
+
+  void _resetRewardTracking() {
+    _rewardEarnedCallback = null;
+    _rewardEarned = false;
   }
 
   /// Show consent dialog before displaying rewarded ad (AdMob policy compliance)
@@ -441,5 +466,6 @@ class RewardedAdCubit extends Cubit<RewardedAdState>
   @override
   void onAdRewarded(LevelPlayReward reward, LevelPlayAdInfo adInfo) {
     log('onAdRewarded $adInfo', name: 'LevelPlay');
+    _handleRewardEarned();
   }
 }

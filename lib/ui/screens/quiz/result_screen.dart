@@ -8,6 +8,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutterquiz/commons/commons.dart';
 import 'package:flutterquiz/core/core.dart';
 import 'package:flutterquiz/features/ads/blocs/interstitial_ad_cubit.dart';
+import 'package:flutterquiz/features/ads/blocs/rewarded_ad_cubit.dart';
 import 'package:flutterquiz/features/ads/blocs/rewarded_interstitial_ad_cubit.dart';
 import 'package:flutterquiz/features/battle_room/cubits/battle_room_cubit.dart';
 import 'package:flutterquiz/features/battle_room/models/battle_room.dart';
@@ -291,23 +292,16 @@ class _ResultScreenState extends State<ResultScreen> {
 
   void _showBoostEarningsPopup() {
     try {
-      final questions = widget.questions ?? const <Question>[];
-      final userId = context.read<UserDetailsCubit>().getUserFirebaseId();
-      final correctAnswers = questions.where((q) {
-        final ans = AnswerEncryption.decryptCorrectAnswer(
-          rawKey: userId,
-          correctAnswer: q.correctAnswer!,
-        );
-        return q.attempted && q.submittedAnswerId == ans;
-      }).length;
+      final adsEnabled = context.read<SystemConfigCubit>().isAdsEnable;
+      final adsRemoved = context.read<UserDetailsCubit>().removeAds();
+      if (!adsEnabled || adsRemoved) return;
 
-      if (correctAnswers <= 0) return;
+      final coinScoreState = context.read<SetCoinScoreCubit>().state;
+      if (coinScoreState is! SetCoinScoreSuccess) return;
 
-      final updateCoinsCubit = context.read<UpdateCoinsCubit>();
-      // Calculate coin value (example: 10 coins per correct answer)
-      final baseCoins = correctAnswers * 10;
+      final baseCoins = coinScoreState.earnCoin;
+      if (baseCoins <= 0) return;
 
-      // Offer boost
       context.read<MonetizationCubit>().offerBoostEarnings(
         coinsEarned: baseCoins.toString(),
       );
@@ -315,43 +309,50 @@ class _ResultScreenState extends State<ResultScreen> {
       showDialog<void>(
         context: context,
         barrierDismissible: false,
-        builder: (dialogContext) => BlocProvider.value(
-          value: updateCoinsCubit,
-          child: BlocConsumer<MonetizationCubit, MonetizationState>(
-            listener: (context, state) {
-              if (!state.isLoadingBoost && state.boostEarnings != null) {
-                Navigator.of(dialogContext).pop();
-                final boostedCoins = state.boostEarnings!.boostedCoins;
-                updateCoinsCubit.updateCoins(
-                  addCoin: true,
-                  coins: boostedCoins,
-                  title: 'Boost Earnings',
-                );
-              }
-            },
-            builder: (context, state) {
-              if (state.boostEarnings != null) {
+        builder: (dialogContext) =>
+            BlocBuilder<MonetizationCubit, MonetizationState>(
+              builder: (context, state) {
+                if (state.isLoadingBoost || state.boostEarnings == null) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final boost = state.boostEarnings!;
+
                 return BoostEarningsDialog(
-                  boost: state.boostEarnings!,
-                  onClaimPressed: () {
-                    context.read<MonetizationCubit>().applyBoostEarnings(
-                      coinsEarned: state.boostEarnings!.boostedCoins.toString(),
+                  boost: boost,
+                  onClaimPressed: () async {
+                    final rewardedCubit = context.read<RewardedAdCubit>();
+
+                    if (rewardedCubit.state is! RewardedAdLoaded) {
+                      await rewardedCubit.createRewardedAd(context);
+                      if (!mounted) return;
+                      context.showSnack(context.tr('watchAdToEarnCoins')!);
+                      return;
+                    }
+
+                    await rewardedCubit.showAd(
+                      context: context,
+                      rewardAmount: boost.coinDifference,
+                      rewardCurrencyLabel: 'coins',
+                      onAdDismissedCallback: () {},
+                      onUserEarnedReward: () async {
+                        await context
+                            .read<MonetizationCubit>()
+                            .applyBoostEarnings(
+                              coinsEarned: boost.boostedCoins.toString(),
+                            );
+                        await fetchUpdateUserDetails();
+                        if (!mounted) return;
+                        Navigator.of(dialogContext).pop();
+                      },
                     );
                   },
                   onSkipPressed: () {
                     Navigator.of(dialogContext).pop();
-                    updateCoinsCubit.updateCoins(
-                      addCoin: true,
-                      coins: state.boostEarnings!.originalCoins,
-                      title: 'Quiz Completed',
-                    );
                   },
                 );
-              }
-              return const Center(child: CircularProgressIndicator());
-            },
-          ),
-        ),
+              },
+            ),
       );
     } catch (e) {
       // Silently fail boost earnings
