@@ -1000,8 +1000,246 @@ class HomeScreenState extends State<HomeScreen>
                 ///
                 final live = state.contestList.live;
 
-                /// No Contest
+                /// No live contest — fall back to upcoming if available
                 if (live.errorMessage.isNotEmpty) {
+                  final upcoming = state.contestList.upcoming;
+
+                  // If there is an upcoming contest, show it as a teaser
+                  if (upcoming.errorMessage.isEmpty &&
+                      upcoming.contestDetails.isNotEmpty) {
+                    final upcomingContest = upcoming.contestDetails.first;
+                    final entryFee =
+                        int.tryParse(upcomingContest.entry ?? '0') ?? 0;
+
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Top gradient section — purple/violet for upcoming
+                          Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(16),
+                                  topRight: Radius.circular(16),
+                                ),
+                                child: Container(
+                                  height: 160,
+                                  decoration: const BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        Color(0xFF7C3AED),
+                                        Color(0xFFA855F7),
+                                      ],
+                                    ),
+                                  ),
+                                  child:
+                                      upcomingContest.image != null &&
+                                          upcomingContest.image!.isNotEmpty
+                                      ? Image.network(
+                                          upcomingContest.image!,
+                                          fit: BoxFit.cover,
+                                          width: double.infinity,
+                                        )
+                                      : const SizedBox(),
+                                ),
+                              ),
+                              // COMING SOON badge
+                              Positioned(
+                                top: 12,
+                                right: 12,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF59E0B),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    context.tr('upcomingLbl') ?? 'COMING SOON',
+                                    style: GoogleFonts.nunito(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              // Title and description overlay
+                              Positioned(
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.transparent,
+                                        Colors.black.withValues(alpha: 0.7),
+                                      ],
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        upcomingContest.name.toString(),
+                                        style: GoogleFonts.nunito(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        upcomingContest.description.toString(),
+                                        style: GoogleFonts.nunito(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w400,
+                                          color: Colors.white.withValues(
+                                            alpha: 0.95,
+                                          ),
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          // Bottom section — starts on / entry fee / view details
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                // Starts On
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        context.tr('startsOnLbl') ??
+                                            'Starts On',
+                                        style: GoogleFonts.nunito(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w400,
+                                          color: const Color(0xFF64748B),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        upcomingContest.startDate
+                                                ?.split(' ')
+                                                .first ??
+                                            '-',
+                                        style: GoogleFonts.nunito(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF1E293B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                // Entry fee
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        context.tr('entryFeesLbl') ??
+                                            'Entry Fee',
+                                        style: GoogleFonts.nunito(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w400,
+                                          color: const Color(0xFF64748B),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        entryFee == 0
+                                            ? context.tr('freeLbl') ?? 'Free'
+                                            : '$entryFee ${context.tr('coinsLbl') ?? 'Coins'}',
+                                        style: GoogleFonts.nunito(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF1E293B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                // View details button — navigates to contest screen
+                                GestureDetector(
+                                  onTap: onTapViewAll,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 12,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          Color(0xFF7C3AED),
+                                          Color(0xFFA855F7),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(
+                                            0xFF7C3AED,
+                                          ).withValues(alpha: 0.3),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Text(
+                                      context.tr('viewDetailsLbl') ??
+                                          'View Details',
+                                      style: GoogleFonts.nunito(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  // No live or upcoming contest — show empty state
                   return Container(
                     decoration: BoxDecoration(
                       color: colorScheme.surface,

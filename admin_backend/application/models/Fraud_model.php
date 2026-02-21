@@ -62,8 +62,8 @@ class Fraud_model extends CI_Model
             'detections' => $detections,
             'total_detections' => count($detections),
             'action' => count($detections) > 0 ? 'review' : 'allow',
-            'highest_severity' => count($detections) > 0 
-                ? $this->get_highest_severity($detections) 
+            'highest_severity' => count($detections) > 0
+                ? $this->get_highest_severity($detections)
                 : 'none'
         ];
     }
@@ -81,12 +81,12 @@ class Fraud_model extends CI_Model
 
         // Count ads watched today
         $ads_today = $this->db->select('COUNT(*) as count')
-                              ->where('user_id', $user_id)
-                              ->where("DATE(date) = '$today'")
-                              ->where("type = 'watchedAds'")
-                              ->get('tbl_tracker')
-                              ->row()
-                              ->count;
+            ->where('user_id', $user_id)
+            ->where("DATE(date) = '$today'")
+            ->where("type = 'watchedAds'")
+            ->get('tbl_tracker')
+            ->row()
+            ->count;
 
         if ($ads_today >= $daily_ad_limit) {
             return [
@@ -146,7 +146,7 @@ class Fraud_model extends CI_Model
 
         // Get user creation date
         $user = $this->db->select('created')->where('id', $user_id)->get('tbl_users')->row();
-        
+
         if (!$user) {
             return ['is_suspicious' => false];
         }
@@ -176,7 +176,11 @@ class Fraud_model extends CI_Model
      */
     private function log_fraud_detection($user_id, $detection)
     {
-        $user = $this->db->select('uid')->where('id', $user_id)->get('tbl_users')->row();
+        $user = $this->db->select('uid, type')->where('id', $user_id)->get('tbl_users')->row();
+
+        // Embed auth provider so admin can identify OAuth accounts at a glance
+        $meta = $detection['metadata'] ?? [];
+        $meta['auth_provider'] = $user->type ?? 'unknown';
 
         $data = [
             'user_id' => $user_id,
@@ -185,7 +189,7 @@ class Fraud_model extends CI_Model
             'reason' => $detection['reason'],
             'severity' => $detection['severity'],
             'action_taken' => 'review',
-            'metadata' => json_encode($detection['metadata'] ?? []),
+            'metadata' => json_encode($meta),
             'created_at' => date('Y-m-d H:i:s')
         ];
 
@@ -225,19 +229,19 @@ class Fraud_model extends CI_Model
      */
     public function get_detections_for_review($status = 'review', $limit = 20, $offset = 0)
     {
-        $query = $this->db->select('fd.*, tu.name, tu.email, tu.coins')
-                         ->from('tbl_fraud_detection fd')
-                         ->join('tbl_users tu', 'fd.user_id = tu.id', 'left')
-                         ->where('fd.action_taken', $status)
-                         ->where('fd.resolved', 0);
+        $query = $this->db->select('fd.*, tu.name, tu.email, tu.coins, tu.type as auth_provider')
+            ->from('tbl_fraud_detection fd')
+            ->join('tbl_users tu', 'fd.user_id = tu.id', 'left')
+            ->where('fd.action_taken', $status)
+            ->where('fd.resolved', 0);
 
         $total = $query->count_all_results(false);
 
         $results = $query->order_by('fd.severity', 'DESC')
-                        ->order_by('fd.created_at', 'DESC')
-                        ->limit($limit, $offset)
-                        ->get()
-                        ->result_array();
+            ->order_by('fd.created_at', 'DESC')
+            ->limit($limit, $offset)
+            ->get()
+            ->result_array();
 
         return [
             'data' => $results,
@@ -266,7 +270,7 @@ class Fraud_model extends CI_Model
         ];
 
         return $this->db->where('id', $detection_id)
-                       ->update('tbl_fraud_detection', $data);
+            ->update('tbl_fraud_detection', $data);
     }
 
     /**
@@ -279,17 +283,17 @@ class Fraud_model extends CI_Model
         $stats = [
             'total_detections' => $this->db->count_all('tbl_fraud_detection'),
             'unresolved' => $this->db->where('resolved', 0)
-                                     ->count_all_results('tbl_fraud_detection'),
+                ->count_all_results('tbl_fraud_detection'),
             'by_type' => $this->db->select('detection_type, COUNT(*) as count')
-                                  ->group_by('detection_type')
-                                  ->get('tbl_fraud_detection')
-                                  ->result_array(),
+                ->group_by('detection_type')
+                ->get('tbl_fraud_detection')
+                ->result_array(),
             'by_severity' => $this->db->select('severity, COUNT(*) as count')
-                                      ->group_by('severity')
-                                      ->get('tbl_fraud_detection')
-                                      ->result_array(),
+                ->group_by('severity')
+                ->get('tbl_fraud_detection')
+                ->result_array(),
             'resolved_count' => $this->db->where('resolved', 1)
-                                        ->count_all_results('tbl_fraud_detection')
+                ->count_all_results('tbl_fraud_detection')
         ];
 
         return $stats;

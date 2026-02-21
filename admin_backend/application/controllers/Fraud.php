@@ -88,15 +88,35 @@ class Fraud extends CI_Controller
         $result = $this->Fraud_model->resolve_detection($detection_id, $action, $notes);
 
         if ($result && $action == 'suspend') {
-            // Get user_id from detection and suspend account
-            $detection = $this->db->select('user_id')
-                                 ->where('id', $detection_id)
-                                 ->get('tbl_fraud_detection')
-                                 ->row();
-            
+            // Get user_id and auth provider from detection
+            $detection = $this->db->select('fd.user_id, tu.type as auth_provider')
+                ->from('tbl_fraud_detection fd')
+                ->join('tbl_users tu', 'fd.user_id = tu.id', 'left')
+                ->where('fd.id', $detection_id)
+                ->get()
+                ->row();
+
             if ($detection) {
+                // OAuth accounts (Google, Apple) must not be suspended automatically.
+                // Firebase verifies the identity of these users; a fraud flag may be
+                // a false positive from the quiz-speed check. Force a warning instead
+                // and inform the admin — they can deactivate from the Users table
+                // if they have absolute certainty of fraud.
+                $oauth_types = ['gmail', 'apple'];
+                if (in_array($detection->auth_provider, $oauth_types)) {
+                    // Downgrade to warning and tell the admin
+                    $this->Fraud_model->resolve_detection($detection_id, 'warning', 'OAuth account — auto-downgraded from suspend. Verify manually before deactivating.');
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Cannot auto-suspend OAuth-verified account (' . strtoupper($detection->auth_provider) . '). Action downgraded to Warning. Deactivate from the Users table only after manual review.',
+                        'downgraded' => true,
+                        'auth_provider' => $detection->auth_provider
+                    ]);
+                    return;
+                }
+
                 $this->db->where('id', $detection->user_id)
-                         ->update('tbl_users', ['status' => 'suspended']);
+                    ->update('tbl_users', ['status' => 'suspended']);
             }
         }
 
@@ -117,11 +137,11 @@ class Fraud extends CI_Controller
 
         $detection_id = $this->input->get('id');
         $detection = $this->db->select('fd.*, tu.name, tu.email, tu.coins, tu.created')
-                             ->from('tbl_fraud_detection fd')
-                             ->join('tbl_users tu', 'fd.user_id = tu.id')
-                             ->where('fd.id', $detection_id)
-                             ->get()
-                             ->row_array();
+            ->from('tbl_fraud_detection fd')
+            ->join('tbl_users tu', 'fd.user_id = tu.id')
+            ->where('fd.id', $detection_id)
+            ->get()
+            ->row_array();
 
         if (!$detection) {
             show_404();
@@ -130,11 +150,11 @@ class Fraud extends CI_Controller
         // Get user's activity
         $data['detection'] = $detection;
         $data['user_activity'] = $this->db->select('*')
-                                          ->where('user_id', $detection['user_id'])
-                                          ->order_by('date', 'DESC')
-                                          ->limit(20)
-                                          ->get('tbl_tracker')
-                                          ->result_array();
+            ->where('user_id', $detection['user_id'])
+            ->order_by('date', 'DESC')
+            ->limit(20)
+            ->get('tbl_tracker')
+            ->result_array();
 
         $this->load->view('fraud_detection_detail', $data);
     }
@@ -159,7 +179,7 @@ class Fraud extends CI_Controller
 
         foreach ($settings as $name => $value) {
             $this->db->where('setting_name', $name)
-                     ->update('tbl_settings', ['setting_value' => $value]);
+                ->update('tbl_settings', ['setting_value' => $value]);
         }
 
         echo json_encode(['success' => true, 'message' => 'Thresholds updated']);

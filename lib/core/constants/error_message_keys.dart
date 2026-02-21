@@ -127,6 +127,10 @@ const errorCodeNotificationSentSuccessfully = '123';
 const errorCodeInvalidHash = '124';
 const errorCodeAccountHasBeenDeactivated = '126';
 const errorCodeCanNotMakeRequest = '127';
+// Separate code for Firebase-side account disable (e.g. Firebase console ban or
+// Google account compromise) vs backend suspension (126). Allows the two cases
+// to be distinguished in logs and future UX messages.
+const errorCodeFirebaseAccountDisabled = '135';
 const errorCodeCategoryAlreadyPlayed = '128';
 const errorCodeUnauthorizedAccess = '129';
 const errorCodeUserExists = '130';
@@ -146,7 +150,7 @@ String firebaseErrorCodeToNumber(String code) => switch (code) {
   invalidVerificationCodeKey => errorCodeInvalidVerificationCode,
   operationNotAllowedKey => errorCodeOperationNotAllowed,
   requireRecentLoginKey => errorCodeRequireRecentLogin,
-  userDisabledKey => errorCodeAccountHasBeenDeactivated,
+  userDisabledKey => errorCodeFirebaseAccountDisabled,
   userNotFoundKey => errorCodeUserNotFound,
   verifyEmailKey => errorCodeVerifyEmail,
   weakPasswordKey => errorCodeWeakPassword,
@@ -161,6 +165,7 @@ String firebaseErrorCodeToNumber(String code) => switch (code) {
 String convertErrorCodeToLanguageKey(String code) => switch (code) {
   errorCodeAccountExistsCredential => accountExistCredentialKey,
   errorCodeAccountHasBeenDeactivated => accountHasBeenDeactivatedKey,
+  errorCodeFirebaseAccountDisabled => accountHasBeenDeactivatedKey,
   errorCodeAlreadyInExam => alreadyInExamKey,
   errorCodeAlreadyPlayedContest => contestAlreadyPlayedKey,
   errorCodeBattleDestroyedSuccess => _battleDestroyedSuccess,

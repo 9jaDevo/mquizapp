@@ -78,8 +78,12 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
     required List<Map<String, String?>> values,
     required String keyValue,
   }) {
-    selectedCategoryId = values.map((e) => e['id']).toList().first!;
-    selectedCategory = values.map((e) => e['name']).toList().first!;
+    // Only initialise to the first item when no valid selection exists yet.
+    final ids = values.map((e) => e['id']).toList();
+    if (!ids.contains(selectedCategoryId)) {
+      selectedCategoryId = ids.first!;
+      selectedCategory = values.first['name'] ?? '';
+    }
 
     return StatefulBuilder(
       builder: (context, setState) {

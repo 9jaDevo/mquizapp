@@ -78,12 +78,7 @@ class _CreateOrJoinRoomScreenState extends State<CreateOrJoinRoomScreen> {
         ? context.read<SystemConfigCubit>().oneVsOneBattleMinimumEntryFee
         : context.read<SystemConfigCubit>().groupBattleMinimumEntryFee;
 
-    entryFees = [
-      minEntryCoins,
-      minEntryCoins * 2,
-      minEntryCoins * 3,
-      minEntryCoins * 4,
-    ];
+    entryFees = [50, 100, 500, 1000];
 
     Future.delayed(Duration.zero, () {
       context.read<RewardedAdCubit>().createRewardedAd(context);
@@ -122,9 +117,15 @@ class _CreateOrJoinRoomScreenState extends State<CreateOrJoinRoomScreen> {
     required List<Map<String, String?>> values,
     required String keyValue,
   }) {
-    selectedCategoryId = values.map((e) => e['id']).toList().first!;
-    selectedCategory = values.map((e) => e['name']).toList().first!;
-    selectedCategoryImage = values.map((e) => e['image']).toList().first!;
+    // Only initialise to the first item if no valid category has been selected
+    // yet. Without this guard, any setState rebuild (e.g. typing a custom coin
+    // amount) re-invokes this method and resets the dropdown to the first item.
+    final ids = values.map((e) => e['id']).toList();
+    if (!ids.contains(selectedCategoryId)) {
+      selectedCategoryId = ids.first!;
+      selectedCategory = values.first['name'] ?? '';
+      selectedCategoryImage = values.first['image'] ?? '';
+    }
 
     return StatefulBuilder(
       builder: (context, setState) {

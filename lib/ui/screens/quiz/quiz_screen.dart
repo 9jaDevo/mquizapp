@@ -19,7 +19,6 @@ import 'package:flutterquiz/features/quiz/models/quiz_type.dart';
 import 'package:flutterquiz/features/quiz/quiz_repository.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/features/wallet/cubit/monetization_cubit.dart';
-import 'package:flutterquiz/features/wallet/widgets/monetization_widgets.dart';
 import 'package:flutterquiz/ui/screens/quiz/widgets/audio_question_container.dart';
 import 'package:flutterquiz/ui/widgets/already_logged_in_dialog.dart';
 import 'package:flutterquiz/ui/widgets/circular_progress_container.dart';
@@ -284,15 +283,23 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
           ? 0.0
           : (correctAnswers / questions.length) * 100;
 
+      // avg_answer_time is required by the backend quiz-cheating rule.
+      // Without it the backend receives 0 and flags every accurate player.
+      final avgAnswerTime = questions.isEmpty
+          ? 0.0
+          : totalSecondsToCompleteQuiz / questions.length;
+
       final metadata = {
         'quiz_score': correctAnswers.toString(),
         'time_taken': totalSecondsToCompleteQuiz.toString(),
         'accuracy': accuracy.toStringAsFixed(2),
+        'avg_answer_time': avgAnswerTime.toStringAsFixed(2),
         'quiz_type': widget.quizType.toString(),
       };
 
       context.read<MonetizationCubit>().evaluateUserRisk(
-        actionType: 'quiz_completion',
+        // Must match backend Fraud_model check: 'quiz_complete'
+        actionType: 'quiz_complete',
         metadata: metadata,
       );
     } catch (e) {
