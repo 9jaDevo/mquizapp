@@ -5,7 +5,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutterquiz/commons/widgets/custom_alert_dialog.dart';
 import 'package:flutterquiz/core/core.dart';
 import 'package:flutterquiz/features/ads/blocs/rewarded_ad_cubit.dart';
+import 'package:flutterquiz/features/battle_room/battle_room_repository.dart';
 import 'package:flutterquiz/features/battle_room/cubits/battle_room_cubit.dart';
+import 'package:flutterquiz/features/battle_room/cubits/battle_stats_cubit.dart';
 import 'package:flutterquiz/features/profile_management/cubits/update_score_and_coins_cubit.dart';
 import 'package:flutterquiz/features/profile_management/cubits/user_details_cubit.dart';
 import 'package:flutterquiz/features/profile_management/profile_management_repository.dart';
@@ -388,8 +390,16 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
       onTap: () {
         Navigator.of(context).push(
           CupertinoPageRoute<CreateOrJoinRoomScreen>(
-            builder: (_) => BlocProvider<UpdateCoinsCubit>(
-              create: (_) => UpdateCoinsCubit(ProfileManagementRepository()),
+            builder: (_) => MultiBlocProvider(
+              providers: [
+                BlocProvider<UpdateCoinsCubit>(
+                  create: (_) =>
+                      UpdateCoinsCubit(ProfileManagementRepository()),
+                ),
+                BlocProvider<BattleStatsCubit>(
+                  create: (_) => BattleStatsCubit(BattleRoomRepository()),
+                ),
+              ],
               child: CreateOrJoinRoomScreen(
                 quizType: QuizTypes.oneVsOneBattle,
                 title: context.tr('playWithFrdLbl')!,

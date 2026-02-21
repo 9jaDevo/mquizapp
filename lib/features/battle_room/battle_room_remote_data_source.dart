@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutterquiz/features/battle_room/models/battle_room.dart';
+import 'package:flutterquiz/features/battle_room/models/battle_stats.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -619,6 +621,133 @@ final class BattleRoomRemoteDataSource {
       throw const ApiException(errorCodeDefaultMessage);
     } on Exception {
       throw const ApiException(errorCodeDefaultMessage);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Battle Stats
+  // -------------------------------------------------------------------------
+
+  static const _battleStatsCollection = 'battleStats';
+  static const _battleStatsDocId = 'global';
+
+  /// Returns aggregated stats for the battle landing screen.
+  ///
+  /// - [activeRooms]   : total open rooms across both collections.
+  /// - [playersOnline] : occupied user slots in those rooms.
+  /// - [totalBattles]  : cumulative rooms ever created (counter doc).
+  Future<BattleStats> fetchBattleStats() async {
+    try {
+      // 1. Fetch all open rooms from both collections in parallel.
+      final results = await Future.wait([
+        _firebaseFirestore
+            .collection(battleRoomCollection)
+            .where('readyToPlay', isEqualTo: false)
+            .get(),
+        _firebaseFirestore
+            .collection(multiUserBattleRoomCollection)
+            .where('readyToPlay', isEqualTo: false)
+            .get(),
+        _firebaseFirestore
+            .collection(_battleStatsCollection)
+            .doc(_battleStatsDocId)
+            .get(),
+      ]);
+
+      final oneVsOneDocs = (results[0] as QuerySnapshot).docs;
+      final groupDocs = (results[1] as QuerySnapshot).docs;
+      final statsDoc = results[2] as DocumentSnapshot;
+
+      final activeRooms = oneVsOneDocs.length + groupDocs.length;
+
+      // Count non-empty user slots (uid present and non-empty).
+      int playersOnline = 0;
+      for (final doc in [...oneVsOneDocs, ...groupDocs]) {
+        final data = doc.data()! as Map<String, dynamic>;
+        for (final slot in ['user1', 'user2', 'user3', 'user4']) {
+          final user = data[slot] as Map<String, dynamic>?;
+          if (user != null) {
+            final uid = user['uid'] as String? ?? '';
+            if (uid.isNotEmpty) playersOnline++;
+          }
+        }
+      }
+
+      final totalBattles = statsDoc.exists
+          ? (statsDoc.data()! as Map<String, dynamic>)['totalBattles']
+                    as int? ??
+                0
+          : 0;
+
+      return BattleStats(
+        activeRooms: activeRooms,
+        playersOnline: playersOnline,
+        totalBattles: totalBattles,
+      );
+    } on SocketException {
+      throw const ApiException(errorCodeNoInternet);
+    } on Exception {
+      // Return zeros rather than crashing the UI.
+      return BattleStats.zero;
+    }
+  }
+
+  /// Returns up to 50 open (waiting) rooms from the given collection.
+  ///
+  /// For group battles pass [isGroupBattle] = true (queries `multiUserBattleRoom`).
+  /// For 1v1 pass false (queries `battleRoom` where `user2.uid` is empty).
+  /// Rooms are ordered by creation time, newest first.
+  Future<List<BattleRoom>> getOpenBattleRooms({
+    required bool isGroupBattle,
+  }) async {
+    try {
+      if (await InternetConnectivity.isUserOffline()) {
+        throw const SocketException('');
+      }
+
+      QuerySnapshot snapshot;
+
+      if (isGroupBattle) {
+        snapshot = await _firebaseFirestore
+            .collection(multiUserBattleRoomCollection)
+            .where('readyToPlay', isEqualTo: false)
+            .orderBy('createdAt', descending: true)
+            .limit(50)
+            .get();
+      } else {
+        snapshot = await _firebaseFirestore
+            .collection(battleRoomCollection)
+            .where('readyToPlay', isEqualTo: false)
+            .where('user2.uid', isEqualTo: '')
+            .where('roomCode', isNotEqualTo: '')
+            .orderBy('createdAt', descending: true)
+            .limit(50)
+            .get();
+      }
+
+      return snapshot.docs.map(BattleRoom.fromDocumentSnapshot).toList();
+    } on SocketException {
+      throw const ApiException(errorCodeNoInternet);
+    } on PlatformException {
+      throw const ApiException(errorCodeDefaultMessage);
+    } on Exception {
+      throw const ApiException(errorCodeDefaultMessage);
+    }
+  }
+
+  /// Atomically increments the total battles counter.
+  /// Called once per room creation (fire-and-forget).
+  Future<void> incrementTotalBattles() async {
+    try {
+      await _firebaseFirestore
+          .collection(_battleStatsCollection)
+          .doc(_battleStatsDocId)
+          .set(
+            {'totalBattles': FieldValue.increment(1)},
+            SetOptions(merge: true),
+          );
+    } on Exception {
+      // Non-critical — silently discard.
     }
   }
 

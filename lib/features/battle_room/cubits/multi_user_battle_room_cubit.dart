@@ -145,6 +145,9 @@ final class MultiUserBattleRoomCubit extends Cubit<MultiUserBattleRoomState> {
       );
 
       subscribeToMultiUserBattleRoom(documentSnapshot.id, questions);
+
+      // Increment the cumulative battle counter (fire-and-forget).
+      unawaited(_battleRoomRepository.incrementTotalBattles());
     } on Exception catch (e) {
       emit(MultiUserBattleRoomFailure(e.toString()));
     }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -8,15 +9,19 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutterquiz/commons/commons.dart';
 import 'package:flutterquiz/core/core.dart';
 import 'package:flutterquiz/features/ads/blocs/rewarded_ad_cubit.dart';
+import 'package:flutterquiz/features/battle_room/battle_room_repository.dart';
+import 'package:flutterquiz/features/battle_room/cubits/open_rooms_cubit.dart';
 import 'package:flutterquiz/features/battle_room/cubits/battle_room_cubit.dart';
+import 'package:flutterquiz/features/battle_room/cubits/battle_stats_cubit.dart';
 import 'package:flutterquiz/features/battle_room/cubits/multi_user_battle_room_cubit.dart';
 import 'package:flutterquiz/features/profile_management/cubits/user_details_cubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/quiz_category_cubit.dart';
 import 'package:flutterquiz/features/quiz/models/quiz_type.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/features/system_config/model/room_code_char_type.dart';
+import 'package:flutterquiz/ui/screens/battle/join_room_screen.dart';
 import 'package:flutterquiz/ui/screens/battle/widgets/battle_invite_card.dart';
-import 'package:flutterquiz/ui/screens/battle/widgets/top_curve_clipper.dart';
+import 'package:flutterquiz/ui/screens/battle/widgets/battle_painters.dart';
 import 'package:flutterquiz/ui/widgets/already_logged_in_dialog.dart';
 import 'package:flutterquiz/ui/widgets/circular_progress_container.dart';
 import 'package:flutterquiz/ui/widgets/custom_rounded_button.dart';
@@ -85,6 +90,8 @@ class _CreateOrJoinRoomScreenState extends State<CreateOrJoinRoomScreen> {
       if (isCategoryEnabled()) {
         _getCategories();
       }
+      // Fetch battle stats for the landing screen tiles.
+      context.read<BattleStatsCubit>().fetchStats();
     });
   }
 
@@ -1864,14 +1871,185 @@ class _CreateOrJoinRoomScreenState extends State<CreateOrJoinRoomScreen> {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Glassmorphism helpers
+  // ---------------------------------------------------------------------------
+
+  /// Returns a human-friendly count string: >=1000 shown as "1.2k" etc.
+  String _formatCount(int n) {
+    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}k';
+    return '$n';
+  }
+
+  /// Semi-transparent glass container effect via BackdropFilter.
+  Widget _glassContainer({
+    required Widget child,
+    double borderRadius = 16,
+    EdgeInsetsGeometry padding = const EdgeInsets.all(12),
+    Color fillColor = const Color(0x1AFFFFFF),
+    double borderOpacity = 0.25,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(borderRadius),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          padding: padding,
+          decoration: BoxDecoration(
+            color: fillColor,
+            borderRadius: BorderRadius.circular(borderRadius),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: borderOpacity),
+              width: 1,
+            ),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  /// One of the two arena player cards (You / Rival).
+  Widget _arenaCard({required String emoji, required String label}) {
+    return _glassContainer(
+      borderRadius: 20,
+      fillColor: const Color(0x1AFFFFFF),
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+      child: SizedBox(
+        width: scrWidth * 0.34,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 44)),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: GoogleFonts.nunito(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                3,
+                (_) => Container(
+                  width: 5,
+                  height: 5,
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  decoration: const BoxDecoration(
+                    color: Color(0x99FFFFFF),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// VS circular badge with dark fill and glow.
+  Widget _vsBadge() {
+    return Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: const Color(0xFF0D1117),
+        border: Border.all(color: const Color(0xFFFF6B35), width: 2.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFF6B35).withValues(alpha: 0.5),
+            blurRadius: 14,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        'VS',
+        style: GoogleFonts.nunito(
+          fontSize: 16,
+          fontWeight: FontWeight.w900,
+          color: Colors.white,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+
+  /// One stat tile in the bottom row.
+  Widget _statTile({
+    required String icon,
+    required String value,
+    required String label,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 20)),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: GoogleFonts.nunito(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF2563EB),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: GoogleFonts.nunito(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF94A3B8),
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final size = context;
+    // Derive two-line title from widget.title (e.g. "Group Play" → "GROUP" / "PLAY")
+    final titleParts = widget.title.toUpperCase().split(' ');
+    final titleLine1 = titleParts.isNotEmpty
+        ? titleParts[0]
+        : widget.title.toUpperCase();
+    final titleLine2 = titleParts.length > 1
+        ? titleParts.sublist(1).join(' ')
+        : '';
+    final isGroup = widget.quizType == QuizTypes.groupPlay;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: systemUiOverlayStyle.copyWith(
-        systemNavigationBarColor: context.surfaceColor,
-        systemNavigationBarIconBrightness: systemNavigationBarIconBrightness,
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: Color(0xFF0A0E2E),
+        systemNavigationBarIconBrightness: Brightness.light,
       ),
       child: BlocListener<QuizCategoryCubit, QuizCategoryState>(
         listener: (context, state) {
@@ -1880,7 +2058,6 @@ class _CreateOrJoinRoomScreenState extends State<CreateOrJoinRoomScreen> {
               showAlreadyLoggedInDialog(context);
               return;
             }
-
             showDialog<bool>(
               context: context,
               builder: (context) => AlertDialog(
@@ -1901,131 +2078,323 @@ class _CreateOrJoinRoomScreenState extends State<CreateOrJoinRoomScreen> {
                 ),
               ),
             ).then((value) {
-              if (value != null && value) {
-                _getCategories();
-              }
+              if (value != null && value) _getCategories();
             });
           }
         },
         child: Scaffold(
-          body: SingleChildScrollView(
-            child: SizedBox(
-              height: size.height,
-              width: size.width,
-              child: Stack(
-                children: [
-                  /// Title & Back Btn
-                  Container(
-                    width: size.width,
-                    height: size.height * 0.65,
-                    color: Theme.of(context).primaryColor,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        /// BG
-                        SvgPicture.asset(
-                          Assets.battleDesignImg,
-                          fit: BoxFit.cover,
-                          width: size.width,
-                          height: size.height,
-                        ),
+          backgroundColor: const Color(0xFF0A0E2E),
+          body: Stack(
+            children: [
+              // ── Background gradient ──────────────────────────────────────
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xFF0A0E2E), Color(0xFF1A3A8F)],
+                  ),
+                ),
+              ),
 
-                        /// VS
-                        Padding(
-                          padding: const EdgeInsets.only(top: 75, left: 3),
-                          child: SvgPicture.asset(
-                            Assets.vsImg,
-                            width: 247.177,
-                            height: 126.416,
-                          ),
-                        ),
+              // ── Radial burst rays ────────────────────────────────────────
+              CustomPaint(
+                painter: const BattleRadialRaysPainter(),
+                child: const SizedBox.expand(),
+              ),
 
-                        /// Title & Back Button
-                        Align(
-                          alignment: Alignment.topCenter,
-                          child: Padding(
-                            padding: EdgeInsets.only(
-                              top: scrHeight * .07,
-                              left: scrWidth * UiUtils.hzMarginPct,
-                              right: scrWidth * UiUtils.hzMarginPct,
+              // ── Fog/wave at the bottom ───────────────────────────────────
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: ClipPath(
+                  clipper: const BattleWaveFogClipper(),
+                  child: Container(
+                    height: 180,
+                    color: const Color(0xFFE8F0FF).withValues(alpha: 0.08),
+                  ),
+                ),
+              ),
+
+              // ── Main content ─────────────────────────────────────────────
+              SafeArea(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: scrWidth * UiUtils.hzMarginPct,
+                    vertical: 12,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // ── Back button ───────────────────────────────────
+                      Align(
+                        alignment: AlignmentDirectional.topStart,
+                        child: GestureDetector(
+                          onTap: Navigator.of(context).pop,
+                          child: _glassContainer(
+                            borderRadius: 50,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
                             ),
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                GestureDetector(
-                                  onTap: Navigator.of(context).pop,
-                                  child: Icon(
-                                    Icons.arrow_back_rounded,
-                                    size: 24.5,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.surface,
-                                  ),
+                                const Icon(
+                                  Icons.arrow_back_rounded,
+                                  color: Colors.white,
+                                  size: 18,
                                 ),
+                                const SizedBox(width: 6),
                                 Text(
-                                  widget.title,
-                                  style: TextStyle(
-                                    fontSize: 22,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.surface,
-                                    fontWeight: FontWeight.bold,
+                                  'Back',
+                                  style: GoogleFonts.nunito(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                const SizedBox(),
                               ],
                             ),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
+                      ),
+                      const SizedBox(height: 16),
 
-                  /// Bottom - Create/Join Container
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    child: ClipPath(
-                      clipper: TopCurveClipper(),
-                      child: Container(
-                        width: size.width,
-                        height: size.height * 0.4,
-                        padding: const EdgeInsets.only(left: 10, right: 10),
-                        color: Theme.of(context).colorScheme.surface,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            /// Create Room Btn
-                            CustomRoundedButton(
-                              widthPercentage: context.width,
-                              backgroundColor: Theme.of(context).primaryColor,
-                              radius: 10,
-                              showBorder: false,
-                              height: 50,
-                              onTap: showCreateRoomBottomSheet,
-                              buttonTitle: context.tr('createRoom'),
-                            ),
-                            SizedBox(height: size.height * 0.025),
-
-                            /// Join Room Btn
-                            CustomRoundedButton(
-                              widthPercentage: context.width,
-                              backgroundColor: Theme.of(context).primaryColor,
-                              radius: 10,
-                              showBorder: false,
-                              height: 50,
-                              onTap: showJoinRoomBottomSheet,
-                              buttonTitle: context.tr('joinRoom'),
-                            ),
-                          ],
+                      // ── Sub-header ────────────────────────────────────
+                      Text(
+                        'QUIZ PRESENTS',
+                        style: GoogleFonts.nunito(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white.withValues(alpha: 0.65),
+                          letterSpacing: 4,
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 6),
+
+                      // ── Big title ─────────────────────────────────────
+                      Text(
+                        titleLine1,
+                        style: GoogleFonts.nunito(
+                          fontSize: 48,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          height: 1.05,
+                        ),
+                      ),
+                      if (titleLine2.isNotEmpty)
+                        Text(
+                          titleLine2,
+                          style: GoogleFonts.nunito(
+                            fontSize: 48,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF4FC3F7),
+                            height: 1.05,
+                          ),
+                        ),
+                      const SizedBox(height: 10),
+
+                      // ── PVP badge ─────────────────────────────────────
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.35),
+                            width: 1,
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '✕  PVP',
+                          style: GoogleFonts.nunito(
+                            color: Colors.white.withValues(alpha: 0.8),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+
+                      // ── Arena row (You | VS | Rival) ──────────────────
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _arenaCard(
+                            emoji: '🔥',
+                            label: context.tr('youLbl') ?? 'You',
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            child: _vsBadge(),
+                          ),
+                          _arenaCard(
+                            emoji: isGroup ? '💪' : '🤺',
+                            label: context.tr('rivalLbl') ?? 'Rival',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // ── Caption pill ──────────────────────────────────
+                      _glassContainer(
+                        borderRadius: 50,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
+                        child: Text(
+                          context.tr('battleCaptionLbl') ??
+                              'Challenge friends & rivals globally',
+                          style: GoogleFonts.nunito(
+                            color: Colors.white.withValues(alpha: 0.8),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // ── Create Room button ────────────────────────────
+                      SizedBox(
+                        width: double.infinity,
+                        height: 58,
+                        child: ElevatedButton(
+                          onPressed: showCreateRoomBottomSheet,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2563EB),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            elevation: 6,
+                            shadowColor: const Color(
+                              0xFF2563EB,
+                            ).withValues(alpha: 0.4),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text('⚔', style: TextStyle(fontSize: 18)),
+                              const SizedBox(width: 10),
+                              Text(
+                                context.tr('createRoom') ?? 'Create Room',
+                                style: GoogleFonts.nunito(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // ── Join Room button ──────────────────────────────
+                      SizedBox(
+                        width: double.infinity,
+                        height: 58,
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              CupertinoPageRoute<void>(
+                                builder: (_) => BlocProvider(
+                                  create: (_) =>
+                                      OpenRoomsCubit(BattleRoomRepository()),
+                                  child: JoinRoomScreen(
+                                    quizType: widget.quizType,
+                                    onJoinSuccess: inviteToRoomBottomSheet,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(
+                              color: Colors.white,
+                              width: 1.5,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.group_outlined, size: 20),
+                              const SizedBox(width: 10),
+                              Text(
+                                context.tr('joinRoom') ?? 'Join Room',
+                                style: GoogleFonts.nunito(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // ── Stat tiles ────────────────────────────────────
+                      BlocBuilder<BattleStatsCubit, BattleStatsState>(
+                        builder: (context, state) {
+                          final active = state is BattleStatsLoaded
+                              ? _formatCount(state.stats.activeRooms)
+                              : '—';
+                          final online = state is BattleStatsLoaded
+                              ? _formatCount(state.stats.playersOnline)
+                              : '—';
+                          final total = state is BattleStatsLoaded
+                              ? _formatCount(state.stats.totalBattles)
+                              : '—';
+                          return Row(
+                            children: [
+                              Expanded(
+                                child: _statTile(
+                                  icon: '🏠',
+                                  value: active,
+                                  label:
+                                      context.tr('activeRoomsLbl') ??
+                                      'Active Rooms',
+                                ),
+                              ),
+                              Expanded(
+                                child: _statTile(
+                                  icon: '👥',
+                                  value: online,
+                                  label:
+                                      context.tr('playersOnlineLbl') ??
+                                      'Players Online',
+                                ),
+                              ),
+                              Expanded(
+                                child: _statTile(
+                                  icon: '⚔',
+                                  value: total,
+                                  label:
+                                      context.tr('totalBattlesLbl') ??
+                                      'Total Battles',
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 16),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),

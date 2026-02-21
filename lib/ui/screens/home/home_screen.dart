@@ -14,7 +14,9 @@ import 'package:flutterquiz/core/core.dart';
 import 'package:flutterquiz/features/ads/ads.dart';
 import 'package:flutterquiz/features/auth/cubits/auth_cubit.dart';
 import 'package:flutterquiz/features/badges/blocs/badges_cubit.dart';
+import 'package:flutterquiz/features/battle_room/battle_room_repository.dart';
 import 'package:flutterquiz/features/battle_room/cubits/battle_room_cubit.dart';
+import 'package:flutterquiz/features/battle_room/cubits/battle_stats_cubit.dart';
 import 'package:flutterquiz/features/battle_room/cubits/multi_user_battle_room_cubit.dart';
 import 'package:flutterquiz/features/exam/cubits/exam_cubit.dart';
 import 'package:flutterquiz/features/profile_management/cubits/update_score_and_coins_cubit.dart';
@@ -585,9 +587,15 @@ class HomeScreenState extends State<HomeScreen>
 
       globalCtx.push(
         CupertinoPageRoute<void>(
-          builder: (_) => BlocProvider<UpdateCoinsCubit>(
-            create: (context) =>
-                UpdateCoinsCubit(ProfileManagementRepository()),
+          builder: (_) => MultiBlocProvider(
+            providers: [
+              BlocProvider<UpdateCoinsCubit>(
+                create: (_) => UpdateCoinsCubit(ProfileManagementRepository()),
+              ),
+              BlocProvider<BattleStatsCubit>(
+                create: (_) => BattleStatsCubit(BattleRoomRepository()),
+              ),
+            ],
             child: CreateOrJoinRoomScreen(
               quizType: QuizTypes.groupPlay,
               title: context.tr('groupPlay')!,
@@ -606,8 +614,16 @@ class HomeScreenState extends State<HomeScreen>
       } else {
         globalCtx.push(
           CupertinoPageRoute<CreateOrJoinRoomScreen>(
-            builder: (_) => BlocProvider<UpdateCoinsCubit>(
-              create: (_) => UpdateCoinsCubit(ProfileManagementRepository()),
+            builder: (_) => MultiBlocProvider(
+              providers: [
+                BlocProvider<UpdateCoinsCubit>(
+                  create: (_) =>
+                      UpdateCoinsCubit(ProfileManagementRepository()),
+                ),
+                BlocProvider<BattleStatsCubit>(
+                  create: (_) => BattleStatsCubit(BattleRoomRepository()),
+                ),
+              ],
               child: CreateOrJoinRoomScreen(
                 quizType: QuizTypes.oneVsOneBattle,
                 title: context.tr('playWithFrdLbl')!,

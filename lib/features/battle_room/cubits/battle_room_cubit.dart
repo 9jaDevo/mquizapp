@@ -330,6 +330,9 @@ final class BattleRoomCubit extends Cubit<BattleRoomState> {
         questions,
         isGroupBattle: false,
       );
+
+      // Increment the cumulative battle counter (fire-and-forget).
+      unawaited(_battleRoomRepository.incrementTotalBattles());
     } on Exception catch (e) {
       emit(BattleRoomFailure(e.toString()));
     }

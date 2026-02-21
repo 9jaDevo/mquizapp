@@ -6,6 +6,7 @@ import 'package:flutterquiz/core/constants/api_exception.dart';
 import 'package:flutterquiz/core/constants/constants.dart';
 import 'package:flutterquiz/features/battle_room/battle_room_remote_data_source.dart';
 import 'package:flutterquiz/features/battle_room/models/battle_room.dart';
+import 'package:flutterquiz/features/battle_room/models/battle_stats.dart';
 import 'package:flutterquiz/features/battle_room/models/message.dart';
 import 'package:flutterquiz/features/quiz/models/question.dart';
 
@@ -657,6 +658,24 @@ final class BattleRoomRepository {
       rethrow;
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // Battle Stats
+  // ---------------------------------------------------------------------------
+
+  Future<BattleStats> fetchBattleStats() =>
+      _battleRoomRemoteDataSource.fetchBattleStats();
+
+  Future<void> incrementTotalBattles() =>
+      _battleRoomRemoteDataSource.incrementTotalBattles();
+
+  /// Returns up to 50 open (not-yet-started) rooms.
+  /// Pass [isGroupBattle] = true for group rooms, false for 1v1 friend rooms.
+  Future<List<BattleRoom>> getOpenBattleRooms({
+    required bool isGroupBattle,
+  }) => _battleRoomRemoteDataSource.getOpenBattleRooms(
+    isGroupBattle: isGroupBattle,
+  );
 
   //All the message related code start from here
   Stream<List<Message>> subscribeToMessages({required String roomId}) {
