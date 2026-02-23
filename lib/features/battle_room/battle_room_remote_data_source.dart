@@ -708,24 +708,26 @@ final class BattleRoomRemoteDataSource {
       QuerySnapshot snapshot;
 
       if (isGroupBattle) {
+        // Single equality filter — no composite index required.
         snapshot = await _firebaseFirestore
             .collection(multiUserBattleRoomCollection)
             .where('readyToPlay', isEqualTo: false)
-            .orderBy('createdAt', descending: true)
             .limit(50)
             .get();
       } else {
+        // Single equality filter only — avoids composite index requirement.
+        // Rooms with empty roomCode are filtered out below.
         snapshot = await _firebaseFirestore
             .collection(battleRoomCollection)
-            .where('readyToPlay', isEqualTo: false)
             .where('user2.uid', isEqualTo: '')
-            .where('roomCode', isNotEqualTo: '')
-            .orderBy('createdAt', descending: true)
             .limit(50)
             .get();
       }
 
-      return snapshot.docs.map(BattleRoom.fromDocumentSnapshot).toList();
+      return snapshot.docs
+          .map(BattleRoom.fromDocumentSnapshot)
+          .where((r) => r.roomCode != null && r.roomCode!.isNotEmpty)
+          .toList();
     } on SocketException {
       throw const ApiException(errorCodeNoInternet);
     } on PlatformException {

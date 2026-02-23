@@ -152,7 +152,9 @@ final class SetCoinScoreCubit extends Cubit<SetCoinScoreState> {
           percentage: double.parse(
             result['winningPer']?.toString() ?? '0',
           ).toInt(),
-          earnCoin: int.parse(result['earnCoin']?.toString() ?? '0'),
+          earnCoin: int.parse(
+            (result['earnCoin'] ?? result['entry_coin'])?.toString() ?? '0',
+          ),
           earnScore: int.parse(result['userScore']?.toString() ?? '0'),
           currentLevel: int.parse(result['currentLevel']?.toString() ?? '0'),
           totalLevels: int.parse(result['totalLevel']?.toString() ?? '0'),
@@ -161,7 +163,11 @@ final class SetCoinScoreCubit extends Cubit<SetCoinScoreState> {
           user2Id: result['user2_id']?.toString(),
           user3Id: result['user3_id']?.toString(),
           user4Id: result['user4_id']?.toString(),
-          winnerUserId: result['winner_user_id']?.toString(),
+          winnerUserId:
+              result['winner_user_id']?.toString() ??
+              ((result['winner'] as List?)?.isNotEmpty ?? false
+                  ? (result['winner'] as List).first.toString()
+                  : null),
           winnerCoins: int.parse(result['winner_coin']?.toString() ?? '0'),
           user1Data: result['user1_data'] != null
               ? BattleUserData.fromJson(

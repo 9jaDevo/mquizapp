@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/commons/commons.dart';
 import 'package:flutterquiz/core/core.dart';
 import 'package:flutterquiz/features/battle_room/battle_room_repository.dart';
+import 'package:flutterquiz/ui/screens/battle/battle_room_result_screen.dart';
 import 'package:flutterquiz/features/battle_room/cubits/battle_room_cubit.dart';
 import 'package:flutterquiz/features/battle_room/cubits/message_cubit.dart';
 import 'package:flutterquiz/features/battle_room/models/message.dart';
@@ -483,20 +484,22 @@ class _BattleRoomQuizScreenState extends State<BattleRoomQuizScreen>
                 ? state.battleRoom.roomCode
                 : state.battleRoom.roomId;
 
-            await Navigator.of(context).pushReplacementNamed(
-              Routes.result,
-              arguments: {
-                'questions': state.questions,
-                'battleRoom': state.battleRoom,
-                'numberOfPlayer': 2,
-                'play_with_bot': widget.playWithBot,
-                'quizType': widget.quizType,
-                'entryFee': state.battleRoom.entryFee,
-                'matchId': matchId,
-              },
+            final quizTypeStr = switch (widget.quizType) {
+              QuizTypes.randomBattle => '1.3',
+              _ => '1.4',
+            };
+            await context.pushReplacementNamed(
+              Routes.battleRoomResult,
+              arguments: BattleRoomResultArgs(
+                battleRoom: state.battleRoom,
+                currentUserId: _currUserId,
+                entryFee: state.battleRoom.entryFee ?? 0,
+                quizType: quizTypeStr,
+                matchId: matchId,
+                playWithBot: widget.playWithBot,
+              ),
             );
-
-            battleRoomCubit.deleteBattleRoom();
+            // Room deletion is handled by BattleRoomResultScreen.
           }
         }
       }
@@ -759,40 +762,25 @@ class _BattleRoomQuizScreenState extends State<BattleRoomQuizScreen>
                         .read<UserDetailsCubit>()
                         .userId();
 
-                    final playedQuestion = switch (widget.quizType) {
-                      QuizTypes.oneVsOneBattle || QuizTypes.randomBattle => {
-                        'user1_id': battleRoom.user1!.uid == currUserId
-                            ? currUserId
-                            : '0',
-                        'user2_id': battleRoom.user2!.uid == currUserId
-                            ? currUserId
-                            : '0',
-                        'user1_data': battleRoom.user1!.answers,
-                        'user2_data': battleRoom.user2!.answers,
-                      },
-                      _ => throw Exception(
-                        'Invalid Type, must be 1v1 or random battle',
-                      ),
-                    };
-
                     final matchId =
                         battleRoom.roomCode != null &&
                             battleRoom.roomCode!.isNotEmpty
                         ? battleRoom.roomCode
                         : battleRoom.roomId;
 
-                    await context
-                        .read<SetCoinScoreCubit>()
-                        .setCoinScore(
+                    if (context.mounted) {
+                      await context.pushReplacementNamed(
+                        Routes.battleRoomResult,
+                        arguments: BattleRoomResultArgs(
+                          battleRoom: battleRoom,
+                          currentUserId: currUserId,
+                          entryFee: battleRoom.entryFee ?? 0,
                           quizType: type,
-                          playedQuestions: playedQuestion,
-                          playWithBot: widget.playWithBot,
                           matchId: matchId,
-                        )
-                        .then((_) {
-                          context.read<BattleRoomCubit>().deleteBattleRoom();
-                          context.shouldPop();
-                        });
+                          playWithBot: widget.playWithBot,
+                        ),
+                      );
+                    }
                   });
                 }
               }

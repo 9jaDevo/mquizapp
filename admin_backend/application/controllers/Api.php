@@ -6906,17 +6906,18 @@ class Api extends REST_Controller
 
             $user_id = $is_user['user_id'];
             $min_days = (int)is_settings('min_active_days_for_payout');
-            $window = (int)is_settings('activity_tracking_window_days');
 
-            $date_from = date('Y-m-d', strtotime("-$window days"));
+            // Count days since user registration — each calendar day since
+            // sign-up counts as one active day (tbl_daily_streak only stores
+            // one row per user, so querying it always returns 1).
+            $user_row = $this->db->select('date_registered')
+                ->where('id', $user_id)
+                ->get('tbl_users')
+                ->row();
 
-            // Count unique active days (from daily streak table)
-            $active_days = $this->db->select('COUNT(DISTINCT last_login_date) as days')
-                ->where('user_id', $user_id)
-                ->where('last_login_date >=', $date_from)
-                ->get('tbl_daily_streak')
-                ->row()
-                ->days;
+            $reg_date = new DateTime(date('Y-m-d', strtotime($user_row->date_registered)));
+            $today    = new DateTime('today');
+            $active_days = (int)$reg_date->diff($today)->days;
 
             $eligible = (int)$active_days >= $min_days;
 
@@ -6925,7 +6926,6 @@ class Api extends REST_Controller
                 'eligible' => $eligible,
                 'active_days' => $active_days,
                 'required_days' => $min_days,
-                'window_days' => $window,
                 'message' => $eligible
                     ? "You're eligible to withdraw"
                     : "You need " . ($min_days - $active_days) . " more active days to be eligible"

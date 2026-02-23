@@ -3,9 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/commons/commons.dart';
 import 'package:flutterquiz/core/core.dart';
-import 'package:flutterquiz/features/battle_room/cubits/multi_user_battle_room_cubit.dart';
+import 'package:flutterquiz/features/battle_room/cubits/battle_room_cubit.dart';
 import 'package:flutterquiz/features/battle_room/models/battle_room.dart';
-import 'package:flutterquiz/features/profile_management/cubits/user_details_cubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/set_coin_score_cubit.dart';
 import 'package:flutterquiz/features/quiz/models/user_battle_room_details.dart';
 import 'package:flutterquiz/ui/widgets/circular_progress_container.dart';
@@ -13,48 +12,54 @@ import 'package:flutterquiz/ui/widgets/error_container.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
 
-final class MultiUserBattleRoomResultArgs extends RouteArgs {
-  MultiUserBattleRoomResultArgs({required this.joinedUsersCount});
+// ── Args ─────────────────────────────────────────────────────────────────────
 
-  final int joinedUsersCount;
-}
-
-class MultiUserBattleRoomResultScreen extends StatefulWidget {
-  const MultiUserBattleRoomResultScreen({
-    required this.args,
-    super.key,
+final class BattleRoomResultArgs extends RouteArgs {
+  BattleRoomResultArgs({
+    required this.battleRoom,
+    required this.currentUserId,
+    required this.entryFee,
+    required this.quizType,
+    required this.matchId,
+    this.playWithBot = false,
   });
 
-  final MultiUserBattleRoomResultArgs args;
+  /// Snapshot of the battle room at quiz end.
+  final BattleRoom battleRoom;
+  final String currentUserId;
+  final int entryFee;
+
+  /// Backend quiz-type code: '1.3' for random battle, '1.4' for 1v1.
+  final String quizType;
+  final String? matchId;
+  final bool playWithBot;
+}
+
+// ── Screen ───────────────────────────────────────────────────────────────────
+
+class BattleRoomResultScreen extends StatefulWidget {
+  const BattleRoomResultScreen({required this.args, super.key});
+
+  final BattleRoomResultArgs args;
 
   @override
-  State<MultiUserBattleRoomResultScreen> createState() =>
-      _MultiUserBattleRoomResultScreenState();
+  State<BattleRoomResultScreen> createState() => _BattleRoomResultScreenState();
 
   static Route<dynamic> route(RouteSettings routeSettings) {
-    final args = routeSettings.args<MultiUserBattleRoomResultArgs>();
+    final args = routeSettings.args<BattleRoomResultArgs>();
 
     return CupertinoPageRoute(
       builder: (_) => BlocProvider(
         create: (_) => SetCoinScoreCubit(),
-        child: MultiUserBattleRoomResultScreen(args: args),
+        child: BattleRoomResultScreen(args: args),
       ),
     );
   }
 }
 
-class _MultiUserBattleRoomResultScreenState
-    extends State<MultiUserBattleRoomResultScreen> {
-  late final BattleRoom battleRoom = context
-      .read<MultiUserBattleRoomCubit>()
-      .battleRoom!;
-
-  late final int totalQuestions = context
-      .read<MultiUserBattleRoomCubit>()
-      .getQuestions()
-      .length;
-
-  late final String _currentUserId = context.read<UserDetailsCubit>().userId();
+class _BattleRoomResultScreenState extends State<BattleRoomResultScreen> {
+  BattleRoom get _room => widget.args.battleRoom;
+  String get _currentUserId => widget.args.currentUserId;
 
   @override
   void initState() {
@@ -64,76 +69,62 @@ class _MultiUserBattleRoomResultScreenState
 
   Future<void> _updateResult() async {
     await context.read<SetCoinScoreCubit>().setCoinScore(
-      quizType: '1.5',
+      quizType: widget.args.quizType,
       playedQuestions: {
-        'user1_id': ?battleRoom.user1!.uid.isEmpty
-            ? '0'
-            : battleRoom.user1?.uid,
-        'user2_id': ?battleRoom.user2!.uid.isEmpty
-            ? '0'
-            : battleRoom.user2?.uid,
-        'user3_id': ?battleRoom.user3!.uid.isEmpty
-            ? '0'
-            : battleRoom.user3?.uid,
-        'user4_id': battleRoom.user4!.uid.isEmpty ? '0' : battleRoom.user4?.uid,
-        'user1_data': ?battleRoom.user1?.answers,
-        'user2_data': ?battleRoom.user2?.answers,
-        'user3_data': ?battleRoom.user3?.answers,
-        'user4_data': ?battleRoom.user4?.answers,
+        'user1_id': _room.user1!.uid,
+        'user2_id': _room.user2!.uid,
+        'user1_data': _room.user1!.answers,
+        'user2_data': _room.user2!.answers,
       },
-      joinedUsersCount: widget.args.joinedUsersCount,
-      matchId: battleRoom.roomCode,
+      playWithBot: widget.args.playWithBot,
+      matchId: widget.args.matchId,
     );
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // ── Helpers ─────────────────────────────────────────────────────────────
 
   bool _isVictory(SetCoinScoreSuccess state) {
     if (state.winnerUserId == null || state.winnerUserId == '0') return false;
     return state.winnerUserId == _currentUserId;
   }
 
-  int _currentCorrect(SetCoinScoreSuccess state) {
-    final rank = state.userRanks
-        .where((r) => r.userId == _currentUserId)
-        .firstOrNull;
-    return rank?.correctAnswers ??
-        battleRoom.userById(_currentUserId)?.correctAnswers ??
-        0;
-  }
+  int _correctForUser(SetCoinScoreSuccess state, String uid) =>
+      state.userRanks
+          .where((r) => r.userId == uid)
+          .firstOrNull
+          ?.correctAnswers ??
+      (_room.userById(uid)?.correctAnswers ?? 0);
 
-  int _correctForUser(SetCoinScoreSuccess state, String uid) {
-    return state.userRanks
-            .where((r) => r.userId == uid)
-            .firstOrNull
-            ?.correctAnswers ??
-        0;
-  }
+  int _currentCorrect(SetCoinScoreSuccess state) =>
+      _correctForUser(state, _currentUserId);
 
-  /// Returns earned coins: prefers API value; falls back to entry-fee math.
+  /// Returns the coin change for the current user.
+  /// Falls back to entry-fee math if the API field is 0.
   int _computeEarnedCoins(SetCoinScoreSuccess state) {
     if (state.earnCoin != 0) return state.earnCoin;
-    final fee = battleRoom.entryFee ?? 0;
+    final fee = widget.args.entryFee;
     if (fee == 0) return 0;
-    if (_isVictory(state)) return fee * (widget.args.joinedUsersCount - 1);
+    final victory = _isVictory(state);
     final isDraw = state.winnerUserId == null || state.winnerUserId == '0';
     if (isDraw) return 0;
+    // 1v1: winner earns one opponent's fee
+    if (victory) return fee;
     return -fee;
   }
 
   Future<void> _shareScore(SetCoinScoreSuccess state) async {
     final correct = _currentCorrect(state);
-    final user = battleRoom.userById(_currentUserId);
-    final pts = user?.points ?? 0;
+    final total = state.totalQuestions;
+    final pts = _room.userById(_currentUserId)?.points ?? 0;
     final emoji = _isVictory(state) ? '🏆' : '🎮';
     await Share.share(
-      '$emoji I scored $pts pts ($correct/$totalQuestions correct) in Group Battle!\n'
+      '$emoji I scored $pts pts ($correct/$total correct) in 1v1 Battle!\n'
       'Can you beat me? 🔥',
       subject: 'My Battle Result',
     );
   }
 
-  // ── Shared decoration ─────────────────────────────────────────────────────
+  // ── Shared decoration ────────────────────────────────────────────────────
 
   BoxDecoration _card({double radius = 20}) => BoxDecoration(
     color: Colors.white,
@@ -147,7 +138,7 @@ class _MultiUserBattleRoomResultScreenState
     ],
   );
 
-  // ── Widget builders ───────────────────────────────────────────────────────
+  // ── Widgets ──────────────────────────────────────────────────────────────
 
   Widget _buildBackButton() {
     return GestureDetector(
@@ -182,7 +173,7 @@ class _MultiUserBattleRoomResultScreenState
     return Column(
       children: [
         Text(
-          context.tr('groupBattleLbl') ?? 'GROUP BATTLE',
+          context.tr('oneVsOneBattleLbl') ?? '1 vs 1 BATTLE',
           style: GoogleFonts.nunito(
             fontSize: 11,
             fontWeight: FontWeight.w700,
@@ -192,7 +183,7 @@ class _MultiUserBattleRoomResultScreenState
         ),
         const SizedBox(height: 4),
         Text(
-          context.tr('groupBattleResult') ?? 'Battle Result',
+          context.tr('battleResultLbl') ?? 'Battle Result',
           style: GoogleFonts.nunito(
             fontSize: 28,
             fontWeight: FontWeight.w900,
@@ -259,7 +250,6 @@ class _MultiUserBattleRoomResultScreenState
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Icon tile
           Container(
             width: 60,
             height: 60,
@@ -270,7 +260,6 @@ class _MultiUserBattleRoomResultScreenState
             child: Icon(icon, color: iconColor, size: 30),
           ),
           const SizedBox(width: 16),
-          // Text stack
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -293,7 +282,6 @@ class _MultiUserBattleRoomResultScreenState
                   ),
                 ),
                 const SizedBox(height: 10),
-                // Coin pill
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
@@ -330,9 +318,7 @@ class _MultiUserBattleRoomResultScreenState
   }
 
   Widget _buildVSCard(SetCoinScoreSuccess state) {
-    // Left = rank-1 player, Right = rank-2 player.
-    // Using the sorted userRanks list guarantees correct mapping even for
-    // draw scenarios (no clear winner) and 3-4 player rooms.
+    // Rank-based left/right assignment — works for draws and bot matches.
     final rank1Id = state.userRanks.isNotEmpty
         ? state.userRanks.first.userId
         : _currentUserId;
@@ -340,11 +326,18 @@ class _MultiUserBattleRoomResultScreenState
         ? state.userRanks[1].userId
         : null;
 
-    final leftUser = battleRoom.userById(rank1Id);
-    final rightUser = rank2Id != null ? battleRoom.userById(rank2Id) : null;
+    final leftUser = _room.userById(rank1Id);
+    final rightUser = rank2Id != null ? _room.userById(rank2Id) : null;
 
     final leftCorrect = _correctForUser(state, rank1Id);
     final rightCorrect = _correctForUser(state, rank2Id ?? '');
+
+    // Map BattleUserData by userId for speed bonus display.
+    BattleUserData? _dataForUser(String uid) {
+      if (state.user1Id == uid) return state.user1Data;
+      if (state.user2Id == uid) return state.user2Data;
+      return null;
+    }
 
     final isDraw = state.winnerUserId == null || state.winnerUserId == '0';
     final leftIsWinner = !isDraw;
@@ -359,7 +352,9 @@ class _MultiUserBattleRoomResultScreenState
             child: _buildPlayerColumn(
               user: leftUser,
               correct: leftCorrect,
+              total: state.totalQuestions,
               isWinner: leftIsWinner,
+              battleData: _dataForUser(rank1Id),
             ),
           ),
           SizedBox(
@@ -367,19 +362,11 @@ class _MultiUserBattleRoomResultScreenState
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  width: 1,
-                  height: 60,
-                  color: const Color(0xFFE2E8F0),
-                ),
+                Container(width: 1, height: 60, color: const Color(0xFFE2E8F0)),
                 const SizedBox(height: 8),
                 _buildVSBadge(),
                 const SizedBox(height: 8),
-                Container(
-                  width: 1,
-                  height: 60,
-                  color: const Color(0xFFE2E8F0),
-                ),
+                Container(width: 1, height: 60, color: const Color(0xFFE2E8F0)),
               ],
             ),
           ),
@@ -387,7 +374,9 @@ class _MultiUserBattleRoomResultScreenState
             child: _buildPlayerColumn(
               user: rightUser,
               correct: rightCorrect,
+              total: state.totalQuestions,
               isWinner: false,
+              battleData: rank2Id != null ? _dataForUser(rank2Id) : null,
             ),
           ),
         ],
@@ -395,45 +384,49 @@ class _MultiUserBattleRoomResultScreenState
     );
   }
 
-  Widget _buildVSBadge() {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xFFEF4444), width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFEF4444).withValues(alpha: 0.35),
-            blurRadius: 8,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-      child: Center(
-        child: Text(
-          'VS',
-          style: GoogleFonts.nunito(
-            color: Colors.white,
-            fontSize: 12,
-            fontWeight: FontWeight.w900,
-          ),
+  Widget _buildVSBadge() => Container(
+    width: 40,
+    height: 40,
+    decoration: BoxDecoration(
+      color: const Color(0xFF1E293B),
+      shape: BoxShape.circle,
+      border: Border.all(color: const Color(0xFFEF4444), width: 2),
+      boxShadow: [
+        BoxShadow(
+          color: const Color(0xFFEF4444).withValues(alpha: 0.35),
+          blurRadius: 8,
+          spreadRadius: 1,
+        ),
+      ],
+    ),
+    child: Center(
+      child: Text(
+        'VS',
+        style: GoogleFonts.nunito(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
         ),
       ),
-    );
-  }
+    ),
+  );
 
   Widget _buildPlayerColumn({
     required UserBattleRoomDetails? user,
     required int correct,
+    required int total,
     required bool isWinner,
+    BattleUserData? battleData,
   }) {
     if (user == null) return const SizedBox.shrink();
 
     final pts = user.points;
     final pillBg = isWinner ? const Color(0xFF3B82F6) : const Color(0xFFE2E8F0);
     final pillText = isWinner ? Colors.white : const Color(0xFF64748B);
+    final isMe = user.uid == _currentUserId;
+    final speedBonus = battleData != null
+        ? battleData.quickestBonus + battleData.secondQuickestBonus
+        : 0;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -456,14 +449,18 @@ class _MultiUserBattleRoomResultScreenState
         ),
         const SizedBox(height: 8),
         Text(
-          user.name.isEmpty ? '—' : user.name,
+          user.name.isEmpty
+              ? '—'
+              : isMe
+              ? '${user.name} (${context.tr('youLbl') ?? 'You'})'
+              : user.name,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
           style: GoogleFonts.nunito(
-            fontSize: 13,
+            fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF1E293B),
+            color: isMe ? const Color(0xFF3B82F6) : const Color(0xFF1E293B),
           ),
         ),
         const SizedBox(height: 6),
@@ -482,32 +479,42 @@ class _MultiUserBattleRoomResultScreenState
             ),
           ),
         ),
-        const SizedBox(height: 6),
+        if (speedBonus > 0) ...[
+          const SizedBox(height: 4),
+          Text(
+            '+$speedBonus ${context.tr('speedBonus') ?? 'Speed Bonus'}',
+            style: GoogleFonts.nunito(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFFF59E0B),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+        const SizedBox(height: 4),
         Text(
-          '$correct/$totalQuestions ${context.tr('correctLbl') ?? 'correct'}',
+          '$correct/$total ${context.tr('correctLbl') ?? 'correct'}',
           style: GoogleFonts.nunito(
             fontSize: 11,
             color: const Color(0xFF64748B),
           ),
+          textAlign: TextAlign.center,
         ),
       ],
     );
   }
 
   Widget _buildStatTiles(SetCoinScoreSuccess state) {
-    final currentCorrect = _currentCorrect(state);
-    // Compute accuracy from userRanks; fall back to API value only when
-    // userRanks is empty (other quiz types that don't return user_rank).
-    final accuracy = totalQuestions > 0
-        ? (currentCorrect * 100 ~/ totalQuestions)
-        : state.percentage;
+    final total = state.totalQuestions;
+    final correct = _currentCorrect(state);
+    final accuracy = total > 0 ? (correct * 100 ~/ total) : state.percentage;
 
     return Row(
       children: [
         Expanded(
           child: _buildStatTile(
             icon: Icons.quiz_outlined,
-            value: '$totalQuestions',
+            value: '$total',
             label: context.tr('questionsLbl') ?? 'Questions',
           ),
         ),
@@ -523,7 +530,7 @@ class _MultiUserBattleRoomResultScreenState
         Expanded(
           child: _buildStatTile(
             icon: Icons.fact_check_outlined,
-            value: '$currentCorrect/$totalQuestions',
+            value: '$correct/$total',
             label: context.tr('correctLbl') ?? 'Correct',
           ),
         ),
@@ -570,118 +577,6 @@ class _MultiUserBattleRoomResultScreenState
             ),
             textAlign: TextAlign.center,
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFullLeaderboard(SetCoinScoreSuccess state) {
-    if (state.userRanks.length <= 2) return const SizedBox.shrink();
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: _card(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            context.tr('leaderboardLbl') ?? 'Leaderboard',
-            style: GoogleFonts.nunito(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF1E293B),
-            ),
-          ),
-          const SizedBox(height: 14),
-          ...state.userRanks.map((rank) {
-            final user = battleRoom.userById(rank.userId);
-            if (user == null) return const SizedBox.shrink();
-            final isCurrentUser = rank.userId == _currentUserId;
-            final isFirst = rank.rank == 1;
-
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: isFirst
-                          ? const Color(0xFFFEF9C3)
-                          : const Color(0xFFF1F5F9),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: isFirst
-                          ? const Icon(
-                              Icons.emoji_events_rounded,
-                              color: Color(0xFFFBBF24),
-                              size: 18,
-                            )
-                          : Text(
-                              '#${rank.rank}',
-                              style: GoogleFonts.nunito(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF64748B),
-                              ),
-                            ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  ClipOval(
-                    child: QImage.circular(
-                      imageUrl: user.profileUrl,
-                      width: 36,
-                      height: 36,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      user.name.isEmpty
-                          ? '—'
-                          : isCurrentUser
-                          ? '${user.name} (${context.tr('youLbl') ?? 'You'})'
-                          : user.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.nunito(
-                        fontSize: 14,
-                        fontWeight: isCurrentUser
-                            ? FontWeight.w800
-                            : FontWeight.w600,
-                        color: isCurrentUser
-                            ? const Color(0xFF3B82F6)
-                            : const Color(0xFF1E293B),
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isFirst
-                          ? const Color(0xFF3B82F6)
-                          : const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '${rank.correctAnswers}/$totalQuestions',
-                      style: GoogleFonts.nunito(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: isFirst ? Colors.white : const Color(0xFF64748B),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
         ],
       ),
     );
@@ -763,8 +658,6 @@ class _MultiUserBattleRoomResultScreenState
           const SizedBox(height: 16),
           _buildStatTiles(state),
           const SizedBox(height: 16),
-          _buildFullLeaderboard(state),
-          if (state.userRanks.length > 2) const SizedBox(height: 16),
           _buildActionButtons(state),
           const SizedBox(height: 8),
         ],
@@ -779,13 +672,8 @@ class _MultiUserBattleRoomResultScreenState
       body: BlocConsumer<SetCoinScoreCubit, SetCoinScoreState>(
         listener: (context, state) {
           if (state is SetCoinScoreSuccess) {
-            final currUserId = context.read<UserDetailsCubit>().userId();
-            final topRank = state.userRanks.firstOrNull;
-            if (topRank != null && topRank.userId == currUserId) {
-              context
-                  .read<MultiUserBattleRoomCubit>()
-                  .deleteMultiUserBattleRoom();
-            }
+            // Delete the battle room when scoring is complete.
+            context.read<BattleRoomCubit>().deleteBattleRoom();
           }
         },
         builder: (context, state) {

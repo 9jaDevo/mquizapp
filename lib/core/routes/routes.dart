@@ -13,6 +13,7 @@ import 'package:flutterquiz/ui/screens/auth/sign_up_screen.dart';
 import 'package:flutterquiz/ui/screens/badges_screen.dart';
 import 'package:flutterquiz/ui/screens/battle/battle_room_find_opponent_screen.dart';
 import 'package:flutterquiz/ui/screens/battle/battle_room_quiz_screen.dart';
+import 'package:flutterquiz/ui/screens/battle/battle_room_result_screen.dart';
 import 'package:flutterquiz/ui/screens/battle/multi_user_battle_room_quiz_screen.dart';
 import 'package:flutterquiz/ui/screens/battle/multi_user_battle_room_result_screen.dart';
 import 'package:flutterquiz/ui/screens/battle/random_battle_screen.dart';
@@ -82,6 +83,7 @@ class Routes {
   static const selfChallenge = '/selfChallenge';
   static const selfChallengeQuestions = '/selfChallengeQuestions';
   static const battleRoomQuiz = '/battleRoomQuiz';
+  static const battleRoomResult = '/battleRoomResult';
   static const battleRoomFindOpponent = '/battleRoomFindOpponent';
 
   static const logOut = '/logOut';
@@ -172,6 +174,8 @@ class Routes {
         return BookmarkQuizScreen.route(rs);
       case battleRoomQuiz:
         return BattleRoomQuizScreen.route(rs);
+      case battleRoomResult:
+        return BattleRoomResultScreen.route(rs);
       case notification:
         return NotificationScreen.route(rs);
       case funAndLearnTitle:

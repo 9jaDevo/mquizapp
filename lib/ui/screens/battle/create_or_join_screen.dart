@@ -1917,7 +1917,7 @@ class _CreateOrJoinRoomScreenState extends State<CreateOrJoinRoomScreen> {
       fillColor: const Color(0x1AFFFFFF),
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
       child: SizedBox(
-        width: scrWidth * 0.34,
+        width: scrWidth * 0.32,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -2222,41 +2222,52 @@ class _CreateOrJoinRoomScreenState extends State<CreateOrJoinRoomScreen> {
                       const SizedBox(height: 22),
 
                       // ── Arena row (You | VS | Rival) ──────────────────
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _arenaCard(
-                            emoji: '🔥',
-                            label: context.tr('youLbl') ?? 'You',
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
-                            child: _vsBadge(),
-                          ),
-                          _arenaCard(
-                            emoji: isGroup ? '💪' : '🤺',
-                            label: context.tr('rivalLbl') ?? 'Rival',
-                          ),
-                        ],
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Flexible(
+                              child: _arenaCard(
+                                emoji: '🔥',
+                                label: context.tr('youLbl')!,
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                              ),
+                              child: _vsBadge(),
+                            ),
+                            Flexible(
+                              child: _arenaCard(
+                                emoji: isGroup ? '💪' : '🤺',
+                                label: context.tr('rivalLbl')!,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 16),
 
                       // ── Caption pill ──────────────────────────────────
-                      _glassContainer(
-                        borderRadius: 50,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 10,
-                        ),
-                        child: Text(
-                          context.tr('battleCaptionLbl') ??
-                              'Challenge friends & rivals globally',
-                          style: GoogleFonts.nunito(
-                            color: Colors.white.withValues(alpha: 0.8),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: _glassContainer(
+                          borderRadius: 50,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 10,
                           ),
-                          textAlign: TextAlign.center,
+                          child: Text(
+                            context.tr('battleCaptionLbl')!,
+                            style: GoogleFonts.nunito(
+                              color: Colors.white.withValues(alpha: 0.8),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 24),
