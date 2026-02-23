@@ -1,7 +1,8 @@
+import 'dart:ui';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutterquiz/commons/widgets/custom_alert_dialog.dart';
 import 'package:flutterquiz/core/core.dart';
 import 'package:flutterquiz/features/ads/blocs/rewarded_ad_cubit.dart';
@@ -15,11 +16,10 @@ import 'package:flutterquiz/features/quiz/cubits/quiz_category_cubit.dart';
 import 'package:flutterquiz/features/quiz/models/quiz_type.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/ui/screens/battle/create_or_join_screen.dart';
-import 'package:flutterquiz/ui/screens/battle/widgets/top_curve_clipper.dart';
 import 'package:flutterquiz/ui/widgets/already_logged_in_dialog.dart';
-import 'package:flutterquiz/ui/widgets/custom_rounded_button.dart';
 import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class RandomBattleScreen extends StatefulWidget {
   const RandomBattleScreen({super.key});
@@ -38,8 +38,15 @@ class RandomBattleScreen extends StatefulWidget {
 }
 
 class _RandomBattleScreenState extends State<RandomBattleScreen> {
+  // ── Unchanged business-logic state ────────────────────────────────────────
   String selectedCategory = selectCategoryKey;
   String selectedCategoryId = '0';
+
+  // ── Colours ────────────────────────────────────────────────────────────────
+  static const _bg1 = Color(0xFF0F172A);
+  static const _bg2 = Color(0xFF1E3A5F);
+  static const _bg3 = Color(0xFF1D4ED8);
+  static const _accent = Color(0xFF3B82F6);
 
   @override
   void initState() {
@@ -52,6 +59,8 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
     });
   }
 
+  // ── Business logic (unchanged) ─────────────────────────────────────────────
+
   void _getCategories() {
     context.read<QuizCategoryCubit>().getQuizCategoryWithUserId(
       languageId: UiUtils.getCurrentQuizLanguageId(context),
@@ -62,12 +71,10 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
 
   void _addCoinsAfterRewardAd() {
     final rewardAdsCoins = context.read<SystemConfigCubit>().rewardAdsCoins;
-
     context.read<UserDetailsCubit>().updateCoins(
       addCoin: true,
       coins: rewardAdsCoins,
     );
-
     context.read<UpdateCoinsCubit>().updateCoins(
       coins: rewardAdsCoins,
       addCoin: true,
@@ -76,11 +83,92 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
     );
   }
 
+  void _onLetsPlayTap() {
+    final userProfile = context.read<UserDetailsCubit>().getUserProfile();
+
+    if (int.parse(userProfile.coins!) <
+        context.read<SystemConfigCubit>().randomBattleEntryCoins) {
+      if (context.read<RewardedAdCubit>().state is! RewardedAdLoaded) {
+        context.showErrorDialog(
+          context.tr(convertErrorCodeToLanguageKey(errorCodeNotEnoughCoins))!,
+        );
+        return;
+      }
+      context.read<RewardedAdCubit>().showAd(
+        context: context,
+        rewardAmount: context.read<SystemConfigCubit>().rewardAdsCoins,
+        rewardCurrencyLabel: 'coins',
+        onAdDismissedCallback: _addCoinsAfterRewardAd,
+      );
+      return;
+    }
+    if (selectedCategory == selectCategoryKey &&
+        context.read<SystemConfigCubit>().isCategoryEnabledForRandomBattle) {
+      context.showErrorDialog(context.tr(pleaseSelectCategoryKey)!);
+      return;
+    }
+
+    context.read<BattleRoomCubit>().updateState(const BattleRoomInitial());
+    Navigator.of(context).pushReplacementNamed(
+      Routes.battleRoomFindOpponent,
+      arguments: selectedCategoryId,
+    );
+  }
+
+  void _onPlayWithFriendsTap() {
+    Navigator.of(context).push(
+      CupertinoPageRoute<CreateOrJoinRoomScreen>(
+        builder: (_) => MultiBlocProvider(
+          providers: [
+            BlocProvider<UpdateCoinsCubit>(
+              create: (_) => UpdateCoinsCubit(ProfileManagementRepository()),
+            ),
+            BlocProvider<BattleStatsCubit>(
+              create: (_) => BattleStatsCubit(BattleRoomRepository()),
+            ),
+          ],
+          child: CreateOrJoinRoomScreen(
+            quizType: QuizTypes.oneVsOneBattle,
+            title: context.tr('playWithFrdLbl')!,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  Widget _glass({
+    required Widget child,
+    double radius = 16,
+    EdgeInsetsGeometry padding = const EdgeInsets.all(16),
+    Color fill = const Color(0x18FFFFFF),
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          padding: padding,
+          decoration: BoxDecoration(
+            color: fill,
+            borderRadius: BorderRadius.circular(radius),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.20),
+            ),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  // ── Category dropdown ──────────────────────────────────────────────────────
+
   Widget _buildDropDown({
     required List<Map<String, String?>> values,
     required String keyValue,
   }) {
-    // Only initialise to the first item when no valid selection exists yet.
     final ids = values.map((e) => e['id']).toList();
     if (!ids.contains(selectedCategoryId)) {
       selectedCategoryId = ids.first!;
@@ -88,57 +176,36 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
     }
 
     return StatefulBuilder(
-      builder: (context, setState) {
-        final colorScheme = Theme.of(context).colorScheme;
-
-        return Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            color: colorScheme.surface,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+      builder: (context, setLocal) {
+        return DropdownButtonHideUnderline(
           child: DropdownButton<String>(
             key: Key(keyValue),
-            underline: const SizedBox(),
-            borderRadius: BorderRadius.circular(8),
-            dropdownColor: colorScheme.surface,
-            style: TextStyle(
-              color: colorScheme.onTertiary,
-              fontSize: 16,
-              fontWeight: FontWeights.regular,
-            ),
             isExpanded: true,
-            alignment: Alignment.center,
-            icon: Container(
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: colorScheme.onTertiary.withValues(alpha: 0.4),
-                ),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Icon(
-                Icons.keyboard_arrow_down_rounded,
-                color: colorScheme.onTertiary,
-              ),
+            dropdownColor: const Color(0xFF1E3A5F),
+            icon: const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: Colors.white70,
+            ),
+            style: GoogleFonts.nunito(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
             ),
             value: selectedCategoryId,
             hint: Text(
               context.tr(selectCategoryKey)!,
-              style: TextStyle(
-                color: colorScheme.onTertiary.withValues(alpha: 0.4),
-                fontSize: 16,
-                fontWeight: FontWeights.regular,
+              style: GoogleFonts.nunito(
+                color: Colors.white54,
+                fontSize: 15,
               ),
             ),
             onChanged: (value) {
-              setState(() {
-                selectedCategoryId = value!;
-
-                // set name for selected category
-                final index = values.indexWhere((v) => v['id'] == value);
-                if (index != -1) {
-                  selectedCategory = values[index]['name']!;
-                }
+              setLocal(() {
+                setState(() {
+                  selectedCategoryId = value!;
+                  final index = values.indexWhere((v) => v['id'] == value);
+                  if (index != -1) selectedCategory = values[index]['name']!;
+                });
               });
             },
             items: values.map((e) {
@@ -157,9 +224,33 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
     );
   }
 
-  Widget selectCategoryDropDown() {
-    return context.read<SystemConfigCubit>().isCategoryEnabledForRandomBattle
-        ? BlocConsumer<QuizCategoryCubit, QuizCategoryState>(
+  Widget _buildCategorySection() {
+    if (!context.read<SystemConfigCubit>().isCategoryEnabledForRandomBattle) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.category_rounded, color: Colors.white70, size: 16),
+            const SizedBox(width: 6),
+            Text(
+              context.tr(selectCategoryKey)!,
+              style: GoogleFonts.nunito(
+                color: Colors.white70,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _glass(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: BlocConsumer<QuizCategoryCubit, QuizCategoryState>(
             listener: (context, state) {
               if (state is QuizCategorySuccess) {
                 setState(() {
@@ -167,7 +258,6 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
                   selectedCategory = state.categories.first.categoryName!;
                 });
               }
-
               if (state is QuizCategoryFailure) {
                 if (state.errorMessage == errorCodeUnauthorizedAccess) {
                   showAlreadyLoggedInDialog(context);
@@ -175,10 +265,10 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
                 }
                 showDialog<bool>(
                   context: context,
-                  builder: (dialogCtx) => AlertDialog(
+                  builder: (ctx) => AlertDialog(
                     actions: [
                       TextButton(
-                        onPressed: () => dialogCtx.pop(true),
+                        onPressed: () => ctx.pop(true),
                         child: Text(
                           context.tr(retryLbl)!,
                           style: TextStyle(color: context.primaryColor),
@@ -191,180 +281,371 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
                       )!,
                     ),
                   ),
-                ).then((value) {
-                  if (value != null && value) {
-                    _getCategories();
-                  }
+                ).then((v) {
+                  if (v == true) _getCategories();
                 });
               }
             },
             builder: (context, state) {
               return AnimatedSwitcher(
-                duration: const Duration(milliseconds: 500),
+                duration: const Duration(milliseconds: 300),
                 child: state is QuizCategorySuccess
                     ? _buildDropDown(
                         values: state.categories
                             .where((c) => !c.isPremium)
                             .map((e) => {'name': e.categoryName, 'id': e.id})
                             .toList(),
-                        keyValue: 'selectCategorySuccess',
+                        keyValue: 'categorySuccess',
                       )
                     : Opacity(
-                        opacity: 0.65,
+                        opacity: 0.5,
                         child: _buildDropDown(
                           values: [
                             {'name': selectCategoryKey, 'id': '0'},
                           ],
-                          keyValue: 'selectCategory',
+                          keyValue: 'categoryPlaceholder',
                         ),
                       ),
               );
             },
-          )
-        : const SizedBox();
+          ),
+        ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  // ── Entry-fee + coins card ─────────────────────────────────────────────────
+
+  Widget _buildStatsCard() {
+    final entryFee = context.read<SystemConfigCubit>().randomBattleEntryCoins;
+    return _glass(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('\u{1F3DF}', style: TextStyle(fontSize: 26)),
+              const SizedBox(height: 6),
+              Text(
+                context.tr('entryFeesLbl')!,
+                style: GoogleFonts.nunito(
+                  color: Colors.white60,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '$entryFee coins',
+                style: GoogleFonts.nunito(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          Container(
+            width: 1,
+            height: 52,
+            color: Colors.white.withValues(alpha: 0.2),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('\u{1F4B0}', style: TextStyle(fontSize: 26)),
+              const SizedBox(height: 6),
+              Text(
+                context.tr(currentCoinsKey)!,
+                style: GoogleFonts.nunito(
+                  color: Colors.white60,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              BlocBuilder<UserDetailsCubit, UserDetailsState>(
+                builder: (context, state) {
+                  final coins = state is UserDetailsFetchSuccess
+                      ? context.read<UserDetailsCubit>().getCoins() ?? '0'
+                      : '--';
+                  return Text(
+                    '$coins coins',
+                    style: GoogleFonts.nunito(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Buttons ────────────────────────────────────────────────────────────────
+
+  Widget _buildLetsPlayButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton.icon(
+        onPressed: _onLetsPlayTap,
+        icon: const Icon(Icons.flash_on_rounded, size: 20),
+        label: Text(
+          context.tr('letsPlay') ?? "Let's Play",
+          style: GoogleFonts.nunito(
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.3,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _accent,
+          foregroundColor: Colors.white,
+          elevation: 6,
+          shadowColor: _accent.withValues(alpha: 0.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlayWithFriendsButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: OutlinedButton.icon(
+        onPressed: _onPlayWithFriendsTap,
+        icon: const Icon(Icons.people_alt_rounded, size: 20),
+        label: Text(
+          context.tr('playWithFrdLbl') ?? 'Play with Friends',
+          style: GoogleFonts.nunito(
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.3,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.white,
+          side: BorderSide(
+            color: Colors.white.withValues(alpha: 0.55),
+            width: 1.5,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrDivider() {
+    return Row(
+      children: [
+        Expanded(
+          child: Divider(
+            color: Colors.white.withValues(alpha: 0.25),
+            thickness: 1,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            context.tr(orLbl)!,
+            style: GoogleFonts.nunito(
+              color: Colors.white54,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Divider(
+            color: Colors.white.withValues(alpha: 0.25),
+            thickness: 1,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHeroSection() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: _accent.withValues(alpha: 0.45),
+                blurRadius: 16,
+                spreadRadius: 2,
+              ),
+            ],
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.3),
+              width: 2,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              'VS',
+              style: GoogleFonts.nunito(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.5,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 14),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              context.tr('randomLbl') ?? 'Random Battle',
+              style: GoogleFonts.nunito(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.4,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              context.tr('desBattleQuiz') ?? 'Challenge a random opponent',
+              style: GoogleFonts.nunito(
+                color: Colors.white.withValues(alpha: 0.65),
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final showFriendsButton = context
+        .read<SystemConfigCubit>()
+        .isOneVsOneBattleEnabled;
+
     return BlocListener<UpdateCoinsCubit, UpdateCoinsState>(
       listener: (context, state) {
-        if (state is UpdateCoinsFailure) {
-          if (state.errorMessage == errorCodeUnauthorizedAccess) {
-            showAlreadyLoggedInDialog(context);
-          }
+        if (state is UpdateCoinsFailure &&
+            state.errorMessage == errorCodeUnauthorizedAccess) {
+          showAlreadyLoggedInDialog(context);
         }
       },
       child: Scaffold(
-        body: SingleChildScrollView(
-          child: SizedBox(
-            width: context.width,
-            height: context.height,
-            child: Stack(
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [_bg1, _bg2, _bg3],
+              stops: [0.0, 0.5, 1.0],
+            ),
+          ),
+          child: SafeArea(
+            child: Column(
               children: [
-                /// Title & Back Btn
-                Container(
-                  width: context.width,
-                  height: context.height * .45,
-                  color: Theme.of(context).primaryColor,
-                  child: Stack(
-                    alignment: Alignment.center,
+                // ── Back button ──────────────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  child: Row(
                     children: [
-                      /// BG
-                      SvgPicture.asset(
-                        Assets.battleDesignImg,
-                        fit: BoxFit.cover,
-                        width: context.width,
-                        height: context.height,
-                      ),
-
-                      /// VS
-                      Padding(
-                        padding: const EdgeInsets.only(top: 75, left: 3),
-                        child: SvgPicture.asset(
-                          Assets.vsImg,
-                          width: 247.177,
-                          height: 126.416,
-                        ),
-                      ),
-
-                      /// Title & Back Button
-                      Padding(
-                        padding: EdgeInsetsDirectional.only(
-                          top: context.height * 0.07,
-                          start: 25,
-                        ),
-                        child: Stack(
-                          children: [
-                            Align(
-                              alignment: AlignmentDirectional.topStart,
-                              child: GestureDetector(
-                                onTap: Navigator.of(context).pop,
-                                child: Icon(
-                                  Icons.arrow_back_rounded,
-                                  size: 24.5,
-                                  color: Theme.of(context).colorScheme.surface,
-                                ),
-                              ),
+                      GestureDetector(
+                        onTap: Navigator.of(context).pop,
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2),
                             ),
-                            Align(
-                              alignment: AlignmentDirectional.topCenter,
-                              child: Text(
-                                context.tr('randomLbl')!,
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  color: Theme.of(context).colorScheme.surface,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
 
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  child: ClipPath(
-                    clipper: TopCurveClipper(),
-                    child: Container(
-                      width: context.width,
-                      height: context.height * .63,
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: context.width * UiUtils.hzMarginPct,
+                const SizedBox(height: 12),
+                _buildHeroSection(),
+                const SizedBox(height: 14),
+
+                // ── Bottom glass panel ────────────────────────────────────────
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F172A).withValues(alpha: 0.55),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(32),
                       ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          SizedBox(height: context.height * .07),
-
-                          /// Select Category
-                          if (context
-                              .read<SystemConfigCubit>()
-                              .isCategoryEnabledForRandomBattle)
-                            Text(
-                              context.tr(selectCategoryKey)!,
-                              style: TextStyle(
-                                fontWeight: FontWeights.regular,
-                                fontSize: 18,
-                                color: Theme.of(context).colorScheme.onTertiary,
-                              ),
-                            ),
-
-                          /// dropDown
-                          if (context
-                              .read<SystemConfigCubit>()
-                              .isCategoryEnabledForRandomBattle)
-                            SizedBox(height: context.height * .01),
-                          if (context
-                              .read<SystemConfigCubit>()
-                              .isCategoryEnabledForRandomBattle)
-                            selectCategoryDropDown(),
-
-                          /// Entry fees & Current user coins
-                          SizedBox(height: context.height * .02),
-                          _buildEntryFeesAndCoinsCard(context),
-
-                          /// Let's Play
-                          SizedBox(height: context.height * .04),
-                          letsPlayButton(context),
-
-                          if (context
-                              .read<SystemConfigCubit>()
-                              .isOneVsOneBattleEnabled) ...[
-                            /// OR
-                            SizedBox(height: context.height * .02),
-                            _buildOrDivider(context),
-
-                            /// Let's Play
-                            SizedBox(height: context.height * .02),
-                            playWithFrndsButton(context),
-                          ],
-                        ],
+                      border: Border(
+                        top: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.12),
+                        ),
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(32),
+                      ),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                        child: SingleChildScrollView(
+                          padding: EdgeInsets.fromLTRB(
+                            context.width * UiUtils.hzMarginPct,
+                            28,
+                            context.width * UiUtils.hzMarginPct,
+                            MediaQuery.of(context).padding.bottom + 24,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _buildCategorySection(),
+                              _buildStatsCard(),
+                              const SizedBox(height: 24),
+                              _buildLetsPlayButton(),
+                              if (showFriendsButton) ...[
+                                const SizedBox(height: 16),
+                                _buildOrDivider(),
+                                const SizedBox(height: 16),
+                                _buildPlayWithFriendsButton(),
+                              ],
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -374,213 +655,6 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  CustomRoundedButton playWithFrndsButton(BuildContext context) {
-    return CustomRoundedButton(
-      widthPercentage: context.width,
-      backgroundColor: Theme.of(context).primaryColor,
-      buttonTitle: context.tr('playWithFrdLbl'),
-      radius: 8,
-      showBorder: false,
-      height: context.height * .07,
-      fontWeight: FontWeights.semiBold,
-      textSize: 18,
-      onTap: () {
-        Navigator.of(context).push(
-          CupertinoPageRoute<CreateOrJoinRoomScreen>(
-            builder: (_) => MultiBlocProvider(
-              providers: [
-                BlocProvider<UpdateCoinsCubit>(
-                  create: (_) =>
-                      UpdateCoinsCubit(ProfileManagementRepository()),
-                ),
-                BlocProvider<BattleStatsCubit>(
-                  create: (_) => BattleStatsCubit(BattleRoomRepository()),
-                ),
-              ],
-              child: CreateOrJoinRoomScreen(
-                quizType: QuizTypes.oneVsOneBattle,
-                title: context.tr('playWithFrdLbl')!,
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  CustomRoundedButton letsPlayButton(BuildContext context) {
-    return CustomRoundedButton(
-      widthPercentage: context.width,
-      backgroundColor: Theme.of(context).primaryColor,
-      buttonTitle: context.tr('letsPlay'),
-      radius: 8,
-      showBorder: false,
-      height: context.height * .07,
-      fontWeight: FontWeights.semiBold,
-      textSize: 18,
-      onTap: () {
-        final userProfile = context.read<UserDetailsCubit>().getUserProfile();
-
-        if (int.parse(userProfile.coins!) <
-            context.read<SystemConfigCubit>().randomBattleEntryCoins) {
-          //if ad not loaded than show not enough coins
-          if (context.read<RewardedAdCubit>().state is! RewardedAdLoaded) {
-            context.showErrorDialog(
-              context.tr(
-                convertErrorCodeToLanguageKey(errorCodeNotEnoughCoins),
-              )!,
-            );
-            return;
-          }
-
-          // Show rewarded ad with built-in consent dialog
-          context.read<RewardedAdCubit>().showAd(
-            context: context,
-            rewardAmount: context.read<SystemConfigCubit>().rewardAdsCoins,
-            rewardCurrencyLabel: 'coins',
-            onAdDismissedCallback: _addCoinsAfterRewardAd,
-          );
-          return;
-        }
-        if (selectedCategory == selectCategoryKey &&
-            context
-                .read<SystemConfigCubit>()
-                .isCategoryEnabledForRandomBattle) {
-          context.showErrorDialog(
-            context.tr(pleaseSelectCategoryKey)!,
-          );
-          return;
-        }
-
-        context.read<BattleRoomCubit>().updateState(const BattleRoomInitial());
-
-        Navigator.of(context).pushReplacementNamed(
-          Routes.battleRoomFindOpponent,
-          arguments: selectedCategoryId,
-        );
-      },
-    );
-  }
-
-  Container _buildEntryFeesAndCoinsCard(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      width: context.width,
-      height: context.height * .14,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(
-                  text: "${context.tr("entryFeesLbl")!}\n",
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeights.regular,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onTertiary.withValues(alpha: .4),
-                  ),
-                ),
-                TextSpan(
-                  text:
-                      '${context.read<SystemConfigCubit>().randomBattleEntryCoins} ${context.tr(coinsLbl)}',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeights.bold,
-                    color: Theme.of(context).colorScheme.onTertiary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          VerticalDivider(
-            indent: context.width * .07,
-            endIndent: context.width * .07,
-            color: Theme.of(
-              context,
-            ).colorScheme.onTertiary.withValues(alpha: .6),
-          ),
-          Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(
-                  text: '${context.tr(currentCoinsKey)!}\n',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeights.regular,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onTertiary.withValues(alpha: .4),
-                  ),
-                ),
-                WidgetSpan(
-                  child: BlocBuilder<UserDetailsCubit, UserDetailsState>(
-                    bloc: context.read<UserDetailsCubit>(),
-                    builder: (context, state) {
-                      return state is UserDetailsFetchSuccess
-                          ? Text(
-                              '${context.read<UserDetailsCubit>().getCoins()!} ${context.tr(coinsLbl)}',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeights.bold,
-                                color: Theme.of(context).colorScheme.onTertiary,
-                              ),
-                            )
-                          : const SizedBox();
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Row _buildOrDivider(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Divider(
-            color: Theme.of(
-              context,
-            ).colorScheme.onTertiary.withValues(alpha: .6),
-            thickness: .5,
-            indent: context.width * .1,
-            endIndent: context.width * .05,
-          ),
-        ),
-        Text(
-          context.tr(orLbl)!,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeights.regular,
-            color: Theme.of(
-              context,
-            ).colorScheme.onTertiary.withValues(alpha: .6),
-          ),
-        ),
-        Expanded(
-          child: Divider(
-            color: Theme.of(
-              context,
-            ).colorScheme.onTertiary.withValues(alpha: .6),
-            thickness: .5,
-            indent: context.width * .05,
-            endIndent: context.width * .1,
-          ),
-        ),
-      ],
     );
   }
 }

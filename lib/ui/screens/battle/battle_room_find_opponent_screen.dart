@@ -167,7 +167,7 @@ class _BattleRoomFindOpponentScreenState
 
         timer.cancel();
       } else {
-        waitingTime--;
+        setState(() => waitingTime--);
       }
     });
   }
