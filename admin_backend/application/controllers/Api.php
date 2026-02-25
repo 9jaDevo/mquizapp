@@ -7335,6 +7335,21 @@ class Api extends REST_Controller
             $this->load->model('Referral_model');
             $stats = $this->Referral_model->get_user_referral_stats($user_id);
 
+            // Attach live bonus config so the app never shows hardcoded thresholds
+            $bonus_system_enable = is_settings('referral_bonus_system_enable');
+            $min_days_row    = $this->db->where('type', 'referral_reward_min_active_days')->get('tbl_settings')->row();
+            $min_quizzes_row = $this->db->where('type', 'referral_reward_min_quizzes')->get('tbl_settings')->row();
+            $bonus_ref_row   = $this->db->where('type', 'referral_bonus_referrer_coins')->get('tbl_settings')->row();
+            $bonus_ee_row    = $this->db->where('type', 'referral_bonus_referee_coins')->get('tbl_settings')->row();
+
+            $stats['bonus_config'] = [
+                'enabled'              => $bonus_system_enable == '1',
+                'min_active_days'      => $min_days_row    ? (int)$min_days_row->message    : 7,
+                'min_quizzes'          => $min_quizzes_row ? (int)$min_quizzes_row->message : 50,
+                'referrer_bonus_coins' => $bonus_ref_row   ? (int)$bonus_ref_row->message   : 0,
+                'referee_bonus_coins'  => $bonus_ee_row    ? (int)$bonus_ee_row->message    : 0,
+            ];
+
             $response['error'] = false;
             $response['message'] = "Referral stats retrieved";
             $response['data'] = $stats;
@@ -7411,8 +7426,9 @@ class Api extends REST_Controller
             // Get requirements
             $min_days = (int)$this->db->where('type', 'referral_reward_min_active_days')->get('tbl_settings')->row()->message;
             $min_quizzes = (int)$this->db->where('type', 'referral_reward_min_quizzes')->get('tbl_settings')->row()->message;
-            $referrer_reward = (int)$this->db->where('type', 'referral_reward_referrer_coins')->get('tbl_settings')->row()->message;
-            $referee_reward = (int)$this->db->where('type', 'referral_reward_referee_coins')->get('tbl_settings')->row()->message;
+            // Bug fix: use the correct settings keys (referral_bonus_*, not referral_reward_*)
+            $referrer_reward = (int)$this->db->where('type', 'referral_bonus_referrer_coins')->get('tbl_settings')->row()->message;
+            $referee_reward = (int)$this->db->where('type', 'referral_bonus_referee_coins')->get('tbl_settings')->row()->message;
 
             $days_remaining = max(0, $min_days - $referral->referee_active_days);
             $quizzes_remaining = max(0, $min_quizzes - $referral->referee_quizzes_played);

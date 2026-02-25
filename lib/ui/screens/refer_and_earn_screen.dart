@@ -23,16 +23,42 @@ class ReferAndEarnScreen extends StatefulWidget {
   State<ReferAndEarnScreen> createState() => _ReferAndEarnScreenState();
 }
 
+class _BonusConfig {
+  const _BonusConfig({
+    required this.enabled,
+    required this.minActiveDays,
+    required this.minQuizzes,
+    required this.referrerBonusCoins,
+    required this.refereeBonusCoins,
+  });
+
+  final bool enabled;
+  final int minActiveDays;
+  final int minQuizzes;
+  final int referrerBonusCoins;
+  final int refereeBonusCoins;
+
+  static const fallback = _BonusConfig(
+    enabled: true,
+    minActiveDays: 7,
+    minQuizzes: 50,
+    referrerBonusCoins: 0,
+    refereeBonusCoins: 0,
+  );
+}
+
 class _ReferralStats {
   const _ReferralStats({
     required this.total,
     required this.active,
     required this.earned,
+    required this.bonusConfig,
   });
 
   final int total;
   final int active;
   final int earned;
+  final _BonusConfig bonusConfig;
 }
 
 class _ReferAndEarnScreenState extends State<ReferAndEarnScreen> {
@@ -54,10 +80,23 @@ class _ReferAndEarnScreenState extends State<ReferAndEarnScreen> {
       final data = responseJson['data'] as Map<String, dynamic>?;
       if (data == null) return null;
 
+      _BonusConfig bonusConfig = _BonusConfig.fallback;
+      final bc = data['bonus_config'] as Map<String, dynamic>?;
+      if (bc != null) {
+        bonusConfig = _BonusConfig(
+          enabled: bc['enabled'] as bool? ?? true,
+          minActiveDays: int.tryParse(bc['min_active_days'].toString()) ?? 7,
+          minQuizzes: int.tryParse(bc['min_quizzes'].toString()) ?? 50,
+          referrerBonusCoins: int.tryParse(bc['referrer_bonus_coins'].toString()) ?? 0,
+          refereeBonusCoins: int.tryParse(bc['referee_bonus_coins'].toString()) ?? 0,
+        );
+      }
+
       return _ReferralStats(
         total: int.tryParse(data['total_referrals'].toString()) ?? 0,
         active: int.tryParse(data['successful_referrals'].toString()) ?? 0,
         earned: int.tryParse(data['total_coins_earned'].toString()) ?? 0,
+        bonusConfig: bonusConfig,
       );
     } catch (_) {
       return null;
@@ -107,7 +146,13 @@ class _ReferAndEarnScreenState extends State<ReferAndEarnScreen> {
                     );
                   },
                 ),
-                _buildHeroCard(context, sysConfig),
+                FutureBuilder<_ReferralStats?>(
+                  future: _statsFuture,
+                  builder: (context, snapshot) {
+                    final bc = snapshot.data?.bonusConfig ?? _BonusConfig.fallback;
+                    return _buildHeroCard(context, sysConfig, bc);
+                  },
+                ),
                 const SizedBox(height: 20),
                 _buildHowItWorksCard(context),
                 const SizedBox(height: 20),
@@ -260,7 +305,7 @@ class _ReferAndEarnScreenState extends State<ReferAndEarnScreen> {
     );
   }
 
-  Widget _buildHeroCard(BuildContext context, SystemConfigCubit sysConfig) {
+  Widget _buildHeroCard(BuildContext context, SystemConfigCubit sysConfig, _BonusConfig bc) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
       decoration: BoxDecoration(
@@ -329,14 +374,15 @@ class _ReferAndEarnScreenState extends State<ReferAndEarnScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              Expanded(
-                child: _buildHeroMiniCard(
-                  icon: Icons.auto_awesome_rounded,
-                  value: '+${sysConfig.referrerEarnCoin}',
-                  title: 'Bonus Reward',
-                  subtitle: 'After 7 days + 10 quizzes',
+              if (bc.enabled)
+                Expanded(
+                  child: _buildHeroMiniCard(
+                    icon: Icons.auto_awesome_rounded,
+                    value: '+${bc.referrerBonusCoins}',
+                    title: 'Bonus Reward',
+                    subtitle: 'After ${bc.minActiveDays}d + ${bc.minQuizzes} quizzes',
+                  ),
                 ),
-              ),
             ],
           ),
         ],
@@ -446,7 +492,7 @@ class _ReferAndEarnScreenState extends State<ReferAndEarnScreen> {
           _buildStep(
             number: '3',
             title: 'Earn Bonus',
-            description: 'Get +50 bonus when they complete 10 quizzes',
+            description: 'Get bonus coins when they complete the activity requirement',
           ),
         ],
       ),
