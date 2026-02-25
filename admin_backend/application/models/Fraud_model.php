@@ -298,4 +298,106 @@ class Fraud_model extends CI_Model
 
         return $stats;
     }
+
+    /**
+     * Check signup fraud signals for a new user registration.
+     *
+     * Runs lightweight checks that are possible at signup time:
+     *   1. IP flood: too many signups from this IP today (via tbl_referrals records)
+     *   2. Referral daily abuse: referrer has exceeded max-per-day threshold
+     *   3. Referral IP abuse: same IP used too many times on this referral code
+     *
+     * POLICY: All detections are logged for admin review. This method NEVER disables
+     * an account — that decision belongs to a human admin.
+     *
+     * @param int    $user_id       Newly created user id
+     * @param string $signup_ip     IP address detected at signup
+     * @param string $referrer_id   Referrer user_id if a friends_code was used (0/'')
+     * @return array ['flagged' => bool, 'rules_triggered' => string[]]
+     */
+    public function check_signup_fraud($user_id, $signup_ip, $referrer_id = 0)
+    {
+        $rules_triggered = [];
+
+        // ── Rule 1: IP flood check ────────────────────────────────────────────
+        // Count signups from this IP recorded in tbl_referrals today
+        $check_ip = $this->db->where('type', 'referral_block_same_ip')->get('tbl_settings')->row();
+        if ($check_ip && $check_ip->message == '1' && !empty($signup_ip)) {
+            $max_row = $this->db->where('type', 'referral_same_ip_max_count')->get('tbl_settings')->row();
+            $max_ip  = $max_row ? (int)$max_row->message : 2;
+
+            $ip_count = $this->db->where('signup_ip', $signup_ip)
+                                  ->where('DATE(signup_date)', date('Y-m-d'))
+                                  ->count_all_results('tbl_referrals');
+
+            error_log('[SIGNUP-FRAUD] IP ' . $signup_ip . ': ' . $ip_count . ' referral signups today (max ' . $max_ip . ')');
+
+            if ($ip_count >= $max_ip) {
+                $rules_triggered[] = 'ip_flood';
+                $this->log_fraud_detection($user_id, [
+                    'type'     => 'signup_ip_flood',
+                    'reason'   => 'IP ' . $signup_ip . ' has ' . ($ip_count + 1) . ' signups today (max ' . $max_ip . ')',
+                    'severity' => 'medium',
+                    'metadata' => ['signup_ip' => $signup_ip, 'count' => $ip_count + 1, 'max' => $max_ip]
+                ]);
+            }
+        }
+
+        // ── Rule 2 & 3: Referral-specific checks (only when a code was used) ──
+        if (!empty($referrer_id) && $referrer_id > 0) {
+            // Rule 2: Referrer daily cap
+            $daily_row = $this->db->where('type', 'referral_max_per_day')->get('tbl_settings')->row();
+            $max_day   = $daily_row ? (int)$daily_row->message : 5;
+
+            $today_referrals = $this->db->where('referrer_id', $referrer_id)
+                                         ->where('DATE(signup_date)', date('Y-m-d'))
+                                         ->count_all_results('tbl_referrals');
+
+            error_log('[SIGNUP-FRAUD] Referrer ' . $referrer_id . ': ' . $today_referrals . ' referrals today (max ' . $max_day . ')');
+
+            if ($today_referrals >= $max_day) {
+                $rules_triggered[] = 'referral_daily_cap';
+                $this->log_fraud_detection($user_id, [
+                    'type'     => 'referral_daily_cap_exceeded',
+                    'reason'   => 'Referrer ' . $referrer_id . ' has ' . ($today_referrals + 1) . ' referrals today (max ' . $max_day . ')',
+                    'severity' => 'medium',
+                    'metadata' => ['referrer_id' => $referrer_id, 'today_count' => $today_referrals + 1, 'max' => $max_day]
+                ]);
+            }
+
+            // Rule 3: Same IP on same referral code
+            if (!empty($signup_ip)) {
+                $ip_ref_count = $this->db->where('referrer_id', $referrer_id)
+                                          ->where('signup_ip', $signup_ip)
+                                          ->count_all_results('tbl_referrals');
+
+                $max_ip_ref_row = $this->db->where('type', 'referral_same_ip_max_count')->get('tbl_settings')->row();
+                $max_ip_ref    = $max_ip_ref_row ? (int)$max_ip_ref_row->message : 2;
+
+                error_log('[SIGNUP-FRAUD] Referrer ' . $referrer_id . ' + IP ' . $signup_ip . ': ' . $ip_ref_count . ' sign-ups (max ' . $max_ip_ref . ')');
+
+                if ($ip_ref_count >= $max_ip_ref) {
+                    $rules_triggered[] = 'referral_ip_duplicate';
+                    $this->log_fraud_detection($user_id, [
+                        'type'     => 'referral_ip_duplicate',
+                        'reason'   => 'IP ' . $signup_ip . ' used ' . ($ip_ref_count + 1) . 'x with referrer ' . $referrer_id . ' (max ' . $max_ip_ref . ')',
+                        'severity' => 'high',
+                        'metadata' => ['referrer_id' => $referrer_id, 'signup_ip' => $signup_ip, 'count' => $ip_ref_count + 1, 'max' => $max_ip_ref]
+                    ]);
+                }
+            }
+        }
+
+        $flagged = !empty($rules_triggered);
+        if ($flagged) {
+            error_log('[SIGNUP-FRAUD] ⚠️  User ' . $user_id . ' flagged at signup. Rules: ' . implode(', ', $rules_triggered) . '. Logged for admin review — account NOT disabled.');
+        } else {
+            error_log('[SIGNUP-FRAUD] ✅ User ' . $user_id . ' passed all signup fraud checks.');
+        }
+
+        return [
+            'flagged'         => $flagged,
+            'rules_triggered' => $rules_triggered
+        ];
+    }
 }

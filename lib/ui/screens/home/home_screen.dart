@@ -1654,12 +1654,53 @@ class HomeScreenState extends State<HomeScreen>
                     alignment: Alignment.topCenter,
                     child: _buildUserProfileHeader(),
                   ),
+                  // WhatsApp support bubble
+                  Positioned(
+                    right: 16,
+                    bottom: 100,
+                    child: _buildWhatsAppBubble(),
+                  ),
                 ],
               ),
             ),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildWhatsAppBubble() {
+    const waUrl = 'https://chat.whatsapp.com/DjvHJgqd2v56URcMSEnJpe';
+    return Tooltip(
+      message: 'Chat support on WhatsApp',
+      child: GestureDetector(
+        onTap: () async {
+          final uri = Uri.parse(waUrl);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          }
+        },
+        child: Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            color: const Color(0xFF25D366),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF25D366).withValues(alpha: 0.45),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.chat,
+            color: Colors.white,
+            size: 28,
+          ),
+        ),
+      ),
     );
   }
 

@@ -32,15 +32,15 @@ class RewardedInterstitialAdCubit extends Cubit<RewardedInterstitialAdState> {
         config.isAdsEnable && !context.read<UserDetailsCubit>().removeAds();
 
     if (!showAds) {
-      log('Rewarded interstitial ads disabled', name: 'RewardedInterstitialAd');
+      log('⏭️ [REWARD-INT] Create skipped (ads disabled)', name: 'RewardedInterstitialAd-Diagnostic');
       return;
     }
 
     // Only support AdMob for rewarded interstitial
     if (config.adsType != AdType.admob) {
       log(
-        'Rewarded interstitial only supported for AdMob',
-        name: 'RewardedInterstitialAd',
+        '⏭️ [REWARD-INT] Only AdMob supported | Got: ${config.adsType}',
+        name: 'RewardedInterstitialAd-Diagnostic',
       );
       return;
     }
@@ -48,8 +48,8 @@ class RewardedInterstitialAdCubit extends Cubit<RewardedInterstitialAdState> {
     if (state == RewardedInterstitialAdState.loading ||
         state == RewardedInterstitialAdState.loaded) {
       log(
-        'Rewarded interstitial already loading or loaded',
-        name: 'RewardedInterstitialAd',
+        '⏭️ [REWARD-INT] Already loading/loaded',
+        name: 'RewardedInterstitialAd-Diagnostic',
       );
       return;
     }
@@ -61,16 +61,16 @@ class RewardedInterstitialAdCubit extends Cubit<RewardedInterstitialAdState> {
 
     if (adUnitId.isEmpty) {
       log(
-        'Rewarded interstitial ad unit ID not configured in backend',
-        name: 'RewardedInterstitialAd',
+        '❌ [REWARD-INT] Ad unit ID NOT CONFIGURED in backend',
+        name: 'RewardedInterstitialAd-Diagnostic',
       );
       emit(RewardedInterstitialAdState.initial);
       return;
     }
 
     log(
-      'Loading rewarded interstitial ad with ID: $adUnitId',
-      name: 'RewardedInterstitialAd',
+      '🔄 [REWARD-INT] Loading | AdUnitID: $adUnitId',
+      name: 'RewardedInterstitialAd-Diagnostic',
     );
 
     await RewardedInterstitialAd.load(
@@ -88,14 +88,14 @@ class RewardedInterstitialAdCubit extends Cubit<RewardedInterstitialAdState> {
           );
 
           log(
-            'Rewarded interstitial ad loaded',
-            name: 'RewardedInterstitialAd',
+            '✅ [REWARD-INT] Loaded successfully',
+            name: 'RewardedInterstitialAd-Diagnostic',
           );
         },
         onAdFailedToLoad: (error) {
           log(
-            'Rewarded interstitial failed to load: $error',
-            name: 'RewardedInterstitialAd',
+            '❌ [REWARD-INT] Failed to load: $error',
+            name: 'RewardedInterstitialAd-Diagnostic',
           );
           emit(RewardedInterstitialAdState.failure);
           _rewardedInterstitialAd = null;

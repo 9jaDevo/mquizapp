@@ -22,9 +22,9 @@ class AdImpressionQualityTracker {
       final impressions = prefs.getInt(key) ?? 0;
       await prefs.setInt(key, impressions + 1);
       
-      log('Impression recorded for $adId (total: ${impressions + 1})', name: 'AdQuality');
+      log('✅ [IMPRESSION] Recorded for $adId (total: ${impressions + 1})', name: 'AdQuality-Diagnostic');
     } catch (e) {
-      log('Error recording impression: $e', name: 'AdQuality');
+      log('❌ [IMPRESSION] Error recording: $e', name: 'AdQuality-Diagnostic');
     }
   }
 

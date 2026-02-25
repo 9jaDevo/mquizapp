@@ -140,6 +140,7 @@ class RewardedAdCubit extends Cubit<RewardedAdState>
 
   Future<void> createRewardedAd(BuildContext context) async {
     if (state is RewardedAdLoadInProgress || state is RewardedAdLoaded) {
+      log('⏭️ [REWARDED] Create skipped (already loading/loaded)', name: 'RewardedAd-Diagnostic');
       return; // Prevent duplicate loads
     }
     emit(const RewardedAdLoadInProgress());
@@ -147,6 +148,7 @@ class RewardedAdCubit extends Cubit<RewardedAdState>
     final sysConfigCubit = context.read<SystemConfigCubit>();
     if (sysConfigCubit.isAdsEnable &&
         !context.read<UserDetailsCubit>().removeAds()) {
+      log('🔄 [REWARDED] Creating rewarded ad | Network: ${sysConfigCubit.adsType}', name: 'RewardedAd-Diagnostic');
       if (sysConfigCubit.adsType == AdType.admob) {
         await _createGoogleRewardedAd(context);
       } else if (sysConfigCubit.adsType == AdType.unity) {

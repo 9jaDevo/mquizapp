@@ -41,10 +41,13 @@ class BannerAdCubit extends Cubit<BannerAdState> {
         AdSize.banner;
 
     final startTime = DateTime.now().millisecondsSinceEpoch;
+    final adUnitId = context.read<SystemConfigCubit>().googleBannerId;
+    final platform = Platform.isIOS ? 'iOS' : 'Android';
+    log('🔄 [BANNER] Creating Google banner | Platform: $platform | AdUnitID: ${adUnitId.isEmpty ? "⚠️ MISSING" : adUnitId} | Size: ${size.width}x${size.height}', name: 'BannerAd-Diagnostic');
 
     final ad = BannerAd(
       request: const AdRequest(),
-      adUnitId: context.read<SystemConfigCubit>().googleBannerId,
+      adUnitId: adUnitId,
       listener: BannerAdListener(
         onAdLoaded: (ad) async {
           _bannerRetryCount = 0; // Reset
@@ -59,22 +62,23 @@ class BannerAdCubit extends Cubit<BannerAdState> {
           await BannerVisibilityTracker.recordAdLoadTime(_bannerAdId, loadDuration);
           
           emit(BannerAdState.loaded);
-          log('BannerAd loaded (${loadDuration}ms)');
+          log('✅ [BANNER] Google banner loaded! Duration: ${loadDuration}ms Size: ${ad.size.width}x${ad.size.height}', name: 'BannerAd-Diagnostic');
         },
         onAdFailedToLoad: (Ad ad, LoadAdError error) async {
           await ad.dispose(); // Dispose failed ad
-          log('BannerAd failedToLoad: $error');
+          final errorDesc = _getAdErrorDescription(error.code);
+          log('❌ [BANNER] Google failed! Code: ${error.code} ($errorDesc) Message: ${error.message}', name: 'BannerAd-Diagnostic');
           emit(BannerAdState.failure);
 
           if (error.code == 3 && _bannerRetryCount < _maxRetryCount) {
             final delay = Duration(seconds: min(2 << _bannerRetryCount, 10));
             _bannerRetryCount++;
 
-            log('Retrying in ${delay.inSeconds}s (attempt $_bannerRetryCount)');
+            log('⏳ [BANNER] Retrying Google in ${delay.inSeconds}s (attempt $_bannerRetryCount/$_maxRetryCount)', name: 'BannerAd-Diagnostic');
             await Future<void>.delayed(delay);
             await _createGoogleBannerAd(context); // Retry recursively
           } else {
-            log('Stopped retrying after $_bannerRetryCount attempts.');
+            log('🛑 [BANNER] Stopped retrying Google after $_bannerRetryCount attempts. Last error: ${error.message}', name: 'BannerAd-Diagnostic');
           }
         },
         onAdOpened: (_) => log('BannerAd opened'),
@@ -91,6 +95,7 @@ class BannerAdCubit extends Cubit<BannerAdState> {
     final placementName = Platform.isIOS ? 'Banner_iOS' : 'Banner_Android';
     
     final startTime = DateTime.now().millisecondsSinceEpoch;
+    log('🔄 [BANNER] Creating Unity banner | Placement: $placementName', name: 'BannerAd-Diagnostic');
 
     _unityBannerAd = UnityBannerAd(
       placementId: placementName,
@@ -104,22 +109,22 @@ class BannerAdCubit extends Cubit<BannerAdState> {
         final loadDuration = DateTime.now().millisecondsSinceEpoch - startTime;
         await BannerVisibilityTracker.recordAdLoadTime(_bannerAdId, loadDuration);
         
-        log('BannerAd loaded (${loadDuration}ms)');
+        log('✅ [BANNER] Unity loaded! Duration: ${loadDuration}ms', name: 'BannerAd-Diagnostic');
         emit(BannerAdState.loaded);
       },
       onFailed: (placementId, error, message) async {
-        log('Banner Ad $placementId failed: $error $message');
+        log('❌ [BANNER] Unity failed! Placement: $placementId Error: $error Message: $message', name: 'BannerAd-Diagnostic');
         emit(BannerAdState.failure);
 
         if (_bannerRetryCount < _maxRetryCount) {
           final delay = Duration(seconds: min(2 << _bannerRetryCount, 10));
           _bannerRetryCount++;
 
-          log('Retrying in ${delay.inSeconds}s (attempt $_bannerRetryCount)');
+          log('⏳ [BANNER] Retrying Unity in ${delay.inSeconds}s (attempt $_bannerRetryCount/$_maxRetryCount)', name: 'BannerAd-Diagnostic');
           await Future<void>.delayed(delay);
           _createUnityBannerAd(); // Retry
         } else {
-          log('Stopped retrying after $_bannerRetryCount attempts.');
+          log('🛑 [BANNER] Stopped retrying Unity after $_bannerRetryCount attempts.', name: 'BannerAd-Diagnostic');
         }
       },
     );
@@ -130,17 +135,24 @@ class BannerAdCubit extends Cubit<BannerAdState> {
     final showAds =
         config.isAdsEnable && !context.read<UserDetailsCubit>().removeAds();
 
-    if (!showAds) return;
+    if (!showAds) {
+      log('⏭️ [BANNER] Init skipped (ads disabled=${!config.isAdsEnable} premium=${context.read<UserDetailsCubit>().removeAds()})', name: 'BannerAd-Diagnostic');
+      return;
+    }
 
     // Record when banner becomes visible - lazy loading
     BannerVisibilityTracker.recordBannerVisible(_bannerAdId);
     
     // Only load ads if app is in resumed state (visible to user)
-    if (context.mounted && BannerVisibilityTracker.isScreenVisible(context)) {
+    final isScreenVisible = context.mounted && BannerVisibilityTracker.isScreenVisible(context);
+    final adNetwork = config.adsType.toString().split('.').last;
+    log('📊 [BANNER] Init called | Network: $adNetwork | ScreenVisible: $isScreenVisible', name: 'BannerAd-Diagnostic');
+    
+    if (isScreenVisible) {
       _loadBannerAd(context);
     } else {
       // Defer loading until later when screen might be visible
-      log('Deferring banner ad load (screen not visible yet)', name: 'BannerAd');
+      log('⏸️ [BANNER] DEFERRED LOAD - Screen not visible (lifecycle check failed - may block impressions)', name: 'BannerAd-Diagnostic');
       _lazyLoadingInitiated = true;
     }
   }
@@ -158,19 +170,24 @@ class BannerAdCubit extends Cubit<BannerAdState> {
     // Check if we should load based on visibility duration
     final shouldLoad = await BannerVisibilityTracker.shouldLoadBanner(_bannerAdId);
     if (!shouldLoad) {
-      log('Waiting for banner to be visible longer before loading', name: 'BannerAd');
+      log('⏸️ [BANNER] DELAYED LOAD - Not visible long enough (recursive retry in 500ms)', name: 'BannerAd-Diagnostic');
       Future.delayed(Duration(milliseconds: 500), () => _loadBannerAd(context));
       return;
     }
 
+    log('🚀 [BANNER] _loadBannerAd proceeding with network: ${config.adsType}', name: 'BannerAd-Diagnostic');
+    
     if (config.adsType == AdType.admob) {
       _createGoogleBannerAd(context);
     } else if (config.adsType == AdType.unity) {
       _createUnityBannerAd();
     } else if (config.adsType == AdType.ironSource) {
-      if (config.ironSourceBannerId.isNotEmpty) {
+      final bannerId = config.ironSourceBannerId;
+      if (bannerId.isNotEmpty) {
+        log('✅ [BANNER] IronSource ID configured: $bannerId', name: 'BannerAd-Diagnostic');
         emit(BannerAdState.loaded);
       } else {
+        log('❌ [BANNER] IronSource ID NOT configured', name: 'BannerAd-Diagnostic');
         emit(BannerAdState.failure);
       }
     }
@@ -202,6 +219,23 @@ class BannerAdCubit extends Cubit<BannerAdState> {
       'quality_score': (qualityScore * 100).toStringAsFixed(1),
       'avg_load_time_ms': avgLoadTime.toStringAsFixed(0),
     };
+  }
+
+  String _getAdErrorDescription(int errorCode) {
+    switch (errorCode) {
+      case 0:
+        return 'ERROR_CODE_INTERNAL_ERROR';
+      case 1:
+        return 'ERROR_CODE_INVALID_REQUEST';
+      case 2:
+        return 'ERROR_CODE_NETWORK_ERROR';
+      case 3:
+        return 'ERROR_CODE_NO_FILL (no ads available - check budget/targeting)';
+      case 4:
+        return 'ERROR_CODE_REQUEST_ID_MISMATCH';
+      default:
+        return 'UNKNOWN_ERROR_$errorCode';
+    }
   }
 
   @override

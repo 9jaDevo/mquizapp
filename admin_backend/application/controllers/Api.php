@@ -100,7 +100,8 @@ class Api extends REST_Controller
                 $fcm_id = ($this->post('fcm_id')) ? $this->post('fcm_id') : '';
                 $web_fcm_id = ($this->post('web_fcm_id')) ? $this->post('web_fcm_id') : '';
                 $friends_code = ($this->post('friends_code')) ? $this->post('friends_code') : '';
-                $status = ($this->post('status')) ? $this->post('status') : '1';
+                // Status is always set by the backend — never trust the client
+                $status = '1';
                 $refer_coin = is_settings('refer_coin');
                 $earn_coin = is_settings('earn_coin');
 
@@ -297,6 +298,19 @@ class Api extends REST_Controller
 
                     $res1 = $this->db->where('id', $insert_id)->get('tbl_users')->row_array();
                     error_log('[BACKEND] Fetched user data - id: ' . $res1['id'] . ', firebase_id: ' . $res1['firebase_id'] . ', api_token firebase_id: ' . (isset($res1['api_token']) ? substr($res1['api_token'], 0, 50) : 'none'));
+
+                    // ── Backend signup fraud check ────────────────────────────
+                    // Runs AFTER insert so the new user_id is available for logging.
+                    // Findings are flagged for admin review; the account is never
+                    // auto-disabled here — that is a manual admin decision.
+                    $this->load->model('Fraud_model');
+                    $referrer_id_for_fraud = 0;
+                    if (!empty($friends_code)) {
+                        $credited_user_row = $this->db->select('id')->where('friends_code', $friends_code)->get('tbl_users')->row();
+                        $referrer_id_for_fraud = $credited_user_row ? (int)$credited_user_row->id : 0;
+                    }
+                    $this->Fraud_model->check_signup_fraud($insert_id, $user_ip, $referrer_id_for_fraud);
+                    // ─────────────────────────────────────────────────────────
 
                     if (filter_var($res1['profile'], FILTER_VALIDATE_URL) === false) {
                         $res1['profile'] = ($res1['profile']) ? base_url() . USER_IMG_PATH . $res1['profile'] : '';

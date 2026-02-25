@@ -46,8 +46,11 @@ class BannerVisibilityTracker {
     final shouldLoad = duration >= _minVisibilityDuration.inMilliseconds;
     
     if (!shouldLoad) {
-      log('Banner $bannerId not visible long enough ($duration ms < ${_minVisibilityDuration.inMilliseconds} ms)',
-          name: 'BannerVisibility');
+      log('⏸️ [VISIBILITY] Banner not visible long enough ($duration ms < ${_minVisibilityDuration.inMilliseconds} ms) - DELAYS AD LOAD',
+          name: 'BannerVisibility-Diagnostic');
+    } else {
+      log('✅ [VISIBILITY] Banner visible long enough ($duration ms >= ${_minVisibilityDuration.inMilliseconds} ms)',
+          name: 'BannerVisibility-Diagnostic');
     }
     
     return shouldLoad;

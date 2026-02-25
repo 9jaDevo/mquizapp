@@ -1,7 +1,7 @@
 name: flutterquiz
 description: A new Flutter application.
 publish_to: "none"
-version: 2.4.2+66
+version: 2.4.3+67
 
 # Release Version: 2.3.7 (do not remove or edit this)
 environment:

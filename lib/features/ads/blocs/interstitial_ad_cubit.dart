@@ -55,8 +55,8 @@ class AdFrequencyManager {
       final timeSinceLastAd = now.millisecondsSinceEpoch - lastShowTime;
       if (timeSinceLastAd < _minGapBetweenAds) {
         log(
-          'Ad blocked: Only ${timeSinceLastAd ~/ 1000}s since last ad (need ${_minGapBetweenAds ~/ 1000}s)',
-          name: 'AdFrequency',
+          '🛑 [FREQ-CAP] Ad blocked: Only ${timeSinceLastAd ~/ 1000}s since last (need ${_minGapBetweenAds ~/ 1000}s) - THIS LIMITS REVENUE',
+          name: 'AdFrequency-Diagnostic',
         );
         return false;
       }
@@ -72,15 +72,19 @@ class AdFrequencyManager {
 
       if (dailyCount >= _maxAdsPerDay) {
         log(
-          'Ad blocked: Daily limit reached ($dailyCount/$_maxAdsPerDay)',
-          name: 'AdFrequency',
+          '🛑 [FREQ-CAP] Ad blocked: Daily limit reached ($dailyCount/$_maxAdsPerDay) - CONSIDER INCREASING LIMIT',
+          name: 'AdFrequency-Diagnostic',
         );
         return false;
       }
 
+      log(
+        '✅ [FREQ-CAP] Can show ad | Time check: pass | Daily count: $dailyCount/$_maxAdsPerDay',
+        name: 'AdFrequency-Diagnostic',
+      );
       return true;
     } catch (e) {
-      log('Error in canShowAd: $e', name: 'AdFrequency', error: e);
+      log('❌ [FREQ-CAP] Error in canShowAd: $e', name: 'AdFrequency-Diagnostic', error: e);
       return true; // Allow ad on error to avoid breaking functionality
     }
   }
@@ -107,11 +111,11 @@ class AdFrequencyManager {
       await prefs.setString(_dailyAdCountDateKey, todayDate);
 
       log(
-        'Ad recorded: ${dailyCount + 1}/$_maxAdsPerDay for today',
-        name: 'AdFrequency',
+        '✅ [FREQ-CAP] Ad recorded shown: ${dailyCount + 1}/$_maxAdsPerDay for today',
+        name: 'AdFrequency-Diagnostic',
       );
     } catch (e) {
-      log('Error in recordAdShown: $e', name: 'AdFrequency', error: e);
+      log('❌ [FREQ-CAP] Error in recordAdShown: $e', name: 'AdFrequency-Diagnostic', error: e);
     }
   }
 
@@ -177,9 +181,13 @@ class InterstitialAdCubit extends Cubit<InterstitialAdState>
         systemConfigCubit.isAdsEnable &&
         !context.read<UserDetailsCubit>().removeAds();
 
-    if (!showAds) return;
+    if (!showAds) {
+      log('⏭️ [INTERSTITIAL] Create skipped (ads disabled)', name: 'InterstitialAd-Diagnostic');
+      return;
+    }
 
     emit(const InterstitialAdLoadInProgress());
+    log('🔄 [INTERSTITIAL] Creating interstitial ad | Network: ${systemConfigCubit.adsType}', name: 'InterstitialAd-Diagnostic');
 
     final adsType = systemConfigCubit.adsType;
     if (adsType == AdType.admob) {
@@ -189,8 +197,10 @@ class InterstitialAdCubit extends Cubit<InterstitialAdState>
     } else if (adsType == AdType.ironSource) {
       final adUnitId = systemConfigCubit.ironSourceInterstitialId;
       if (adUnitId.isNotEmpty) {
+        log('✅ [INTERSTITIAL] IronSource ID: $adUnitId', name: 'InterstitialAd-Diagnostic');
         _createIronSourceAd(adUnitId);
       } else {
+        log('❌ [INTERSTITIAL] IronSource ID NOT configured', name: 'InterstitialAd-Diagnostic');
         emit(const InterstitialAdFailToLoad());
       }
     }
@@ -200,29 +210,35 @@ class InterstitialAdCubit extends Cubit<InterstitialAdState>
     // Check frequency capping first (AdMob compliance)
     final canShowAd = await AdFrequencyManager.canShowAd();
     if (!canShowAd) {
-      log('Ad not shown due to frequency cap', name: 'InterstitialAd');
+      log('🛑 [INTERSTITIAL] Show blocked by frequency capping', name: 'InterstitialAd-Diagnostic');
       return;
     }
 
+    log('📊 [INTERSTITIAL] Show attempt | State: $state', name: 'InterstitialAd-Diagnostic');
+    
     //if ad is enable
     final sysConfigCubit = context.read<SystemConfigCubit>();
     if (sysConfigCubit.isAdsEnable &&
         !context.read<UserDetailsCubit>().removeAds()) {
       //if ad loaded succesfully
       if (state is InterstitialAdLoaded) {
+        log('✅ [INTERSTITIAL] Attempting to show ads', name: 'InterstitialAd-Diagnostic');
         //show google interstitial ad
         if (sysConfigCubit.adsType == AdType.admob) {
           interstitialAd?.fullScreenContentCallback = FullScreenContentCallback(
             onAdShowedFullScreenContent: (InterstitialAd ad) {
+              log('✅ [INTERSTITIAL] Google ad shown to user', name: 'InterstitialAd-Diagnostic');
               // Record ad as shown for frequency tracking
               AdFrequencyManager.recordAdShown();
             },
             onAdDismissedFullScreenContent: (InterstitialAd ad) {
+              log('✅ [INTERSTITIAL] Google ad dismissed | Creating next ad', name: 'InterstitialAd-Diagnostic');
               ad.dispose();
               createInterstitialAd(context);
             },
             onAdFailedToShowFullScreenContent:
                 (InterstitialAd ad, AdError error) {
+                  log('❌ [INTERSTITIAL] Google ad failed to show: $error', name: 'InterstitialAd-Diagnostic');
                   ad.dispose();
                   createInterstitialAd(context);
                 },
@@ -233,28 +249,45 @@ class InterstitialAdCubit extends Cubit<InterstitialAdState>
           UnityAds.showVideoAd(
             placementId: unityPlacementName,
             onStart: (placementId) {
+              log('✅ [INTERSTITIAL] Unity ad started playing', name: 'InterstitialAd-Diagnostic');
               // Record ad as shown for frequency tracking
               AdFrequencyManager.recordAdShown();
-              log('Video Ad $placementId started');
             },
-            onComplete: (placementId) => createInterstitialAd(context),
-            onFailed: (placementId, error, message) =>
-                log('Video Ad $placementId failed: $error $message'),
-            onClick: (placementId) => log('Video Ad $placementId click'),
-            onSkipped: (placementId) => createInterstitialAd(context),
+            onComplete: (placementId) {
+              log('✅ [INTERSTITIAL] Unity ad completed | Creating next ad', name: 'InterstitialAd-Diagnostic');
+              createInterstitialAd(context);
+            },
+            onFailed: (placementId, error, message) {
+              log('❌ [INTERSTITIAL] Unity ad failed: $error $message', name: 'InterstitialAd-Diagnostic');
+              createInterstitialAd(context);
+            },
+            onClick: (placementId) => log('👆 [INTERSTITIAL] Unity ad clicked', name: 'InterstitialAd-Diagnostic'),
+            onSkipped: (placementId) {
+              log('⏭️ [INTERSTITIAL] Unity ad skipped', name: 'InterstitialAd-Diagnostic');
+              createInterstitialAd(context);
+            },
           );
         } else if (sysConfigCubit.adsType == AdType.ironSource) {
           if (await _ironSourceAd.isAdReady()) {
+            log('✅ [INTERSTITIAL] IronSource ad ready | Showing...', name: 'InterstitialAd-Diagnostic');
             // Record ad as shown for frequency tracking
             await AdFrequencyManager.recordAdShown();
             await _ironSourceAd.showAd().then((_) {
+              log('✅ [INTERSTITIAL] IronSource ad completed | Creating next ad', name: 'InterstitialAd-Diagnostic');
               createInterstitialAd(context);
             });
+          } else {
+            log('❌ [INTERSTITIAL] IronSource ad not ready', name: 'InterstitialAd-Diagnostic');
           }
         }
       } else if (state is InterstitialAdFailToLoad) {
+        log('⚠️ [INTERSTITIAL] Previous load failed | Retrying...', name: 'InterstitialAd-Diagnostic');
         createInterstitialAd(context);
+      } else {
+        log('⚠️ [INTERSTITIAL] Ad not loaded yet (state: $state)', name: 'InterstitialAd-Diagnostic');
       }
+    } else {
+      log('⏭️ [INTERSTITIAL] Show skipped (ads disabled)', name: 'InterstitialAd-Diagnostic');
     }
   }
 

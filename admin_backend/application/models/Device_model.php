@@ -66,33 +66,28 @@ class Device_model extends CI_Model
                                        ->result_array();
 
             if (count($other_accounts) > 0) {
-                // Multiple accounts detected
-                $action = is_settings('device_suspension_action');
+                // Multiple accounts detected — log for admin review ONLY
+                // Never auto-suspend: legitimate users share devices (family phones, shared tablets)
+                // Admin reviews from the fraud dashboard and takes manual action
+                $this->create_fraud_record(
+                    $user_id,
+                    'multi_account',
+                    'Device linked to multiple accounts: ' . json_encode($other_accounts),
+                    'high',
+                    'review'
+                );
 
-                if ($action == 'suspend') {
-                    // Suspend current user
-                    $this->db->where('id', $user_id)
-                             ->update('tbl_users', ['status' => 'suspended']);
+                error_log('[DEVICE-FRAUD] User ' . $user_id . ' flagged for multi-account on device ' . substr($device_id, 0, 20) . '... (' . count($other_accounts) . ' other accounts). Flagged for admin review — NOT auto-suspended.');
 
-                    // Create fraud record
-                    $this->create_fraud_record(
-                        $user_id,
-                        'multi_account',
-                        'Device linked to multiple accounts: ' . json_encode($other_accounts),
-                        'critical',
-                        'suspend'
-                    );
+                // Register device mapping as flagged; user keeps active status
+                $this->create_device_mapping($user_id, $device_id, $device_type, $device_name, 'flagged', 'Multi-account flagged for review');
 
-                    // Suspend device mapping for current user attempt
-                    $this->create_device_mapping($user_id, $device_id, $device_type, $device_name, 'suspended', 'Multi-account detected');
-
-                    return [
-                        'status' => 'suspended',
-                        'message' => 'Your account has been suspended due to multi-account activity',
-                        'other_accounts' => $other_accounts,
-                        'conflict_count' => count($other_accounts)
-                    ];
-                }
+                return [
+                    'status' => 'flagged',
+                    'message' => 'Device registered with conflict flag',
+                    'other_accounts' => $other_accounts,
+                    'conflict_count' => count($other_accounts)
+                ];
             }
         }
 
