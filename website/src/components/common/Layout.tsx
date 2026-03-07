@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from './Navbar';
 import Footer from './Footer';
+import StickyDownloadButton from './StickyDownloadButton';
 
 const Layout: React.FC = () => {
   const location = useLocation();
@@ -23,6 +24,7 @@ const Layout: React.FC = () => {
         </motion.main>
       </AnimatePresence>
       <Footer />
+      <StickyDownloadButton />
     </div>
   );
 };
