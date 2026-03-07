@@ -5,29 +5,78 @@
         xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0">
   <url>
     <loc>https://mquiz.uk/blog</loc>
-    <lastmod>2026-02-16</lastmod>
+    <lastmod>2026-03-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://mquiz.uk/blog/getting-started-with-mquiz</loc>
-    <lastmod>2024-01-15</lastmod>
+    <loc>https://mquiz.uk/blog/why-havent-you-download-mquiz-app-yet</loc>
+    <lastmod>2026-03-07</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
     <mobile:mobile/>
   </url>
   <url>
-    <loc>https://mquiz.uk/blog/tips-for-effective-learning</loc>
-    <lastmod>2024-01-10</lastmod>
+    <loc>https://mquiz.uk/blog/best-online-learning-platforms-why-gamified-learning-is-the-future-of-education</loc>
+    <lastmod>2026-02-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
     <mobile:mobile/>
   </url>
   <url>
-    <loc>https://mquiz.uk/blog/gamification-in-education</loc>
-    <lastmod>2024-01-05</lastmod>
+    <loc>https://mquiz.uk/blog/deep-learning-tutorials-why-most-learners-struggle-and-how-smarter-practice-builds-real-understanding</loc>
+    <lastmod>2026-02-03</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.8</priority>
+    <mobile:mobile/>
+  </url>
+  <url>
+    <loc>https://mquiz.uk/blog/mquiz-founder-quiz-competition-winners-announced</loc>
+    <lastmod>2026-01-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <mobile:mobile/>
+  </url>
+  <url>
+    <loc>https://mquiz.uk/blog/mquiz-revolutionizing-education-with-interactive-learning</loc>
+    <lastmod>2026-01-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <mobile:mobile/>
+  </url>
+  <url>
+    <loc>https://mquiz.uk/blog/the-best-quiz-categories-to-challenge-your-knowledge</loc>
+    <lastmod>2026-01-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <mobile:mobile/>
+  </url>
+  <url>
+    <loc>https://mquiz.uk/blog/how-mquiz-makes-learning-fun-and-rewarding</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <mobile:mobile/>
+  </url>
+  <url>
+    <loc>https://mquiz.uk/blog/top-10-benefits-of-using-quiz-apps-for-learning</loc>
+    <lastmod>2026-01-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <mobile:mobile/>
+  </url>
+  <url>
+    <loc>https://mquiz.uk/blog/user-stories-how-mquiz-helped-me-improve-my-grades</loc>
+    <lastmod>2026-01-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <mobile:mobile/>
+  </url>
+  <url>
+    <loc>https://mquiz.uk/blog/how-mquiz-is-changing-the-way-nigerian-students-learn-and-earn-real-cash</loc>
+    <lastmod>2026-02-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
     <mobile:mobile/>
   </url>
 </urlset>
