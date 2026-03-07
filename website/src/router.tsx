@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import Layout from './components/common/Layout';
 import Home from './pages/Home';
 import About from './pages/About';
@@ -44,6 +44,10 @@ export const router = createBrowserRouter([
       {
         path: 'download',
         element: <Download />,
+      },
+      {
+        path: 'nld',
+        element: <Navigate to="/download" replace />,
       },
       {
         path: 'competition',

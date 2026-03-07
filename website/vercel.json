@@ -4,6 +4,13 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install --legacy-peer-deps",
   "framework": "vite",
+  "redirects": [
+    {
+      "source": "/nld",
+      "destination": "/download",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/:path*",
