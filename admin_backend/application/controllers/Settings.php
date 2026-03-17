@@ -959,12 +959,14 @@ class Settings extends CI_Controller
 
             foreach ($settings as $setting) {
                 $value = $this->input->post($setting);
-                
+
                 // Handle checkboxes
-                if ($setting == 'referral_bonus_system_enable' || 
-                    $setting == 'referral_block_same_ip' || 
-                    $setting == 'referral_verify_device_unique' || 
-                    $setting == 'referral_verify_email_unique') {
+                if (
+                    $setting == 'referral_bonus_system_enable' ||
+                    $setting == 'referral_block_same_ip' ||
+                    $setting == 'referral_verify_device_unique' ||
+                    $setting == 'referral_verify_email_unique'
+                ) {
                     $value = $value ? '1' : '0';
                 }
 
@@ -1022,4 +1024,3 @@ class Settings extends CI_Controller
         }
     }
 }
-

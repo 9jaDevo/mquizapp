@@ -238,40 +238,40 @@
                                                 <div class="form-group col-md-3 col-sm-6">
                                                     <label class="control-label">Utility Interstitials</label><br>
                                                     <input type="checkbox" id="ad-rollout-utility-interstitials-btn" data-plugin="switchery" <?php
-                                                                                                                                            if (!empty($ad_rollout_utility_interstitials) && $ad_rollout_utility_interstitials['message'] == '1') {
-                                                                                                                                                echo 'checked';
-                                                                                                                                            }
-                                                                                                                                            ?>>
+                                                                                                                                                if (!empty($ad_rollout_utility_interstitials) && $ad_rollout_utility_interstitials['message'] == '1') {
+                                                                                                                                                    echo 'checked';
+                                                                                                                                                }
+                                                                                                                                                ?>>
                                                     <input type="hidden" id="ad-rollout-utility-interstitials" name="ad_rollout_utility_interstitials" value="<?= (isset($ad_rollout_utility_interstitials)) ? $ad_rollout_utility_interstitials['message'] : 1; ?>">
                                                 </div>
 
                                                 <div class="form-group col-md-3 col-sm-6">
                                                     <label class="control-label">Wallet Banner Placement</label><br>
                                                     <input type="checkbox" id="ad-rollout-wallet-banner-btn" data-plugin="switchery" <?php
-                                                                                                                                    if (!empty($ad_rollout_wallet_banner_placement) && $ad_rollout_wallet_banner_placement['message'] == '1') {
-                                                                                                                                        echo 'checked';
-                                                                                                                                    }
-                                                                                                                                    ?>>
+                                                                                                                                        if (!empty($ad_rollout_wallet_banner_placement) && $ad_rollout_wallet_banner_placement['message'] == '1') {
+                                                                                                                                            echo 'checked';
+                                                                                                                                        }
+                                                                                                                                        ?>>
                                                     <input type="hidden" id="ad-rollout-wallet-banner" name="ad_rollout_wallet_banner_placement" value="<?= (isset($ad_rollout_wallet_banner_placement)) ? $ad_rollout_wallet_banner_placement['message'] : 1; ?>">
                                                 </div>
 
                                                 <div class="form-group col-md-3 col-sm-6">
                                                     <label class="control-label">Coin Store Banner Placement</label><br>
                                                     <input type="checkbox" id="ad-rollout-coinstore-banner-btn" data-plugin="switchery" <?php
-                                                                                                                                       if (!empty($ad_rollout_coin_store_banner_placement) && $ad_rollout_coin_store_banner_placement['message'] == '1') {
-                                                                                                                                           echo 'checked';
-                                                                                                                                       }
-                                                                                                                                       ?>>
+                                                                                                                                        if (!empty($ad_rollout_coin_store_banner_placement) && $ad_rollout_coin_store_banner_placement['message'] == '1') {
+                                                                                                                                            echo 'checked';
+                                                                                                                                        }
+                                                                                                                                        ?>>
                                                     <input type="hidden" id="ad-rollout-coinstore-banner" name="ad_rollout_coin_store_banner_placement" value="<?= (isset($ad_rollout_coin_store_banner_placement)) ? $ad_rollout_coin_store_banner_placement['message'] : 1; ?>">
                                                 </div>
 
                                                 <div class="form-group col-md-3 col-sm-6">
                                                     <label class="control-label">Rewarded Fallback Ladder</label><br>
                                                     <input type="checkbox" id="ad-rollout-rewarded-fallback-btn" data-plugin="switchery" <?php
-                                                                                                                                      if (!empty($ad_rollout_rewarded_fallback) && $ad_rollout_rewarded_fallback['message'] == '1') {
-                                                                                                                                          echo 'checked';
-                                                                                                                                      }
-                                                                                                                                      ?>>
+                                                                                                                                            if (!empty($ad_rollout_rewarded_fallback) && $ad_rollout_rewarded_fallback['message'] == '1') {
+                                                                                                                                                echo 'checked';
+                                                                                                                                            }
+                                                                                                                                            ?>>
                                                     <input type="hidden" id="ad-rollout-rewarded-fallback" name="ad_rollout_rewarded_fallback" value="<?= (isset($ad_rollout_rewarded_fallback)) ? $ad_rollout_rewarded_fallback['message'] : 1; ?>">
                                                 </div>
                                             </div>
@@ -280,10 +280,10 @@
                                                 <div class="form-group col-md-3 col-sm-6">
                                                     <label class="control-label">Compliance Upload</label><br>
                                                     <input type="checkbox" id="ad-compliance-upload-enabled-btn" data-plugin="switchery" <?php
-                                                                                                                                      if (!empty($ad_compliance_upload_enabled) && $ad_compliance_upload_enabled['message'] == '1') {
-                                                                                                                                          echo 'checked';
-                                                                                                                                      }
-                                                                                                                                      ?>>
+                                                                                                                                            if (!empty($ad_compliance_upload_enabled) && $ad_compliance_upload_enabled['message'] == '1') {
+                                                                                                                                                echo 'checked';
+                                                                                                                                            }
+                                                                                                                                            ?>>
                                                     <input type="hidden" id="ad-compliance-upload-enabled" name="ad_compliance_upload_enabled" value="<?= (isset($ad_compliance_upload_enabled)) ? $ad_compliance_upload_enabled['message'] : 1; ?>">
                                                 </div>
                                                 <div class="form-group col-md-3 col-sm-6">
