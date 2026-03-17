@@ -160,6 +160,7 @@ $route['send-notifications'] = 'Settings/send_notifications';
 $route['delete_notification'] = 'Settings/delete_notification';
 $route['system-configurations'] = 'Settings/system_configurations';
 $route['ads-settings'] = 'Settings/ads_settings';
+$route['ad-compliance-reports'] = 'Settings/ad_compliance_reports';
 $route['about-us'] = 'Settings/about_us';
 $route['instructions'] = 'Settings/instructions';
 $route['upload_img'] = 'Settings/upload_img';

@@ -8,7 +8,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutterquiz/commons/commons.dart';
 import 'package:flutterquiz/core/core.dart';
 import 'package:flutterquiz/features/ads/blocs/interstitial_ad_cubit.dart';
-import 'package:flutterquiz/features/ads/blocs/rewarded_interstitial_ad_cubit.dart';
+import 'package:flutterquiz/features/ads/utils/ad_transition_orchestrator.dart';
 import 'package:flutterquiz/features/profile_management/cubits/update_score_and_coins_cubit.dart';
 import 'package:flutterquiz/features/profile_management/cubits/user_details_cubit.dart';
 import 'package:flutterquiz/features/profile_management/profile_management_repository.dart';
@@ -101,9 +101,6 @@ class _MultiMatchResultScreenState extends State<MultiMatchResultScreen> {
       log(
         '[MM_RESULT_ADS] Preparing ads (premium: ${widget.args.isPremiumCategory})',
       );
-      context.read<RewardedInterstitialAdCubit>().createRewardedInterstitialAd(
-        context,
-      );
       context.read<InterstitialAdCubit>().createInterstitialAd(context);
     }
 
@@ -119,43 +116,12 @@ class _MultiMatchResultScreenState extends State<MultiMatchResultScreen> {
       );
 
       if (!widget.args.isPremiumCategory && adsEnabled && !adsRemoved) {
-        if (_quizCompletionCount % 2 == 0) {
-          final rewardCoins = context.read<SystemConfigCubit>().rewardAdsCoins;
-          final rewardedCubit = context.read<RewardedInterstitialAdCubit>();
-          final interstitialCubit = context.read<InterstitialAdCubit>();
-
-          log(
-            '[MM_RESULT_ADS] Rewarded attempt (state: ${rewardedCubit.state}, reward: $rewardCoins)',
-          );
-
-          if (rewardedCubit.state == RewardedInterstitialAdState.loaded) {
-            await rewardedCubit.showAd(
-              context: context,
-              rewardAmount: rewardCoins,
-              rewardCurrencyLabel: 'coins',
-              onAdDismissedCallback: () {},
-            );
-          } else {
-            await rewardedCubit.createRewardedInterstitialAd(context);
-            if (rewardedCubit.state == RewardedInterstitialAdState.loaded) {
-              log('[MM_RESULT_ADS] Rewarded loaded after create');
-              await rewardedCubit.showAd(
-                context: context,
-                rewardAmount: rewardCoins,
-                rewardCurrencyLabel: 'coins',
-                onAdDismissedCallback: () {},
-              );
-            } else {
-              log(
-                '[MM_RESULT_ADS] Rewarded not loaded, fallback to interstitial',
-              );
-              await interstitialCubit.showAd(context);
-            }
-          }
-        } else {
-          log('[MM_RESULT_ADS] Interstitial attempt');
-          await context.read<InterstitialAdCubit>().showAd(context);
-        }
+        await AdTransitionOrchestrator.showResultTransitionAd(
+          context: context,
+          completionCount: _quizCompletionCount,
+          isPremiumCategory: widget.args.isPremiumCategory,
+          rewardCoins: context.read<SystemConfigCubit>().rewardAdsCoins,
+        );
       }
     });
 

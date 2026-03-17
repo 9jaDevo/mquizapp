@@ -3,9 +3,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Geographic regions for ad segmentation
 enum AdRegion {
-  eu,        // European Union - strict GDPR requirements
+  eu, // European Union - strict GDPR requirements
   california, // California - CCPA requirements
-  other,      // Rest of world - standard requirements
+  other, // Rest of world - standard requirements
 }
 
 /// GeographicSegmentation manages user location-based ad policies
@@ -22,7 +22,7 @@ class GeographicSegmentation {
     'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'GB', // GB included for GDPR
   ];
 
-  // California state code
+  // California state code variants (if upstream provides subdivision value)
   static const String _californiaCode = 'US-CA';
 
   /// Detect user's region based on country code
@@ -35,8 +35,8 @@ class GeographicSegmentation {
       return AdRegion.eu;
     }
 
-    if (upperCode == 'US' || _californiaCode.endsWith('CA')) {
-      // Could be California, mark as California for stricter handling
+    if (upperCode == _californiaCode || upperCode == 'US_CA') {
+      // Only classify as California when subdivision-level code is available.
       return AdRegion.california;
     }
 
@@ -50,14 +50,16 @@ class GeographicSegmentation {
 
       // Return cached region if still valid (24 hour cache)
       final lastCheck = prefs.getInt(_lastCheckKey);
-      final now = DateTime.now().millisecondsSinceEpoch;
+      final now = DateTime.now().toUtc().millisecondsSinceEpoch;
 
       if (lastCheck != null && (now - lastCheck) < 86400000) {
         // Cache still valid
         final regionStr = prefs.getString(_regionKey);
         if (regionStr != null) {
-          return AdRegion.values
-              .firstWhere((e) => e.toString() == regionStr, orElse: () => AdRegion.other);
+          return AdRegion.values.firstWhere(
+            (e) => e.toString() == regionStr,
+            orElse: () => AdRegion.other,
+          );
         }
       }
 
@@ -94,9 +96,12 @@ class GeographicSegmentation {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_consentKey, hasConsented);
-      
+
       final region = await getUserRegion();
-      log('Ad consent recorded: $hasConsented (region: ${region.name})', name: 'Geographic');
+      log(
+        'Ad consent recorded: $hasConsented (region: ${region.name})',
+        name: 'Geographic',
+      );
     } catch (e) {
       log('Error recording consent: $e', name: 'Geographic');
     }
@@ -132,26 +137,26 @@ class GeographicSegmentation {
         case AdRegion.eu:
           // Strict limits for EU (GDPR)
           return AdFrequencyLimits(
-            minInterstitialGapMs: 240000, // 4 minutes
-            maxInterstitialsPerDay: 2,
+            minInterstitialGapMs: 120000, // 2 minutes
+            maxInterstitialsPerDay: 3,
             minRewardedGapMs: 180000, // 3 minutes
             maxRewardedPerDay: 3,
           );
 
         case AdRegion.california:
-          // CCPA - moderate limits
+          // CCPA - stricter than global baseline
           return AdFrequencyLimits(
-            minInterstitialGapMs: 180000, // 3 minutes
-            maxInterstitialsPerDay: 3,
+            minInterstitialGapMs: 90000, // 90 seconds
+            maxInterstitialsPerDay: 4,
             minRewardedGapMs: 120000, // 2 minutes
             maxRewardedPerDay: 5,
           );
 
         case AdRegion.other:
-          // Standard limits (from AdFrequencyManager defaults)
+          // Global aggressive-safe baseline selected for monetization.
           return AdFrequencyLimits(
-            minInterstitialGapMs: 120000, // 2 minutes
-            maxInterstitialsPerDay: 3,
+            minInterstitialGapMs: 60000, // 60 seconds
+            maxInterstitialsPerDay: 5,
             minRewardedGapMs: 60000, // 1 minute
             maxRewardedPerDay: 10,
           );
@@ -160,8 +165,8 @@ class GeographicSegmentation {
       log('Error getting frequency limits: $e', name: 'Geographic');
       // Return safe defaults
       return AdFrequencyLimits(
-        minInterstitialGapMs: 240000,
-        maxInterstitialsPerDay: 2,
+        minInterstitialGapMs: 120000,
+        maxInterstitialsPerDay: 3,
         minRewardedGapMs: 180000,
         maxRewardedPerDay: 3,
       );
@@ -196,7 +201,8 @@ class AdFrequencyLimits {
   });
 
   @override
-  String toString() => '''
+  String toString() =>
+      '''
 AdFrequencyLimits(
   interstitial: gap=${minInterstitialGapMs}ms, max=$maxInterstitialsPerDay/day,
   rewarded: gap=${minRewardedGapMs}ms, max=$maxRewardedPerDay/day

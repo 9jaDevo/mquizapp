@@ -69,7 +69,10 @@ class AppOpenAdCubit extends Cubit<AppOpenAdState> {
       );
       return true;
     } catch (e) {
-      log('❌ [APP-OPEN] Error checking frequency: $e', name: 'AppOpenAd-Diagnostic');
+      log(
+        '❌ [APP-OPEN] Error checking frequency: $e',
+        name: 'AppOpenAd-Diagnostic',
+      );
       return false;
     }
   }
@@ -117,13 +120,19 @@ class AppOpenAdCubit extends Cubit<AppOpenAdState> {
         config.isAdsEnable && !context.read<UserDetailsCubit>().removeAds();
 
     if (!showAds) {
-      log('⏭️ [APP-OPEN] Load skipped (ads disabled)', name: 'AppOpenAd-Diagnostic');
+      log(
+        '⏭️ [APP-OPEN] Load skipped (ads disabled)',
+        name: 'AppOpenAd-Diagnostic',
+      );
       return;
     }
 
     // Only support AdMob for app open ads (premium format)
     if (config.adsType != AdType.admob) {
-      log('⏭️ [APP-OPEN] Only AdMob supported | Got: ${config.adsType}', name: 'AppOpenAd-Diagnostic');
+      log(
+        '⏭️ [APP-OPEN] Only AdMob supported | Got: ${config.adsType}',
+        name: 'AppOpenAd-Diagnostic',
+      );
       return;
     }
 
@@ -138,12 +147,18 @@ class AppOpenAdCubit extends Cubit<AppOpenAdState> {
     final adUnitId = config.appOpenAdId;
 
     if (adUnitId.isEmpty) {
-      log('❌ [APP-OPEN] Ad unit ID NOT CONFIGURED in backend', name: 'AppOpenAd-Diagnostic');
+      log(
+        '❌ [APP-OPEN] Ad unit ID NOT CONFIGURED in backend',
+        name: 'AppOpenAd-Diagnostic',
+      );
       emit(AppOpenAdState.initial);
       return;
     }
 
-    log('🔄 [APP-OPEN] Loading | AdUnitID: $adUnitId', name: 'AppOpenAd-Diagnostic');
+    log(
+      '🔄 [APP-OPEN] Loading | AdUnitID: $adUnitId',
+      name: 'AppOpenAd-Diagnostic',
+    );
 
     await AppOpenAd.load(
       adUnitId: adUnitId,
@@ -172,7 +187,7 @@ class AppOpenAdCubit extends Cubit<AppOpenAdState> {
   }
 
   /// Show app open ad if loaded and frequency allows
-  Future<void> showAppOpenAdIfAvailable() async {
+  Future<void> showAppOpenAdIfAvailable(BuildContext context) async {
     if (_isShowingAd) {
       log('Already showing ad', name: 'AppOpenAd');
       return;
@@ -180,6 +195,9 @@ class AppOpenAdCubit extends Cubit<AppOpenAdState> {
 
     if (_appOpenAd == null || state != AppOpenAdState.loaded) {
       log('App open ad not ready to show', name: 'AppOpenAd');
+      if (context.mounted && state != AppOpenAdState.loading) {
+        await loadAppOpenAd(context);
+      }
       return;
     }
 
@@ -194,6 +212,9 @@ class AppOpenAdCubit extends Cubit<AppOpenAdState> {
         await _appOpenAd?.dispose();
         _appOpenAd = null;
         emit(AppOpenAdState.initial);
+        if (context.mounted) {
+          await loadAppOpenAd(context);
+        }
         return;
       }
     }
@@ -218,6 +239,9 @@ class AppOpenAdCubit extends Cubit<AppOpenAdState> {
         ad.dispose();
         _appOpenAd = null;
         emit(AppOpenAdState.failure);
+        if (context.mounted) {
+          loadAppOpenAd(context);
+        }
       },
       onAdDismissedFullScreenContent: (ad) async {
         log('App open ad dismissed', name: 'AppOpenAd');
@@ -225,6 +249,9 @@ class AppOpenAdCubit extends Cubit<AppOpenAdState> {
         ad.dispose();
         _appOpenAd = null;
         emit(AppOpenAdState.initial);
+        if (context.mounted) {
+          await loadAppOpenAd(context);
+        }
       },
       onAdClicked: (ad) async {
         log('App open ad clicked', name: 'AppOpenAd');

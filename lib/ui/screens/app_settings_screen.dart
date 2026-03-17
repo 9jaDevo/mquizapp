@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'dart:developer';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:flutterquiz/core/core.dart';
+import 'package:flutterquiz/features/ads/utils/ad_analytics_collector.dart';
+import 'package:flutterquiz/features/ads/utils/ad_feature_flags.dart';
 import 'package:flutterquiz/features/system_config/cubits/app_settings_cubit.dart';
 import 'package:flutterquiz/features/system_config/system_config_repository.dart';
 import 'package:flutterquiz/ui/widgets/custom_appbar.dart';
@@ -83,10 +86,134 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     return false;
   }
 
+  Future<void> _openAdAdminSheet() async {
+    if (!kDebugMode) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        var utility = AdFeatureFlags.isEnabled(
+          AdFeatureFlags.utilityInterstitials,
+        );
+        var walletBanner = AdFeatureFlags.isEnabled(
+          AdFeatureFlags.walletBannerPlacement,
+        );
+        var coinStoreBanner = AdFeatureFlags.isEnabled(
+          AdFeatureFlags.coinStoreBannerPlacement,
+        );
+        var rewardedFallback = AdFeatureFlags.isEnabled(
+          AdFeatureFlags.rewardedFallback,
+        );
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Ad Rollout Admin',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      FutureBuilder<int>(
+                        future: AdAnalyticsCollector.getComplianceEventCount(),
+                        builder: (context, snapshot) {
+                          final count = snapshot.data ?? 0;
+                          return Text('Compliance events stored: $count');
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      SwitchListTile.adaptive(
+                        value: utility,
+                        title: const Text('Utility interstitials'),
+                        onChanged: (value) async {
+                          await AdFeatureFlags.set(
+                            AdFeatureFlags.utilityInterstitials,
+                            value,
+                          );
+                          setModalState(() => utility = value);
+                        },
+                      ),
+                      SwitchListTile.adaptive(
+                        value: walletBanner,
+                        title: const Text('Wallet banner placement'),
+                        onChanged: (value) async {
+                          await AdFeatureFlags.set(
+                            AdFeatureFlags.walletBannerPlacement,
+                            value,
+                          );
+                          setModalState(() => walletBanner = value);
+                        },
+                      ),
+                      SwitchListTile.adaptive(
+                        value: coinStoreBanner,
+                        title: const Text('Coin store banner placement'),
+                        onChanged: (value) async {
+                          await AdFeatureFlags.set(
+                            AdFeatureFlags.coinStoreBannerPlacement,
+                            value,
+                          );
+                          setModalState(() => coinStoreBanner = value);
+                        },
+                      ),
+                      SwitchListTile.adaptive(
+                        value: rewardedFallback,
+                        title: const Text('Rewarded fallback ladder'),
+                        onChanged: (value) async {
+                          await AdFeatureFlags.set(
+                            AdFeatureFlags.rewardedFallback,
+                            value,
+                          );
+                          setModalState(() => rewardedFallback = value);
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      FilledButton.tonal(
+                        onPressed: () async {
+                          await AdAnalyticsCollector.clearComplianceEvents();
+                          setModalState(() {});
+                        },
+                        child: const Text('Clear Compliance Logs'),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Debug only: long-press the info icon to open this panel.',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: QAppBar(title: Text(_screenTitle)),
+      appBar: QAppBar(
+        title: Text(_screenTitle),
+        actions: [
+          if (kDebugMode && _settingType == 'about_us')
+            IconButton(
+              icon: const Icon(Icons.tune),
+              onPressed: _openAdAdminSheet,
+              onLongPress: _openAdAdminSheet,
+              tooltip: 'Ad Admin',
+            ),
+        ],
+      ),
       body: BlocBuilder<AppSettingsCubit, AppSettingsState>(
         bloc: context.read<AppSettingsCubit>(),
         builder: (context, state) {

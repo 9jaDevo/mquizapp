@@ -5,6 +5,8 @@ import 'package:flutter_svg/svg.dart';
 import 'package:flutterquiz/commons/bottom_nav/models/nav_tab_type_enum.dart';
 import 'package:flutterquiz/commons/screens/dashboard_screen.dart';
 import 'package:flutterquiz/core/core.dart';
+import 'package:flutterquiz/features/ads/blocs/interstitial_ad_cubit.dart';
+import 'package:flutterquiz/features/ads/utils/ad_feature_flags.dart';
 import 'package:flutterquiz/features/badges/blocs/badges_cubit.dart';
 import 'package:flutterquiz/features/statistic/cubits/statistics_cubit.dart';
 import 'package:flutterquiz/features/statistic/statistic_repository.dart';
@@ -12,7 +14,6 @@ import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.da
 import 'package:flutterquiz/ui/widgets/all.dart';
 import 'package:flutterquiz/ui/widgets/badges_icon_container.dart';
 import 'package:flutterquiz/utils/extensions.dart';
-import 'package:flutterquiz/utils/ui_utils.dart';
 
 class StatisticsScreen extends StatefulWidget {
   const StatisticsScreen({super.key});
@@ -29,6 +30,7 @@ class StatisticsScreen extends StatefulWidget {
 }
 
 class _StatisticsScreenState extends State<StatisticsScreen> {
+  static bool _shownInterstitialThisLaunch = false;
   static const _detailsCardHeightPercentage = 0.145;
   static const _detailsCardBorderRadius = 20.0;
   static const _showTotalBadgesCounter = 4;
@@ -69,7 +71,21 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     super.initState();
     Future.delayed(Duration.zero, () {
       context.read<StatisticCubit>().getStatisticWithBattle();
+      _maybeShowInterstitialOncePerSession();
     });
+  }
+
+  Future<void> _maybeShowInterstitialOncePerSession() async {
+    if (!AdFeatureFlags.isEnabled(AdFeatureFlags.utilityInterstitials) ||
+        _shownInterstitialThisLaunch ||
+        !mounted) {
+      return;
+    }
+
+    _shownInterstitialThisLaunch = true;
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    if (!mounted) return;
+    await context.read<InterstitialAdCubit>().showAd(context);
   }
 
   Widget _buildCollectedBadgesContainer() {
@@ -497,7 +513,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   Widget _buildStatisticsContainer({
     required bool showQuestionAndBattleStatistics,
   }) {
-    final size = context;
     const vSpace = SizedBox(height: 16);
 
     return ListView(

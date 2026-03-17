@@ -2533,6 +2533,12 @@ class Api extends REST_Controller
                 'daily_ads_visibility',
                 'daily_ads_coins',
                 'daily_ads_counter',
+                'ad_rollout_utility_interstitials',
+                'ad_rollout_wallet_banner_placement',
+                'ad_rollout_coin_store_banner_placement',
+                'ad_rollout_rewarded_fallback',
+                'ad_compliance_upload_enabled',
+                'ad_compliance_upload_batch_size',
                 // 'maximum_winning_coins',
                 // 'minimum_coins_winning_percentage',
                 'quiz_winning_percentage',
@@ -7163,6 +7169,134 @@ class Api extends REST_Controller
         } catch (Exception $e) {
             $response['error'] = true;
             $response['message'] = "122";
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    /**
+     * Get rollout switches used by ad placements.
+     * This endpoint is safe to call before login.
+     */
+    public function get_ad_rollout_settings_post()
+    {
+        try {
+            $response['error'] = false;
+            $response['data'] = [
+                'utility_interstitials' => (int)(is_settings('ad_rollout_utility_interstitials') ?: 1),
+                'wallet_banner_placement' => (int)(is_settings('ad_rollout_wallet_banner_placement') ?: 1),
+                'coin_store_banner_placement' => (int)(is_settings('ad_rollout_coin_store_banner_placement') ?: 1),
+                'rewarded_fallback' => (int)(is_settings('ad_rollout_rewarded_fallback') ?: 1),
+                'compliance_upload_enabled' => (int)(is_settings('ad_compliance_upload_enabled') ?: 1),
+                'compliance_upload_batch_size' => (int)(is_settings('ad_compliance_upload_batch_size') ?: 25),
+            ];
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = '122';
+            $response['error_msg'] = $e->getMessage();
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    /**
+     * Upload batched ad compliance events from client.
+     */
+    public function submit_ad_compliance_events_post()
+    {
+        try {
+            $is_user = $this->verify_token();
+            if ($is_user['error']) {
+                $this->response($is_user, REST_Controller::HTTP_OK);
+                return false;
+            }
+
+            if ((int)(is_settings('ad_compliance_upload_enabled') ?: 1) === 0) {
+                $response['error'] = true;
+                $response['message'] = 'Compliance upload disabled';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            $events_payload = $this->post('events');
+            if (empty($events_payload)) {
+                $response['error'] = true;
+                $response['message'] = 'Missing events payload';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            if (is_string($events_payload)) {
+                $decoded = json_decode($events_payload, true);
+                $events = is_array($decoded) ? $decoded : [];
+            } else {
+                $events = is_array($events_payload) ? $events_payload : [];
+            }
+
+            if (empty($events)) {
+                $response['error'] = true;
+                $response['message'] = 'Invalid events payload';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            $max_batch_size = (int)(is_settings('ad_compliance_upload_batch_size') ?: 25);
+            $max_batch_size = max(1, min(100, $max_batch_size));
+            $limited_events = array_slice($events, 0, $max_batch_size);
+
+            $inserted = 0;
+            $skipped = 0;
+
+            foreach ($limited_events as $event_item) {
+                if (!is_array($event_item)) {
+                    $skipped++;
+                    continue;
+                }
+
+                $event_name = isset($event_item['event']) ? trim((string)$event_item['event']) : '';
+                if ($event_name === '') {
+                    $skipped++;
+                    continue;
+                }
+
+                $raw_ts = isset($event_item['ts']) ? (string)$event_item['ts'] : '';
+                $event_ts = !empty($raw_ts) ? date('Y-m-d H:i:s', strtotime($raw_ts)) : null;
+                if ($event_ts === '1970-01-01 00:00:00') {
+                    $event_ts = null;
+                }
+
+                $row = [
+                    'user_id' => $is_user['user_id'],
+                    'firebase_id' => $is_user['firebase_id'],
+                    'event_name' => substr($event_name, 0, 100),
+                    'event_ts' => $event_ts,
+                    'event_payload' => json_encode($event_item),
+                    'platform' => isset($event_item['platform']) ? substr((string)$event_item['platform'], 0, 20) : null,
+                    'app_version' => isset($event_item['app_version']) ? substr((string)$event_item['app_version'], 0, 20) : null,
+                    'ip_address' => substr((string)$this->input->ip_address(), 0, 45),
+                    'created_at' => $this->toDateTime,
+                ];
+
+                $this->db->insert('tbl_ad_compliance_events', $row);
+                if ($this->db->affected_rows() > 0) {
+                    $inserted++;
+                } else {
+                    $skipped++;
+                }
+            }
+
+            $response['error'] = false;
+            $response['message'] = 'Compliance events processed';
+            $response['data'] = [
+                'received' => count($events),
+                'processed' => count($limited_events),
+                'inserted' => $inserted,
+                'skipped' => $skipped,
+            ];
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = '122';
+            $response['error_msg'] = $e->getMessage();
         }
 
         $this->response($response, REST_Controller::HTTP_OK);

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/commons/commons.dart';
 import 'package:flutterquiz/core/core.dart';
+import 'package:flutterquiz/features/ads/blocs/interstitial_ad_cubit.dart';
 import 'package:flutterquiz/features/profile_management/cubits/update_score_and_coins_cubit.dart';
 import 'package:flutterquiz/features/profile_management/cubits/user_details_cubit.dart';
 import 'package:flutterquiz/features/profile_management/profile_management_repository.dart';
@@ -54,6 +55,11 @@ class _ContestScreen extends State<ContestScreen>
     context.read<ContestCubit>().getContest(
       languageId: UiUtils.getCurrentQuizLanguageId(context),
     );
+    Future.delayed(Duration.zero, () {
+      if (mounted) {
+        context.read<InterstitialAdCubit>().createInterstitialAd(context);
+      }
+    });
   }
 
   @override

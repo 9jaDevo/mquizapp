@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/commons/commons.dart';
 import 'package:flutterquiz/core/core.dart';
+import 'package:flutterquiz/features/ads/ads.dart';
 import 'package:flutterquiz/features/ads/blocs/interstitial_ad_cubit.dart';
 import 'package:flutterquiz/features/profile_management/cubits/user_details_cubit.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
@@ -796,6 +797,14 @@ class _WalletScreenState extends State<WalletScreen>
 
   @override
   Widget build(BuildContext context) {
+    final walletBannerFlag = AdFeatureFlags.isEnabled(
+      AdFeatureFlags.walletBannerPlacement,
+    );
+    final showBannerAd =
+        walletBannerFlag &&
+        context.watch<BannerAdCubit>().bannerAdLoaded &&
+        !context.read<UserDetailsCubit>().removeAds();
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(
@@ -853,17 +862,25 @@ class _WalletScreenState extends State<WalletScreen>
                 ),
                 const SizedBox(height: 12),
                 Expanded(
-                  child: TabBarView(
-                    controller: tabController,
-                    children: [
-                      _buildRequestContainer(),
-                      _buildTransactionListContainer(),
-                    ],
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: showBannerAd ? 60 : 0),
+                    child: TabBarView(
+                      controller: tabController,
+                      children: [
+                        _buildRequestContainer(),
+                        _buildTransactionListContainer(),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
           ),
+          if (walletBannerFlag)
+            const Align(
+              alignment: Alignment.bottomCenter,
+              child: BannerAdContainer(),
+            ),
         ],
       ),
     );

@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/core/core.dart';
 import 'package:flutterquiz/features/ads/ads.dart';
 import 'package:flutterquiz/features/auth/auth_repository.dart';
+import 'package:flutterquiz/features/ads/utils/ad_feature_flags.dart';
 import 'package:flutterquiz/features/auth/cubits/auth_cubit.dart';
 import 'package:flutterquiz/features/badges/badges_repository.dart';
 import 'package:flutterquiz/features/badges/blocs/badges_cubit.dart';
@@ -77,6 +78,9 @@ Future<Widget> initializeApp() async {
   // Initialize engagement tracker
   engagementTracker = EngagementTrackerService();
   await engagementTracker.initialize();
+
+  // Load ad feature flags for staged rollout control.
+  await AdFeatureFlags.initialize();
 
   return const MyApp();
 }

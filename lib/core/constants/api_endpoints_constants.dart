@@ -90,6 +90,8 @@ const sponsorBannerClickUrl = '$_api/sponsor_banner_click';
 const offerBoostEarningsUrl = '$_api/offer_boost_earnings';
 const applyBoostEarningsUrl = '$_api/apply_boost_earnings';
 const getWatchUnlockConfigUrl = '$_api/get_watch_unlock_config';
+const getAdRolloutSettingsUrl = '$_api/get_ad_rollout_settings';
+const submitAdComplianceEventsUrl = '$_api/submit_ad_compliance_events';
 
 // System & Configuration
 const getAppSettingsUrl = '$_api/get_settings';

@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutterquiz/commons/widgets/custom_snackbar.dart';
 import 'package:flutterquiz/core/core.dart';
+import 'package:flutterquiz/features/ads/ads.dart';
 import 'package:flutterquiz/features/auth/cubits/auth_cubit.dart';
 import 'package:flutterquiz/features/in_app_purchase/in_app_product.dart';
 import 'package:flutterquiz/features/in_app_purchase/in_app_purchase_cubit.dart';
@@ -92,6 +93,13 @@ class _CoinStoreScreenState extends State<CoinStoreScreen>
   Widget _buildProducts(List<ProductDetails> products) {
     final size = context;
     final userBalance = context.read<UserDetailsCubit>().getCoins() ?? '0';
+    final coinStoreBannerFlag = AdFeatureFlags.isEnabled(
+      AdFeatureFlags.coinStoreBannerPlacement,
+    );
+    final showBannerAd =
+        coinStoreBannerFlag &&
+        context.watch<BannerAdCubit>().bannerAdLoaded &&
+        !context.read<UserDetailsCubit>().removeAds();
 
     Future<void> restorePurchases() async {
       return context.read<InAppPurchaseCubit>().restorePurchases();
@@ -105,7 +113,9 @@ class _CoinStoreScreenState extends State<CoinStoreScreen>
             top: 16,
             left: size.width * UiUtils.hzMarginPct,
             right: size.width * UiUtils.hzMarginPct,
-            bottom: Platform.isIOS && !_isGuest ? 90 : 24,
+            bottom:
+                (Platform.isIOS && !_isGuest ? 90 : 24) +
+                (showBannerAd ? 60 : 0),
           ),
           child: Column(
             children: [
@@ -506,6 +516,13 @@ class _CoinStoreScreenState extends State<CoinStoreScreen>
                 },
               ),
             ),
+            if (AdFeatureFlags.isEnabled(
+              AdFeatureFlags.coinStoreBannerPlacement,
+            ))
+              const Align(
+                alignment: Alignment.bottomCenter,
+                child: BannerAdContainer(),
+              ),
           ],
         ),
       ),

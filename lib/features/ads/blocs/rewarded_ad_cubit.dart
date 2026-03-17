@@ -6,6 +6,11 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/commons/widgets/custom_snackbar.dart';
 import 'package:flutterquiz/core/core.dart';
+import 'package:flutterquiz/features/ads/blocs/interstitial_ad_cubit.dart';
+import 'package:flutterquiz/features/ads/blocs/rewarded_interstitial_ad_cubit.dart';
+import 'package:flutterquiz/features/ads/utils/ad_analytics_collector.dart';
+import 'package:flutterquiz/features/ads/utils/ad_feature_flags.dart';
+import 'package:flutterquiz/features/ads/utils/geographic_segmentation.dart';
 import 'package:flutterquiz/features/profile_management/cubits/user_details_cubit.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/features/system_config/model/ad_type.dart';
@@ -90,6 +95,71 @@ class AdConsentTracker {
   }
 }
 
+/// Frequency manager for rewarded placements, aligned with regional policy.
+class RewardedFrequencyManager {
+  static const String _lastShowTimeKey = 'last_rewarded_show_time';
+  static const String _dailyCountKey = 'daily_rewarded_count';
+  static const String _dailyCountDateKey = 'daily_rewarded_count_date';
+
+  static Future<bool> canShowRewarded() async {
+    final prefs = await SharedPreferences.getInstance();
+    final limits = await GeographicSegmentation.getFrequencyLimits();
+    final nowUtc = DateTime.now().toUtc();
+
+    final lastShowTime = prefs.getInt(_lastShowTimeKey) ?? 0;
+    final sinceLast = nowUtc.millisecondsSinceEpoch - lastShowTime;
+    if (sinceLast < limits.minRewardedGapMs) {
+      await AdAnalyticsCollector.recordComplianceEvent(
+        eventName: 'frequency_cap_hit',
+        payload: {
+          'format': 'rewarded',
+          'reason': 'min_gap',
+          'elapsed_ms': sinceLast,
+          'required_ms': limits.minRewardedGapMs,
+        },
+      );
+      return false;
+    }
+
+    final todayDate =
+        '${nowUtc.year.toString().padLeft(4, '0')}-${nowUtc.month.toString().padLeft(2, '0')}-${nowUtc.day.toString().padLeft(2, '0')}';
+    final lastDate = prefs.getString(_dailyCountDateKey) ?? '';
+    final dailyCount = lastDate == todayDate
+        ? (prefs.getInt(_dailyCountKey) ?? 0)
+        : 0;
+
+    if (dailyCount >= limits.maxRewardedPerDay) {
+      await AdAnalyticsCollector.recordComplianceEvent(
+        eventName: 'frequency_cap_hit',
+        payload: {
+          'format': 'rewarded',
+          'reason': 'daily_limit',
+          'daily_count': dailyCount,
+          'max_per_day': limits.maxRewardedPerDay,
+        },
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  static Future<void> recordRewardedShown() async {
+    final prefs = await SharedPreferences.getInstance();
+    final nowUtc = DateTime.now().toUtc();
+    final todayDate =
+        '${nowUtc.year.toString().padLeft(4, '0')}-${nowUtc.month.toString().padLeft(2, '0')}-${nowUtc.day.toString().padLeft(2, '0')}';
+    final lastDate = prefs.getString(_dailyCountDateKey) ?? '';
+    final dailyCount = lastDate == todayDate
+        ? (prefs.getInt(_dailyCountKey) ?? 0)
+        : 0;
+
+    await prefs.setInt(_lastShowTimeKey, nowUtc.millisecondsSinceEpoch);
+    await prefs.setString(_dailyCountDateKey, todayDate);
+    await prefs.setInt(_dailyCountKey, dailyCount + 1);
+  }
+}
+
 class RewardedAdCubit extends Cubit<RewardedAdState>
     with LevelPlayRewardedAdListener {
   RewardedAdCubit() : super(const RewardedAdInitial());
@@ -140,7 +210,10 @@ class RewardedAdCubit extends Cubit<RewardedAdState>
 
   Future<void> createRewardedAd(BuildContext context) async {
     if (state is RewardedAdLoadInProgress || state is RewardedAdLoaded) {
-      log('⏭️ [REWARDED] Create skipped (already loading/loaded)', name: 'RewardedAd-Diagnostic');
+      log(
+        '⏭️ [REWARDED] Create skipped (already loading/loaded)',
+        name: 'RewardedAd-Diagnostic',
+      );
       return; // Prevent duplicate loads
     }
     emit(const RewardedAdLoadInProgress());
@@ -148,7 +221,10 @@ class RewardedAdCubit extends Cubit<RewardedAdState>
     final sysConfigCubit = context.read<SystemConfigCubit>();
     if (sysConfigCubit.isAdsEnable &&
         !context.read<UserDetailsCubit>().removeAds()) {
-      log('🔄 [REWARDED] Creating rewarded ad | Network: ${sysConfigCubit.adsType}', name: 'RewardedAd-Diagnostic');
+      log(
+        '🔄 [REWARDED] Creating rewarded ad | Network: ${sysConfigCubit.adsType}',
+        name: 'RewardedAd-Diagnostic',
+      );
       if (sysConfigCubit.adsType == AdType.admob) {
         await _createGoogleRewardedAd(context);
       } else if (sysConfigCubit.adsType == AdType.unity) {
@@ -316,6 +392,36 @@ class RewardedAdCubit extends Cubit<RewardedAdState>
       _rewardEarnedCallback = onUserEarnedReward;
       _rewardEarned = false;
 
+      // If rewarded is currently not loaded, attempt one load before fallback.
+      if (state is! RewardedAdLoaded) {
+        await createRewardedAd(context);
+        if (state is! RewardedAdLoaded) {
+          await _showFallbackFromRewarded(
+            context: context,
+            rewardAmount: rewardAmount,
+            rewardCurrencyLabel: rewardCurrencyLabel,
+            onAdDismissedCallback: onAdDismissedCallback,
+            reason: 'rewarded_unavailable',
+          );
+          _resetRewardTracking();
+          return;
+        }
+      }
+
+      // Enforce rewarded frequency policy before consent/show.
+      final canShowRewarded = await RewardedFrequencyManager.canShowRewarded();
+      if (!canShowRewarded) {
+        await _showFallbackFromRewarded(
+          context: context,
+          rewardAmount: rewardAmount,
+          rewardCurrencyLabel: rewardCurrencyLabel,
+          onAdDismissedCallback: onAdDismissedCallback,
+          reason: 'rewarded_cap_reached',
+        );
+        _resetRewardTracking();
+        return;
+      }
+
       if (state is RewardedAdLoaded) {
         // Show consent dialog with reward details (AdMob compliance)
         final userConsented = await _showConsentDialog(
@@ -333,6 +439,9 @@ class RewardedAdCubit extends Cubit<RewardedAdState>
         //if google ad is enable
         if (sysConfigCubit.adsType == AdType.admob) {
           _rewardedAd?.fullScreenContentCallback = FullScreenContentCallback(
+            onAdShowedFullScreenContent: (ad) async {
+              await RewardedFrequencyManager.recordRewardedShown();
+            },
             onAdDismissedFullScreenContent: (ad) {
               ad.dispose();
               _resetRewardTracking();
@@ -351,6 +460,10 @@ class RewardedAdCubit extends Cubit<RewardedAdState>
         } else if (sysConfigCubit.adsType == AdType.unity) {
           UnityAds.showVideoAd(
             placementId: unityPlacementName,
+            onStart: (placementId) {
+              RewardedFrequencyManager.recordRewardedShown();
+              log('Video Ad $placementId started');
+            },
             onComplete: (placementId) {
               _handleRewardEarned();
               _resetRewardTracking();
@@ -359,11 +472,11 @@ class RewardedAdCubit extends Cubit<RewardedAdState>
             },
             onFailed: (placementId, error, message) =>
                 log('Video Ad $placementId failed: $error $message'),
-            onStart: (placementId) => log('Video Ad $placementId started'),
             onClick: (placementId) => log('Video Ad $placementId click'),
           );
         } else if (sysConfigCubit.adsType == AdType.ironSource) {
           if (await _ironSourceAd.isAdReady()) {
+            await RewardedFrequencyManager.recordRewardedShown();
             await _ironSourceAd.showAd().then((_) async {
               _resetRewardTracking();
               onAdDismissedCallback();
@@ -371,16 +484,61 @@ class RewardedAdCubit extends Cubit<RewardedAdState>
             });
           }
         }
-      } else if (state is RewardedAdFailure) {
-        //create reward ad if ad is not loaded successfully
-        _resetRewardTracking();
-        createRewardedAd(context);
-      } else if (state is RewardedAdInitial) {
-        //create ad if not initialized yet
-        _resetRewardTracking();
-        createRewardedAd(context);
       }
     }
+  }
+
+  Future<void> _showFallbackFromRewarded({
+    required BuildContext context,
+    required int rewardAmount,
+    required String rewardCurrencyLabel,
+    required VoidCallback onAdDismissedCallback,
+    required String reason,
+  }) async {
+    if (!AdFeatureFlags.isEnabled(AdFeatureFlags.rewardedFallback)) {
+      onAdDismissedCallback();
+      return;
+    }
+
+    await AdAnalyticsCollector.recordComplianceEvent(
+      eventName: 'rewarded_fallback_entered',
+      payload: {
+        'reason': reason,
+      },
+    );
+
+    final rewardedInterstitialCubit = context
+        .read<RewardedInterstitialAdCubit>();
+    if (rewardedInterstitialCubit.state != RewardedInterstitialAdState.loaded) {
+      await rewardedInterstitialCubit.createRewardedInterstitialAd(context);
+    }
+
+    if (rewardedInterstitialCubit.state == RewardedInterstitialAdState.loaded) {
+      await AdAnalyticsCollector.recordComplianceEvent(
+        eventName: 'rewarded_fallback_selected',
+        payload: {
+          'to': 'rewarded_interstitial',
+          'reason': reason,
+        },
+      );
+      await rewardedInterstitialCubit.showAd(
+        context: context,
+        rewardAmount: rewardAmount,
+        rewardCurrencyLabel: rewardCurrencyLabel,
+        onAdDismissedCallback: onAdDismissedCallback,
+      );
+      return;
+    }
+
+    await AdAnalyticsCollector.recordComplianceEvent(
+      eventName: 'rewarded_fallback_selected',
+      payload: {
+        'to': 'interstitial',
+        'reason': reason,
+      },
+    );
+    await context.read<InterstitialAdCubit>().showAd(context);
+    onAdDismissedCallback();
   }
 
   void _handleRewardEarned() {

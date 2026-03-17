@@ -16,13 +16,28 @@ class BannerAdContainer extends StatefulWidget {
   State<BannerAdContainer> createState() => _BannerAdContainer();
 }
 
-class _BannerAdContainer extends State<BannerAdContainer> {
+class _BannerAdContainer extends State<BannerAdContainer>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     Future.delayed(Duration.zero, () {
       context.read<BannerAdCubit>().initBannerAd(context);
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      context.read<BannerAdCubit>().retryDeferredLoad(context);
+    }
   }
 
   @override

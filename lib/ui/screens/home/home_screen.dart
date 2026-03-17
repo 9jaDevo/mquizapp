@@ -39,7 +39,6 @@ import 'package:flutterquiz/ui/screens/home/widgets/daily_challenge_card.dart';
 import 'package:flutterquiz/ui/screens/profile/create_or_edit_profile_screen.dart';
 import 'package:flutterquiz/features/quiz_zone_tab/screens/quiz_zone_tab_screen.dart';
 import 'package:flutterquiz/ui/widgets/all.dart';
-import 'package:flutterquiz/ui/widgets/skill_tier_badge.dart';
 import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -553,7 +552,7 @@ class HomeScreenState extends State<HomeScreen>
       UiUtils.needToUpdateCoinsLocally(context);
 
       // Show app open ad when user resumes app
-      context.read<AppOpenAdCubit>().showAppOpenAdIfAvailable();
+      context.read<AppOpenAdCubit>().showAppOpenAdIfAvailable(context);
     } else {
       ProfileManagementLocalDataSource().updateReversedCoins(0);
     }

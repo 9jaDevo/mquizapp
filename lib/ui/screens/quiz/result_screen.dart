@@ -7,9 +7,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutterquiz/commons/commons.dart';
 import 'package:flutterquiz/core/core.dart';
-import 'package:flutterquiz/features/ads/blocs/interstitial_ad_cubit.dart';
 import 'package:flutterquiz/features/ads/blocs/rewarded_ad_cubit.dart';
-import 'package:flutterquiz/features/ads/blocs/rewarded_interstitial_ad_cubit.dart';
+import 'package:flutterquiz/features/ads/utils/ad_transition_orchestrator.dart';
 import 'package:flutterquiz/features/battle_room/cubits/battle_room_cubit.dart';
 import 'package:flutterquiz/features/battle_room/models/battle_room.dart';
 import 'package:flutterquiz/features/exam/models/exam.dart';
@@ -229,26 +228,12 @@ class _ResultScreenState extends State<ResultScreen> {
       // Increment quiz completion counter
       _quizCompletionCount++;
 
-      if (!widget.isPremiumCategory) {
-        // Show rewarded interstitial every 2 quizzes (giving 3 coins)
-        if (_quizCompletionCount % 2 == 0 &&
-            context.read<SystemConfigCubit>().isAdsEnable &&
-            !context.read<UserDetailsCubit>().removeAds()) {
-          final rewardCoins = context.read<SystemConfigCubit>().rewardAdsCoins;
-
-          await context.read<RewardedInterstitialAdCubit>().showAd(
-            context: context,
-            rewardAmount: rewardCoins,
-            rewardCurrencyLabel: 'coins',
-            onAdDismissedCallback: () {
-              // Continue with regular flow
-            },
-          );
-        } else {
-          // Show regular interstitial ad
-          context.read<InterstitialAdCubit>().showAd(context);
-        }
-      }
+      await AdTransitionOrchestrator.showResultTransitionAd(
+        context: context,
+        completionCount: _quizCompletionCount,
+        isPremiumCategory: widget.isPremiumCategory,
+        rewardCoins: context.read<SystemConfigCubit>().rewardAdsCoins,
+      );
 
       if (widget.quizType == QuizTypes.selfChallenge) {
         setState(() {
@@ -269,7 +254,7 @@ class _ResultScreenState extends State<ResultScreen> {
   Future<void> _loadSkillTierLabel() async {
     final tier = await SkillTierService.computeTier();
     if (!mounted) return;
-    final label = tier != null ? '${SkillTier.label(tier.type)} League' : '--';
+    final label = '${SkillTier.label(tier.type)} League';
     setState(() {
       _skillTierLabel = label;
     });

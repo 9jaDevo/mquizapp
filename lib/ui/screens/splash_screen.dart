@@ -17,6 +17,8 @@ import 'package:flutterquiz/core/core.dart';
 import 'package:flutterquiz/features/settings/settings_cubit.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/features/system_config/model/ad_type.dart';
+import 'package:flutterquiz/features/ads/utils/ad_analytics_collector.dart';
+import 'package:flutterquiz/features/ads/utils/ad_feature_flags.dart';
 import 'package:flutterquiz/ui/widgets/error_container.dart';
 import 'package:flutterquiz/utils/app_tracking_transparency_helper.dart';
 import 'package:flutterquiz/utils/gdpr_helper.dart';
@@ -113,6 +115,8 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _fetchSystemConfig() async {
     await context.read<SystemConfigCubit>().getSystemConfig();
+    await AdFeatureFlags.syncFromBackend();
+    unawaited(AdAnalyticsCollector.uploadComplianceEventsBatch());
     await GdprHelper.initialize();
     await AppTrackingTransparencyHelper.requestTrackingPermission();
   }

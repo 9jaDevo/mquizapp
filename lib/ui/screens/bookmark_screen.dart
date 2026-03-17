@@ -5,6 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_tex/flutter_tex.dart';
 import 'package:flutterquiz/commons/widgets/custom_snackbar.dart';
 import 'package:flutterquiz/core/core.dart';
+import 'package:flutterquiz/features/ads/blocs/interstitial_ad_cubit.dart';
+import 'package:flutterquiz/features/ads/utils/ad_feature_flags.dart';
 import 'package:flutterquiz/features/bookmark/bookmark_repository.dart';
 import 'package:flutterquiz/features/bookmark/cubits/audio_question_bookmark_cubit.dart';
 import 'package:flutterquiz/features/bookmark/cubits/bookmark_cubit.dart';
@@ -32,6 +34,7 @@ class BookmarkScreen extends StatefulWidget {
 
 class _BookmarkScreenState extends State<BookmarkScreen>
     with SingleTickerProviderStateMixin {
+  static bool _shownInterstitialThisLaunch = false;
   late TabController tabController;
   late List<(String, Widget)> tabs = <(String, Widget)>[
     (quizZone, _buildQuizZoneQuestions()),
@@ -60,6 +63,20 @@ class _BookmarkScreenState extends State<BookmarkScreen>
     }
 
     tabController = TabController(length: tabs.length, vsync: this);
+    Future.delayed(Duration.zero, _maybeShowInterstitialOncePerSession);
+  }
+
+  Future<void> _maybeShowInterstitialOncePerSession() async {
+    if (!AdFeatureFlags.isEnabled(AdFeatureFlags.utilityInterstitials) ||
+        _shownInterstitialThisLaunch ||
+        !mounted) {
+      return;
+    }
+
+    _shownInterstitialThisLaunch = true;
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    if (!mounted) return;
+    await context.read<InterstitialAdCubit>().showAd(context);
   }
 
   @override

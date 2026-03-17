@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/core/core.dart';
+import 'package:flutterquiz/features/ads/blocs/interstitial_ad_cubit.dart';
+import 'package:flutterquiz/features/ads/utils/ad_feature_flags.dart';
 import 'package:flutterquiz/features/engagement/cubit/engagement_alltime_cubit.dart';
 import 'package:flutterquiz/features/engagement/cubit/engagement_monthly_cubit.dart';
 import 'package:flutterquiz/features/engagement/cubit/engagement_weekly_cubit.dart';
@@ -33,6 +35,7 @@ enum LeaderboardTimePeriod { week, month, allTime }
 
 class LeaderBoardScreenState extends State<LeaderBoardScreen>
     with AutomaticKeepAliveClientMixin {
+  static bool _shownInterstitialThisLaunch = false;
   // Filter states
   LeaderboardScope _selectedScope = LeaderboardScope.world;
   LeaderboardMetric _selectedMetric = LeaderboardMetric.score;
@@ -47,7 +50,21 @@ class LeaderBoardScreenState extends State<LeaderBoardScreen>
     // Initial data fetch
     Future.delayed(Duration.zero, () {
       _fetchLeaderboardData();
+      _maybeShowInterstitialOncePerSession();
     });
+  }
+
+  Future<void> _maybeShowInterstitialOncePerSession() async {
+    if (!AdFeatureFlags.isEnabled(AdFeatureFlags.utilityInterstitials) ||
+        _shownInterstitialThisLaunch ||
+        !mounted) {
+      return;
+    }
+
+    _shownInterstitialThisLaunch = true;
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    if (!mounted) return;
+    await context.read<InterstitialAdCubit>().showAd(context);
   }
 
   @override
@@ -567,8 +584,7 @@ class LeaderBoardScreenState extends State<LeaderBoardScreen>
     final sanitizedTopThree = topThree
         .where(
           (item) =>
-              item['user_id'] != null &&
-              item['user_id'].toString().isNotEmpty,
+              item['user_id'] != null && item['user_id'].toString().isNotEmpty,
         )
         .toList();
     final useFallbackTopThree = sanitizedTopThree.isEmpty;
@@ -582,10 +598,10 @@ class LeaderBoardScreenState extends State<LeaderBoardScreen>
     final remainingEntries = useFallbackTopThree
         ? (entries.length > 3 ? entries.sublist(3) : <Map<String, dynamic>>[])
         : entries
-            .where(
-              (item) => !topThreeIds.contains(item['user_id']?.toString()),
-            )
-            .toList();
+              .where(
+                (item) => !topThreeIds.contains(item['user_id']?.toString()),
+              )
+              .toList();
     final myRankInt = myRank != null
         ? int.tryParse(myRank['user_rank']?.toString() ?? '0') ?? 0
         : 0;

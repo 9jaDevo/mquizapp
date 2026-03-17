@@ -34,8 +34,8 @@ class AdConsentDialog extends StatelessWidget {
               padding: const EdgeInsets.all(15),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.primary.withValues(
-                      alpha: 0.1,
-                    ),
+                  alpha: 0.1,
+                ),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -64,7 +64,7 @@ class AdConsentDialog extends StatelessWidget {
               text: TextSpan(
                 children: [
                   TextSpan(
-                    text: 'Watch a short ad (30 seconds) to earn ',
+                    text: 'Watch a short ad to earn ',
                     style: TextStyle(
                       fontSize: 14,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -91,8 +91,8 @@ class AdConsentDialog extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   color: Theme.of(context).colorScheme.onSurface.withValues(
-                        alpha: 0.6,
-                      ),
+                    alpha: 0.6,
+                  ),
                   fontStyle: FontStyle.italic,
                 ),
                 textAlign: TextAlign.center,
@@ -133,8 +133,7 @@ class AdConsentDialog extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: onWatchAdTap,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          Theme.of(context).colorScheme.primary,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),

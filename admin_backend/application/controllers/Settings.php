@@ -246,6 +246,12 @@ class Settings extends CI_Controller
                     'daily_ads_coins',
                     'daily_ads_counter',
                     'reward_coin',
+                    'ad_rollout_utility_interstitials',
+                    'ad_rollout_wallet_banner_placement',
+                    'ad_rollout_coin_store_banner_placement',
+                    'ad_rollout_rewarded_fallback',
+                    'ad_compliance_upload_enabled',
+                    'ad_compliance_upload_batch_size',
                     'app_key_android_iron_source',
                     'app_key_ios_iron_source',
                     'rewarded_id_android_iron_source',
@@ -261,6 +267,70 @@ class Settings extends CI_Controller
                 }
 
                 $this->load->view('ads_settings', $this->result);
+            }
+        }
+    }
+
+    public function ad_compliance_reports()
+    {
+        if (!$this->session->userdata('isLoggedIn')) {
+            redirect('/');
+        } else {
+            if (!has_permissions('read', 'ads_settings')) {
+                redirect('/');
+            } else {
+                $date_from = $this->input->get('date_from') ?: date('Y-m-d', strtotime('-7 days'));
+                $date_to = $this->input->get('date_to') ?: date('Y-m-d');
+                $event_name = trim((string)$this->input->get('event_name'));
+
+                $start_datetime = $date_from . ' 00:00:00';
+                $end_datetime = $date_to . ' 23:59:59';
+
+                // Summary by event name
+                $this->db->select('event_name, COUNT(*) as total_events, COUNT(DISTINCT user_id) as unique_users, MAX(created_at) as last_seen');
+                $this->db->from('tbl_ad_compliance_events');
+                $this->db->where('created_at >=', $start_datetime);
+                $this->db->where('created_at <=', $end_datetime);
+                if (!empty($event_name)) {
+                    $this->db->where('event_name', $event_name);
+                }
+                $this->db->group_by('event_name');
+                $this->db->order_by('total_events', 'DESC');
+                $event_summary = $this->db->get()->result_array();
+
+                // Daily summary
+                $this->db->select('DATE(created_at) as event_day, COUNT(*) as total_events, COUNT(DISTINCT user_id) as unique_users');
+                $this->db->from('tbl_ad_compliance_events');
+                $this->db->where('created_at >=', $start_datetime);
+                $this->db->where('created_at <=', $end_datetime);
+                if (!empty($event_name)) {
+                    $this->db->where('event_name', $event_name);
+                }
+                $this->db->group_by('DATE(created_at)');
+                $this->db->order_by('event_day', 'DESC');
+                $daily_summary = $this->db->get()->result_array();
+
+                // Most recent records (for quick debugging)
+                $this->db->select('e.id, e.event_name, e.user_id, u.name as user_name, e.platform, e.app_version, e.created_at');
+                $this->db->from('tbl_ad_compliance_events e');
+                $this->db->join('tbl_users u', 'u.id = e.user_id', 'left');
+                $this->db->where('e.created_at >=', $start_datetime);
+                $this->db->where('e.created_at <=', $end_datetime);
+                if (!empty($event_name)) {
+                    $this->db->where('e.event_name', $event_name);
+                }
+                $this->db->order_by('e.id', 'DESC');
+                $this->db->limit(200);
+                $recent_events = $this->db->get()->result_array();
+
+                $this->result['date_from'] = $date_from;
+                $this->result['date_to'] = $date_to;
+                $this->result['event_name'] = $event_name;
+                $this->result['event_summary'] = $event_summary;
+                $this->result['daily_summary'] = $daily_summary;
+                $this->result['recent_events'] = $recent_events;
+
+                $this->load->view('ad_compliance_reports', $this->result);
             }
         }
     }

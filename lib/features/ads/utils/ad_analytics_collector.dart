@@ -1,5 +1,10 @@
 import 'dart:developer';
 import 'dart:convert';
+import 'dart:math' as math;
+
+import 'package:flutterquiz/core/constants/constants.dart';
+import 'package:flutterquiz/utils/api_utils.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// eCPM estimate (effective cost per 1000 impressions)
@@ -64,6 +69,154 @@ class AdMetrics {
 class AdAnalyticsCollector {
   static const String _variantMetricsKey = 'variant_metrics_';
   static const String _dailyStatsKey = 'daily_stats_';
+  static const String _complianceEventsKey = 'ad_compliance_events';
+
+  /// Store lightweight compliance/audit events locally.
+  static Future<void> recordComplianceEvent({
+    required String eventName,
+    required Map<String, dynamic> payload,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final existingJson = prefs.getString(_complianceEventsKey);
+
+      final events = existingJson == null
+          ? <Map<String, dynamic>>[]
+          : List<Map<String, dynamic>>.from(
+              (jsonDecode(existingJson) as List<dynamic>).map(
+                (e) => Map<String, dynamic>.from(e as Map),
+              ),
+            );
+
+      events.add({
+        'event': eventName,
+        'ts': DateTime.now().toUtc().toIso8601String(),
+        ...payload,
+      });
+
+      // Keep recent history bounded.
+      if (events.length > 100) {
+        events.removeRange(0, events.length - 100);
+      }
+
+      await prefs.setString(_complianceEventsKey, jsonEncode(events));
+    } catch (e) {
+      log('Error recording compliance event: $e', name: 'Analytics');
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getComplianceEvents() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final existingJson = prefs.getString(_complianceEventsKey);
+      if (existingJson == null || existingJson.isEmpty) {
+        return <Map<String, dynamic>>[];
+      }
+
+      return List<Map<String, dynamic>>.from(
+        (jsonDecode(existingJson) as List<dynamic>).map(
+          (e) => Map<String, dynamic>.from(e as Map),
+        ),
+      );
+    } catch (e) {
+      log('Error reading compliance events: $e', name: 'Analytics');
+      return <Map<String, dynamic>>[];
+    }
+  }
+
+  static Future<int> getComplianceEventCount() async {
+    final events = await getComplianceEvents();
+    return events.length;
+  }
+
+  static Future<void> clearComplianceEvents() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_complianceEventsKey);
+    } catch (e) {
+      log('Error clearing compliance events: $e', name: 'Analytics');
+    }
+  }
+
+  /// Upload a bounded batch of compliance events to backend.
+  static Future<int> uploadComplianceEventsBatch() async {
+    try {
+      final events = await getComplianceEvents();
+      if (events.isEmpty) {
+        return 0;
+      }
+
+      final headers = await ApiUtils.getHeaders();
+      if (headers.isEmpty) {
+        return 0;
+      }
+
+      final rolloutResponse = await http.post(
+        Uri.parse(getAdRolloutSettingsUrl),
+        headers: headers,
+      );
+      final rolloutJson =
+          jsonDecode(rolloutResponse.body) as Map<String, dynamic>;
+      final rolloutData = rolloutJson['data'] is Map<String, dynamic>
+          ? rolloutJson['data'] as Map<String, dynamic>
+          : <String, dynamic>{};
+
+      final uploadEnabled =
+          (rolloutData['compliance_upload_enabled']?.toString() ?? '1') == '1';
+      if (!uploadEnabled) {
+        return 0;
+      }
+
+      final configuredBatch =
+          int.tryParse(
+            rolloutData['compliance_upload_batch_size']?.toString() ?? '',
+          ) ??
+          25;
+      final batchSize = math.max(1, math.min(100, configuredBatch));
+      final batch = events.take(batchSize).toList(growable: false);
+
+      final response = await http.post(
+        Uri.parse(submitAdComplianceEventsUrl),
+        headers: headers,
+        body: <String, String>{
+          'events': jsonEncode(batch),
+        },
+      );
+
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
+      if (responseJson['error'] == true) {
+        return 0;
+      }
+
+      final data = responseJson['data'] is Map<String, dynamic>
+          ? responseJson['data'] as Map<String, dynamic>
+          : <String, dynamic>{};
+      final processed =
+          int.tryParse(data['processed']?.toString() ?? '') ?? batch.length;
+      final removeCount = math.max(0, math.min(processed, events.length));
+
+      if (removeCount > 0) {
+        final remaining = events.sublist(removeCount);
+        await _setComplianceEvents(remaining);
+      }
+
+      return removeCount;
+    } catch (e) {
+      log('Error uploading compliance events: $e', name: 'Analytics');
+      return 0;
+    }
+  }
+
+  static Future<void> _setComplianceEvents(
+    List<Map<String, dynamic>> events,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (events.isEmpty) {
+      await prefs.remove(_complianceEventsKey);
+      return;
+    }
+    await prefs.setString(_complianceEventsKey, jsonEncode(events));
+  }
 
   /// Record an impression for tracking
   static Future<void> recordImpressionMetric(String variantName) async {
@@ -169,7 +322,10 @@ class AdAnalyticsCollector {
   }
 
   /// Compare performance of two variants
-  static Future<String> compareVariants(String variant1, String variant2) async {
+  static Future<String> compareVariants(
+    String variant1,
+    String variant2,
+  ) async {
     try {
       final metrics1 = await getVariantMetrics(variant1);
       final metrics2 = await getVariantMetrics(variant2);
@@ -183,7 +339,8 @@ class AdAnalyticsCollector {
       final conversionDiff = metrics1.conversionRate - metrics2.conversionRate;
 
       final winner = ecpmDiff > 0 ? variant1 : variant2;
-      final ecpmPercent = ((ecpmDiff.abs() / metrics2.ecpm) * 100).toStringAsFixed(1);
+      final ecpmPercent = ((ecpmDiff.abs() / metrics2.ecpm) * 100)
+          .toStringAsFixed(1);
 
       return '''
 A/B Test Comparison:
@@ -223,13 +380,24 @@ Impressions:
         return 'No metrics available';
       }
 
-      final totalImpressions = allMetrics.fold<int>(0, (sum, m) => sum + m.impressions);
+      final totalImpressions = allMetrics.fold<int>(
+        0,
+        (sum, m) => sum + m.impressions,
+      );
       final totalClicks = allMetrics.fold<int>(0, (sum, m) => sum + m.clicks);
-      final totalRevenue = allMetrics.fold<double>(0.0, (sum, m) => sum + m.estimatedRevenue);
-      final avgCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0.0;
-      final avgECPM = totalImpressions > 0 ? (totalRevenue / totalImpressions) * 1000 : 0.0;
+      final totalRevenue = allMetrics.fold<double>(
+        0.0,
+        (sum, m) => sum + m.estimatedRevenue,
+      );
+      final avgCTR = totalImpressions > 0
+          ? (totalClicks / totalImpressions) * 100
+          : 0.0;
+      final avgECPM = totalImpressions > 0
+          ? (totalRevenue / totalImpressions) * 1000
+          : 0.0;
 
-      var report = '''
+      var report =
+          '''
 === Daily Ad Analytics Report ===
 
 Overall Metrics:
@@ -244,7 +412,8 @@ Variant Performance:
 
       for (int i = 0; i < allMetrics.length; i++) {
         final m = allMetrics[i];
-        report += '''
+        report +=
+            '''
 ${i + 1}. ${m.variant}
    Impressions: ${m.impressions} | Clicks: ${m.clicks} | Conversions: ${m.conversions}
    CTR: ${m.ctr.toStringAsFixed(2)}% | eCPM: \$${m.ecpm.toStringAsFixed(2)}
@@ -281,7 +450,10 @@ ${i + 1}. ${m.variant}
   // ============ Private Methods ============
 
   /// Increment a metric counter
-  static Future<void> _incrementMetric(String variantName, String metric) async {
+  static Future<void> _incrementMetric(
+    String variantName,
+    String metric,
+  ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final key = _variantMetricsKey + variantName;

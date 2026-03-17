@@ -22,6 +22,9 @@
                 <section class="section">
                     <div class="section-header">
                         <h1><?= lang('ads_settings_for_app'); ?> <small class="text-small"><?= lang('note_that_this_will_directly_reflect_the_changes_in_app'); ?></small></h1>
+                        <div class="section-header-button ml-auto">
+                            <a href="<?= base_url(); ?>ad-compliance-reports" class="btn btn-primary btn-sm">View Compliance Reports</a>
+                        </div>
                     </div>
                     <div class="section-body">
                         <div class="row">
@@ -227,6 +230,69 @@
                                                 <hr class="col-12">
                                             </div>
 
+                                            <div class="row">
+                                                <div class="form-group col-md-12 col-sm-12 mb-2">
+                                                    <h6 class="font-weight-bold">Ad Rollout Controls <small class="text-muted">(safe staged release)</small></h6>
+                                                </div>
+
+                                                <div class="form-group col-md-3 col-sm-6">
+                                                    <label class="control-label">Utility Interstitials</label><br>
+                                                    <input type="checkbox" id="ad-rollout-utility-interstitials-btn" data-plugin="switchery" <?php
+                                                                                                                                            if (!empty($ad_rollout_utility_interstitials) && $ad_rollout_utility_interstitials['message'] == '1') {
+                                                                                                                                                echo 'checked';
+                                                                                                                                            }
+                                                                                                                                            ?>>
+                                                    <input type="hidden" id="ad-rollout-utility-interstitials" name="ad_rollout_utility_interstitials" value="<?= (isset($ad_rollout_utility_interstitials)) ? $ad_rollout_utility_interstitials['message'] : 1; ?>">
+                                                </div>
+
+                                                <div class="form-group col-md-3 col-sm-6">
+                                                    <label class="control-label">Wallet Banner Placement</label><br>
+                                                    <input type="checkbox" id="ad-rollout-wallet-banner-btn" data-plugin="switchery" <?php
+                                                                                                                                    if (!empty($ad_rollout_wallet_banner_placement) && $ad_rollout_wallet_banner_placement['message'] == '1') {
+                                                                                                                                        echo 'checked';
+                                                                                                                                    }
+                                                                                                                                    ?>>
+                                                    <input type="hidden" id="ad-rollout-wallet-banner" name="ad_rollout_wallet_banner_placement" value="<?= (isset($ad_rollout_wallet_banner_placement)) ? $ad_rollout_wallet_banner_placement['message'] : 1; ?>">
+                                                </div>
+
+                                                <div class="form-group col-md-3 col-sm-6">
+                                                    <label class="control-label">Coin Store Banner Placement</label><br>
+                                                    <input type="checkbox" id="ad-rollout-coinstore-banner-btn" data-plugin="switchery" <?php
+                                                                                                                                       if (!empty($ad_rollout_coin_store_banner_placement) && $ad_rollout_coin_store_banner_placement['message'] == '1') {
+                                                                                                                                           echo 'checked';
+                                                                                                                                       }
+                                                                                                                                       ?>>
+                                                    <input type="hidden" id="ad-rollout-coinstore-banner" name="ad_rollout_coin_store_banner_placement" value="<?= (isset($ad_rollout_coin_store_banner_placement)) ? $ad_rollout_coin_store_banner_placement['message'] : 1; ?>">
+                                                </div>
+
+                                                <div class="form-group col-md-3 col-sm-6">
+                                                    <label class="control-label">Rewarded Fallback Ladder</label><br>
+                                                    <input type="checkbox" id="ad-rollout-rewarded-fallback-btn" data-plugin="switchery" <?php
+                                                                                                                                      if (!empty($ad_rollout_rewarded_fallback) && $ad_rollout_rewarded_fallback['message'] == '1') {
+                                                                                                                                          echo 'checked';
+                                                                                                                                      }
+                                                                                                                                      ?>>
+                                                    <input type="hidden" id="ad-rollout-rewarded-fallback" name="ad_rollout_rewarded_fallback" value="<?= (isset($ad_rollout_rewarded_fallback)) ? $ad_rollout_rewarded_fallback['message'] : 1; ?>">
+                                                </div>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="form-group col-md-3 col-sm-6">
+                                                    <label class="control-label">Compliance Upload</label><br>
+                                                    <input type="checkbox" id="ad-compliance-upload-enabled-btn" data-plugin="switchery" <?php
+                                                                                                                                      if (!empty($ad_compliance_upload_enabled) && $ad_compliance_upload_enabled['message'] == '1') {
+                                                                                                                                          echo 'checked';
+                                                                                                                                      }
+                                                                                                                                      ?>>
+                                                    <input type="hidden" id="ad-compliance-upload-enabled" name="ad_compliance_upload_enabled" value="<?= (isset($ad_compliance_upload_enabled)) ? $ad_compliance_upload_enabled['message'] : 1; ?>">
+                                                </div>
+                                                <div class="form-group col-md-3 col-sm-6">
+                                                    <label class="control-label">Compliance Batch Size</label>
+                                                    <input type="number" min="1" max="100" name="ad_compliance_upload_batch_size" class="form-control" value="<?= (isset($ad_compliance_upload_batch_size) && !empty($ad_compliance_upload_batch_size['message'])) ? $ad_compliance_upload_batch_size['message'] : 25; ?>">
+                                                    <small class="form-text text-muted">Number of events per upload request.</small>
+                                                </div>
+                                            </div>
+
 
                                             <div class="row">
                                                 <div class="form-group col-sm-12">
@@ -377,6 +443,31 @@
             } else {
                 $('#daily-ads-visibility-mode').val(0);
             }
+        };
+
+        var utilityInterstitialsBtn = document.querySelector('#ad-rollout-utility-interstitials-btn');
+        utilityInterstitialsBtn.onchange = function() {
+            $('#ad-rollout-utility-interstitials').val(utilityInterstitialsBtn.checked ? 1 : 0);
+        };
+
+        var walletBannerBtn = document.querySelector('#ad-rollout-wallet-banner-btn');
+        walletBannerBtn.onchange = function() {
+            $('#ad-rollout-wallet-banner').val(walletBannerBtn.checked ? 1 : 0);
+        };
+
+        var coinStoreBannerBtn = document.querySelector('#ad-rollout-coinstore-banner-btn');
+        coinStoreBannerBtn.onchange = function() {
+            $('#ad-rollout-coinstore-banner').val(coinStoreBannerBtn.checked ? 1 : 0);
+        };
+
+        var rewardedFallbackBtn = document.querySelector('#ad-rollout-rewarded-fallback-btn');
+        rewardedFallbackBtn.onchange = function() {
+            $('#ad-rollout-rewarded-fallback').val(rewardedFallbackBtn.checked ? 1 : 0);
+        };
+
+        var complianceUploadBtn = document.querySelector('#ad-compliance-upload-enabled-btn');
+        complianceUploadBtn.onchange = function() {
+            $('#ad-compliance-upload-enabled').val(complianceUploadBtn.checked ? 1 : 0);
         };
     </script>
 

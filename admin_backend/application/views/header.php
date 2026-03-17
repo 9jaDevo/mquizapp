@@ -375,6 +375,7 @@
                         <?php } ?>
                         <?php if (has_permissions('read', 'ads_settings')) { ?>
                             <li><a class="nav-link" href="<?= base_url(); ?>ads-settings"><?= lang('ads_settings'); ?></a></li>
+                            <li><a class="nav-link" href="<?= base_url(); ?>ad-compliance-reports">Ad Compliance Reports</a></li>
                         <?php } ?>
                         <?php if (has_permissions('read', 'badges_settings')) { ?>
                             <li><a class="nav-link" href="<?= base_url(); ?>badges-settings"><?= lang('badges_settings'); ?></a></li>
