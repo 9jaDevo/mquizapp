@@ -21,9 +21,9 @@ Use this file as the phase gate tracker. Do not start the next phase until all i
 ## Phase 1: Database
 
 - [x] League migration file created
-- [ ] Migration executed in test db
-- [ ] Indices and constraints verified
-- [ ] Rollback notes captured
+- [x] Migration executed in test db
+- [x] Indices and constraints verified
+- [x] Rollback notes captured
 
 ## Phase 2: Backend APIs
 
@@ -32,6 +32,8 @@ Use this file as the phase gate tracker. Do not start the next phase until all i
 - [x] Daily quiz retrieval and daily limit rule implemented
 - [x] Submission and leaderboard logic implemented
 - [ ] Endpoint tests completed
+
+Note: Endpoint runtime tests are currently blocked in local env due to PHP runtime mismatch (required >= 8.4, current 8.2.12).
 
 ## Phase 3: Flutter Frontend
 
@@ -56,11 +58,13 @@ Use this file as the phase gate tracker. Do not start the next phase until all i
 
 ## Phase 6: Push Notifications
 
-- [ ] T-24h job implemented
-- [ ] Start-day job implemented
-- [ ] Notification preferences respected
+- [x] T-24h job implemented
+- [x] Start-day job implemented
+- [x] Notification preferences respected
 - [ ] Logging and retry handling verified
 - [ ] Real-device delivery tests completed
+
+Note: Runtime verification is blocked in local env due to PHP runtime mismatch (required >= 8.4, current 8.2.12).
 
 ## Phase 7: Ads Integration
 

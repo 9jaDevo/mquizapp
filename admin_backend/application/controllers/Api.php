@@ -8132,6 +8132,71 @@ class Api extends REST_Controller
     }
 
     /**
+     * Update league notification preference for the authenticated user.
+     */
+    public function update_league_notification_preference_post()
+    {
+        try {
+            $is_user = $this->verify_token();
+            if ($is_user['error']) {
+                $this->response($is_user, REST_Controller::HTTP_OK);
+                return false;
+            }
+
+            $user_id = (int)$is_user['user_id'];
+            $league_id = $this->post('league_id') && is_numeric($this->post('league_id')) ? (int)$this->post('league_id') : 0;
+            $notifications_enabled = $this->post('notifications_enabled');
+            $device_token = $this->post('device_token') ? trim($this->post('device_token')) : null;
+
+            if ($league_id <= 0) {
+                $response['error'] = true;
+                $response['message'] = 'League id is required';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            if ($notifications_enabled === null || !is_numeric($notifications_enabled)) {
+                $response['error'] = true;
+                $response['message'] = 'notifications_enabled must be 0 or 1';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            $notifications_enabled = ((int)$notifications_enabled > 0) ? 1 : 0;
+            $league_user = $this->db->where('league_id', $league_id)->where('user_id', $user_id)->get('tbl_league_user')->row_array();
+
+            if (empty($league_user)) {
+                $response['error'] = true;
+                $response['message'] = 'League participation not found for user';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            $update = [
+                'notifications_enabled' => $notifications_enabled,
+            ];
+            if (!empty($device_token)) {
+                $update['device_token'] = $device_token;
+            }
+
+            $this->db->where('league_id', $league_id)->where('user_id', $user_id)->update('tbl_league_user', $update);
+
+            $response['error'] = false;
+            $response['message'] = 'League notification preference updated';
+            $response['data'] = [
+                'league_id' => $league_id,
+                'notifications_enabled' => $notifications_enabled,
+            ];
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = 'Failed to update league notification preference';
+            $response['error_msg'] = $e->getMessage();
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    /**
      * GET /api/blog/posts
      * Get all blog posts with pagination and filters
      */
