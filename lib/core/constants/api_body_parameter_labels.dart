@@ -62,3 +62,7 @@ const metadataKey = 'metadata';
 const bannerIdKey = 'banner_id';
 const isSuspiciousKey = 'is_suspicious';
 const detectionTypeKey = 'detection_type';
+const leagueIdKey = 'league_id';
+const dailyQuizIdKey = 'daily_quiz_id';
+const playsTodayKey = 'plays_today';
+const playsRemainingKey = 'plays_remaining';

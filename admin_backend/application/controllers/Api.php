@@ -7596,6 +7596,542 @@ class Api extends REST_Controller
     }
 
     /**
+     * Fetch active/upcoming/past leagues for the authenticated user.
+     */
+    public function get_leagues_post()
+    {
+        try {
+            $is_user = $this->verify_token();
+            if ($is_user['error']) {
+                $this->response($is_user, REST_Controller::HTTP_OK);
+                return false;
+            }
+
+            $user_id = (int)$is_user['user_id'];
+            $timezone = $this->post('timezone') ? $this->post('timezone') : $this->systemTimezone;
+            $gmt_format = $this->post('gmt_format') ? $this->post('gmt_format') : $this->systemTimezoneGMT;
+            $language_id = ($this->post('language_id') && is_numeric($this->post('language_id'))) ? (int)$this->post('language_id') : 0;
+            $toDateTime = (new DateTime('now', new DateTimeZone($timezone)))->format('Y-m-d H:i:00');
+
+            $languageFilter = $language_id > 0 ? " AND l.language_id = $language_id" : '';
+
+            $activeQuery = "SELECT l.*,\n                (SELECT COUNT(*) FROM tbl_league_user lu WHERE lu.league_id = l.id AND lu.status IN ('opt-in','active')) AS participants,\n                (SELECT lu.status FROM tbl_league_user lu WHERE lu.league_id = l.id AND lu.user_id = $user_id LIMIT 1) AS user_status\n                FROM tbl_league l\n                WHERE l.status = 1 $languageFilter\n                AND CONVERT_TZ('" . $toDateTime . "', '+00:00', '" . $gmt_format . "')\n                    BETWEEN CONVERT_TZ(l.start_date, '+00:00', '" . $gmt_format . "')\n                    AND CONVERT_TZ(l.end_date, '+00:00', '" . $gmt_format . "')\n                ORDER BY l.start_date DESC";
+            $active = $this->db->query($activeQuery)->result_array();
+
+            $upcomingQuery = "SELECT l.*,\n                (SELECT COUNT(*) FROM tbl_league_user lu WHERE lu.league_id = l.id AND lu.status = 'opt-in') AS participants,\n                (SELECT lu.status FROM tbl_league_user lu WHERE lu.league_id = l.id AND lu.user_id = $user_id LIMIT 1) AS user_status\n                FROM tbl_league l\n                WHERE l.status = 1 $languageFilter\n                AND CONVERT_TZ('" . $toDateTime . "', '+00:00', '" . $gmt_format . "') < CONVERT_TZ(l.start_date, '+00:00', '" . $gmt_format . "')\n                ORDER BY l.start_date ASC";
+            $upcoming = $this->db->query($upcomingQuery)->result_array();
+
+            $pastQuery = "SELECT l.*,\n                (SELECT COUNT(*) FROM tbl_league_user lu WHERE lu.league_id = l.id AND lu.status IN ('opt-in','active')) AS participants,\n                (SELECT lu.status FROM tbl_league_user lu WHERE lu.league_id = l.id AND lu.user_id = $user_id LIMIT 1) AS user_status\n                FROM tbl_league l\n                INNER JOIN tbl_league_user lu_self ON lu_self.league_id = l.id AND lu_self.user_id = $user_id\n                WHERE l.status = 1 $languageFilter\n                AND CONVERT_TZ('" . $toDateTime . "', '+00:00', '" . $gmt_format . "') > CONVERT_TZ(l.end_date, '+00:00', '" . $gmt_format . "')\n                ORDER BY l.end_date DESC";
+            $past = $this->db->query($pastQuery)->result_array();
+
+            foreach ($active as &$row) {
+                $row['start_date'] = date('d-M H:i', strtotime($row['start_date']));
+                $row['end_date'] = date('d-M H:i', strtotime($row['end_date']));
+            }
+            foreach ($upcoming as &$row) {
+                $row['start_date'] = date('d-M H:i', strtotime($row['start_date']));
+                $row['end_date'] = date('d-M H:i', strtotime($row['end_date']));
+            }
+            foreach ($past as &$row) {
+                $row['start_date'] = date('d-M', strtotime($row['start_date']));
+                $row['end_date'] = date('d-M', strtotime($row['end_date']));
+            }
+
+            $response['active_leagues'] = [
+                'error' => empty($active),
+                'message' => empty($active) ? 'No active leagues found' : 'Active leagues fetched',
+                'data' => $active
+            ];
+            $response['upcoming_leagues'] = [
+                'error' => empty($upcoming),
+                'message' => empty($upcoming) ? 'No upcoming leagues found' : 'Upcoming leagues fetched',
+                'data' => $upcoming
+            ];
+            $response['past_leagues'] = [
+                'error' => empty($past),
+                'message' => empty($past) ? 'No past leagues found' : 'Past leagues fetched',
+                'data' => $past
+            ];
+        } catch (Exception $e) {
+            $response['active_leagues'] = ['error' => true, 'message' => 'Failed to fetch active leagues', 'data' => []];
+            $response['upcoming_leagues'] = ['error' => true, 'message' => 'Failed to fetch upcoming leagues', 'data' => []];
+            $response['past_leagues'] = ['error' => true, 'message' => 'Failed to fetch past leagues', 'data' => []];
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    /**
+     * Free opt-in to an upcoming league. Coins are charged later at league start.
+     */
+    public function opt_in_league_post()
+    {
+        try {
+            $is_user = $this->verify_token();
+            if ($is_user['error']) {
+                $this->response($is_user, REST_Controller::HTTP_OK);
+                return false;
+            }
+
+            $user_id = (int)$is_user['user_id'];
+            $league_id = $this->post('league_id') && is_numeric($this->post('league_id')) ? (int)$this->post('league_id') : 0;
+            $device_token = $this->post('device_token') ? trim($this->post('device_token')) : null;
+
+            if ($league_id <= 0) {
+                $response['error'] = true;
+                $response['message'] = 'League id is required';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            $league = $this->db->where('id', $league_id)->where('status', 1)->get('tbl_league')->row_array();
+            if (empty($league)) {
+                $response['error'] = true;
+                $response['message'] = 'League not found';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            $now = date('Y-m-d H:i:s');
+            if (strtotime($league['start_date']) <= strtotime($now)) {
+                $response['error'] = true;
+                $response['message'] = 'League already started. Join directly from live leagues.';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            $existing = $this->db->where('league_id', $league_id)->where('user_id', $user_id)->get('tbl_league_user')->row_array();
+            if (!empty($existing)) {
+                $response['error'] = false;
+                $response['message'] = 'Already opted in';
+                $response['data'] = [
+                    'league_id' => $league_id,
+                    'status' => $existing['status']
+                ];
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            $insert = [
+                'league_id' => $league_id,
+                'user_id' => $user_id,
+                'status' => 'opt-in',
+                'opted_in_at' => $now,
+                'device_token' => $device_token,
+                'notifications_enabled' => 1,
+                'date_created' => $now,
+            ];
+
+            $this->db->insert('tbl_league_user', $insert);
+
+            $response['error'] = false;
+            $response['message'] = 'Opt-in successful';
+            $response['data'] = [
+                'league_id' => $league_id,
+                'status' => 'opt-in'
+            ];
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = 'Failed to opt in league';
+            $response['error_msg'] = $e->getMessage();
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    /**
+     * Join a live league (deduct coins once) and activate user participation.
+     */
+    public function join_league_post()
+    {
+        try {
+            $is_user = $this->verify_token();
+            if ($is_user['error']) {
+                $this->response($is_user, REST_Controller::HTTP_OK);
+                return false;
+            }
+
+            $user_id = (int)$is_user['user_id'];
+            $league_id = $this->post('league_id') && is_numeric($this->post('league_id')) ? (int)$this->post('league_id') : 0;
+
+            if ($league_id <= 0) {
+                $response['error'] = true;
+                $response['message'] = 'League id is required';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            $league = $this->db->where('id', $league_id)->where('status', 1)->get('tbl_league')->row_array();
+            if (empty($league)) {
+                $response['error'] = true;
+                $response['message'] = 'League not found';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            $existing = $this->db->where('league_id', $league_id)->where('user_id', $user_id)->get('tbl_league_user')->row_array();
+            if (!empty($existing) && $existing['status'] === 'active') {
+                $response['error'] = false;
+                $response['message'] = 'Already joined';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            $user = $this->db->where('id', $user_id)->get('tbl_users')->row_array();
+            $available_coins = isset($user['coins']) ? (int)$user['coins'] : 0;
+            $entry = (int)$league['entry'];
+
+            if ($available_coins < $entry) {
+                $response['error'] = true;
+                $response['message'] = 'Insufficient coins';
+                $response['data'] = [
+                    'required' => $entry,
+                    'available' => $available_coins,
+                ];
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            $this->db->trans_start();
+
+            $updatedCoins = $available_coins - $entry;
+            $this->db->where('id', $user_id)->update('tbl_users', ['coins' => $updatedCoins]);
+
+            $now = date('Y-m-d H:i:s');
+            if (!empty($existing)) {
+                $this->db->where('league_id', $league_id)->where('user_id', $user_id)->update('tbl_league_user', [
+                    'status' => 'active',
+                    'joined_at' => $now,
+                    'coins_paid' => $entry,
+                ]);
+            } else {
+                $this->db->insert('tbl_league_user', [
+                    'league_id' => $league_id,
+                    'user_id' => $user_id,
+                    'status' => 'active',
+                    'opted_in_at' => null,
+                    'joined_at' => $now,
+                    'coins_paid' => $entry,
+                    'notifications_enabled' => 1,
+                    'date_created' => $now,
+                ]);
+            }
+
+            $lb = $this->db->where('league_id', $league_id)->where('user_id', $user_id)->get('tbl_league_leaderboard')->row_array();
+            if (empty($lb)) {
+                $this->db->insert('tbl_league_leaderboard', [
+                    'league_id' => $league_id,
+                    'user_id' => $user_id,
+                    'cumulative_best_score' => 0,
+                    'games_played' => 0,
+                    'date_created' => $now,
+                ]);
+            }
+
+            $this->db->trans_complete();
+
+            if ($this->db->trans_status() === false) {
+                $response['error'] = true;
+                $response['message'] = 'Failed to join league';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            $response['error'] = false;
+            $response['message'] = 'League joined successfully';
+            $response['data'] = [
+                'league_id' => $league_id,
+                'coins_deducted' => $entry,
+                'coins_remaining' => $updatedCoins,
+            ];
+        } catch (Exception $e) {
+            $this->db->trans_rollback();
+            $response['error'] = true;
+            $response['message'] = 'Failed to join league';
+            $response['error_msg'] = $e->getMessage();
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    /**
+     * Fetch current day quiz for a joined league.
+     */
+    public function get_league_daily_quiz_post()
+    {
+        try {
+            $is_user = $this->verify_token();
+            if ($is_user['error']) {
+                $this->response($is_user, REST_Controller::HTTP_OK);
+                return false;
+            }
+
+            $user_id = (int)$is_user['user_id'];
+            $league_id = $this->post('league_id') && is_numeric($this->post('league_id')) ? (int)$this->post('league_id') : 0;
+
+            if ($league_id <= 0) {
+                $response['error'] = true;
+                $response['message'] = 'League id is required';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            $leagueUser = $this->db->where('league_id', $league_id)->where('user_id', $user_id)->where('status', 'active')->get('tbl_league_user')->row_array();
+            if (empty($leagueUser)) {
+                $response['error'] = true;
+                $response['message'] = 'User is not active in this league';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            $league = $this->db->where('id', $league_id)->where('status', 1)->get('tbl_league')->row_array();
+            if (empty($league)) {
+                $response['error'] = true;
+                $response['message'] = 'League not found';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            $today = date('Y-m-d');
+            $start = date('Y-m-d', strtotime($league['start_date']));
+            $dayDiff = floor((strtotime($today) - strtotime($start)) / 86400);
+            $quizDay = (int)$dayDiff + 1;
+            if ($quizDay < 1) {
+                $response['error'] = true;
+                $response['message'] = 'League has not started yet';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            $dailyQuiz = $this->db->where('league_id', $league_id)->where('quiz_day', $quizDay)->get('tbl_league_daily_quiz')->row_array();
+            if (empty($dailyQuiz)) {
+                $response['error'] = true;
+                $response['message'] = 'Daily quiz not configured for today';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            $playsToday = $this->db->where('league_id', $league_id)->where('user_id', $user_id)->where('quiz_day', $quizDay)->get('tbl_league_submission')->num_rows();
+            $playsRemaining = max(0, 5 - $playsToday);
+
+            if ($playsRemaining <= 0) {
+                $response['error'] = true;
+                $response['message'] = 'Daily play limit reached';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            $questionQuery = "SELECT q.* FROM tbl_league_daily_quiz_questions lq\n                INNER JOIN tbl_contest_question q ON q.id = lq.question_id\n                WHERE lq.daily_quiz_id = " . (int)$dailyQuiz['id'] . "\n                ORDER BY lq.question_order ASC";
+            $questions = $this->db->query($questionQuery)->result_array();
+
+            $adAlreadyShown = $this->db->where('league_id', $league_id)
+                ->where('user_id', $user_id)
+                ->where('quiz_day', $quizDay)
+                ->where('ad_shown', 1)
+                ->get('tbl_league_submission')
+                ->num_rows() > 0;
+
+            $response['error'] = false;
+            $response['message'] = 'Daily quiz fetched';
+            $response['data'] = [
+                'league_id' => $league_id,
+                'league_day' => $quizDay,
+                'daily_quiz_id' => (int)$dailyQuiz['id'],
+                'plays_today' => $playsToday,
+                'plays_remaining' => $playsRemaining,
+                'show_ad' => !$adAlreadyShown,
+                'questions' => $questions,
+            ];
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = 'Failed to fetch daily quiz';
+            $response['error_msg'] = $e->getMessage();
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    /**
+     * Submit league quiz score and update cumulative leaderboard.
+     */
+    public function submit_league_quiz_post()
+    {
+        try {
+            $is_user = $this->verify_token();
+            if ($is_user['error']) {
+                $this->response($is_user, REST_Controller::HTTP_OK);
+                return false;
+            }
+
+            $user_id = (int)$is_user['user_id'];
+            $league_id = $this->post('league_id') && is_numeric($this->post('league_id')) ? (int)$this->post('league_id') : 0;
+            $daily_quiz_id = $this->post('daily_quiz_id') && is_numeric($this->post('daily_quiz_id')) ? (int)$this->post('daily_quiz_id') : 0;
+            $correct_answers = $this->post('correct_answers') && is_numeric($this->post('correct_answers')) ? (int)$this->post('correct_answers') : 0;
+            $total_questions = $this->post('total_questions') && is_numeric($this->post('total_questions')) ? (int)$this->post('total_questions') : 0;
+            $ad_shown = $this->post('ad_shown') && is_numeric($this->post('ad_shown')) ? (int)$this->post('ad_shown') : 0;
+
+            if ($league_id <= 0 || $daily_quiz_id <= 0 || $total_questions <= 0) {
+                $response['error'] = true;
+                $response['message'] = 'Required parameters are missing';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            $dailyQuiz = $this->db->where('id', $daily_quiz_id)->where('league_id', $league_id)->get('tbl_league_daily_quiz')->row_array();
+            if (empty($dailyQuiz)) {
+                $response['error'] = true;
+                $response['message'] = 'Invalid daily quiz';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            $quizDay = (int)$dailyQuiz['quiz_day'];
+            $playsToday = $this->db->where('league_id', $league_id)->where('user_id', $user_id)->where('quiz_day', $quizDay)->get('tbl_league_submission')->num_rows();
+            if ($playsToday >= 5) {
+                $response['error'] = true;
+                $response['message'] = 'Daily play limit reached';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            $wrong_answers = max(0, $total_questions - $correct_answers);
+            $score = ($correct_answers * 8) - ($wrong_answers * 8);
+            $todayDate = date('Y-m-d');
+            $now = date('Y-m-d H:i:s');
+
+            $this->db->trans_start();
+
+            $this->db->insert('tbl_league_submission', [
+                'league_id' => $league_id,
+                'user_id' => $user_id,
+                'daily_quiz_id' => $daily_quiz_id,
+                'quiz_day' => $quizDay,
+                'score' => $score,
+                'correct_answers' => $correct_answers,
+                'wrong_answers' => $wrong_answers,
+                'total_questions' => $total_questions,
+                'ad_shown' => $ad_shown > 0 ? 1 : 0,
+                'submission_date' => $todayDate,
+                'submitted_at' => $now,
+                'date_created' => $now,
+            ]);
+
+            $dailyBestRows = $this->db->query("SELECT quiz_day, MAX(score) as best_score FROM tbl_league_submission WHERE league_id = $league_id AND user_id = $user_id GROUP BY quiz_day")->result_array();
+            $cumulative = 0;
+            $dailyBest = [];
+            foreach ($dailyBestRows as $row) {
+                $best = (float)$row['best_score'];
+                $day = (int)$row['quiz_day'];
+                $cumulative += $best;
+                $dailyBest[] = ['day' => $day, 'score' => $best];
+            }
+
+            $gamesPlayed = count($dailyBest);
+            $lb = $this->db->where('league_id', $league_id)->where('user_id', $user_id)->get('tbl_league_leaderboard')->row_array();
+            if (empty($lb)) {
+                $this->db->insert('tbl_league_leaderboard', [
+                    'league_id' => $league_id,
+                    'user_id' => $user_id,
+                    'cumulative_best_score' => $cumulative,
+                    'daily_best_scores' => json_encode($dailyBest),
+                    'games_played' => $gamesPlayed,
+                    'last_updated' => $now,
+                    'date_created' => $now,
+                ]);
+            } else {
+                $this->db->where('league_id', $league_id)->where('user_id', $user_id)->update('tbl_league_leaderboard', [
+                    'cumulative_best_score' => $cumulative,
+                    'daily_best_scores' => json_encode($dailyBest),
+                    'games_played' => $gamesPlayed,
+                    'last_updated' => $now,
+                ]);
+            }
+
+            $rankQuery = "SELECT rank FROM (SELECT user_id, ROW_NUMBER() OVER (ORDER BY cumulative_best_score DESC, last_updated ASC) AS rank FROM tbl_league_leaderboard WHERE league_id = $league_id) t WHERE t.user_id = $user_id";
+            $rankRow = $this->db->query($rankQuery)->row_array();
+            $userRank = !empty($rankRow) ? (int)$rankRow['rank'] : 0;
+
+            $this->db->trans_complete();
+            if ($this->db->trans_status() === false) {
+                $response['error'] = true;
+                $response['message'] = 'Failed to submit league quiz';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            $response['error'] = false;
+            $response['message'] = 'League quiz submitted';
+            $response['data'] = [
+                'score' => $score,
+                'correct_answers' => $correct_answers,
+                'wrong_answers' => $wrong_answers,
+                'cumulative_score' => $cumulative,
+                'user_rank' => $userRank,
+                'games_played' => $gamesPlayed,
+                'plays_remaining' => max(0, 5 - ($playsToday + 1)),
+            ];
+        } catch (Exception $e) {
+            $this->db->trans_rollback();
+            $response['error'] = true;
+            $response['message'] = 'Failed to submit league quiz';
+            $response['error_msg'] = $e->getMessage();
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    /**
+     * Fetch paginated league leaderboard with top-3 summary.
+     */
+    public function get_league_leaderboard_post()
+    {
+        try {
+            $is_user = $this->verify_token();
+            if ($is_user['error']) {
+                $this->response($is_user, REST_Controller::HTTP_OK);
+                return false;
+            }
+
+            $user_id = (int)$is_user['user_id'];
+            $league_id = $this->post('league_id') && is_numeric($this->post('league_id')) ? (int)$this->post('league_id') : 0;
+            $limit = $this->post('limit') && is_numeric($this->post('limit')) ? (int)$this->post('limit') : 15;
+            $offset = $this->post('offset') && is_numeric($this->post('offset')) ? (int)$this->post('offset') : 0;
+
+            if ($league_id <= 0) {
+                $response['error'] = true;
+                $response['message'] = 'League id is required';
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
+            }
+
+            $baseSelect = "SELECT ll.user_id, ll.cumulative_best_score as score, ll.last_updated, u.name, u.profile,\n                ROW_NUMBER() OVER (ORDER BY ll.cumulative_best_score DESC, ll.last_updated ASC) AS user_rank\n                FROM tbl_league_leaderboard ll\n                INNER JOIN tbl_users u ON u.id = ll.user_id\n                WHERE ll.league_id = $league_id";
+
+            $topThree = $this->db->query("SELECT * FROM (" . $baseSelect . ") x ORDER BY x.user_rank ASC LIMIT 3")->result_array();
+            $rows = $this->db->query("SELECT * FROM (" . $baseSelect . ") x ORDER BY x.user_rank ASC LIMIT $offset, $limit")->result_array();
+            $totalRow = $this->db->query("SELECT COUNT(*) as total FROM tbl_league_leaderboard WHERE league_id = $league_id")->row_array();
+            $total = !empty($totalRow) ? (int)$totalRow['total'] : 0;
+
+            $userRank = $this->db->query("SELECT user_rank, score FROM (" . $baseSelect . ") x WHERE x.user_id = $user_id LIMIT 1")->row_array();
+
+            $response['error'] = false;
+            $response['message'] = 'League leaderboard fetched';
+            $response['data'] = [
+                'top_three' => $topThree,
+                'leaderboard' => $rows,
+                'user_rank' => !empty($userRank) ? (int)$userRank['user_rank'] : null,
+                'user_score' => !empty($userRank) ? (float)$userRank['score'] : 0,
+                'total' => $total,
+            ];
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = 'Failed to fetch league leaderboard';
+            $response['error_msg'] = $e->getMessage();
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    /**
      * GET /api/blog/posts
      * Get all blog posts with pagination and filters
      */

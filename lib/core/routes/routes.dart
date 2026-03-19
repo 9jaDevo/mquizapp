@@ -34,6 +34,10 @@ import 'package:flutterquiz/ui/screens/contest_rules_screen.dart';
 import 'package:flutterquiz/ui/screens/quiz/fun_and_learn_screen.dart';
 import 'package:flutterquiz/ui/screens/quiz/fun_and_learn_title_screen.dart';
 import 'package:flutterquiz/ui/screens/quiz/guess_the_word_quiz_screen.dart';
+import 'package:flutterquiz/ui/screens/quiz/league_daily_quiz_screen.dart';
+import 'package:flutterquiz/ui/screens/quiz/league_details_screen.dart';
+import 'package:flutterquiz/ui/screens/quiz/league_leaderboard_screen.dart';
+import 'package:flutterquiz/ui/screens/quiz/league_screen.dart';
 import 'package:flutterquiz/ui/screens/quiz/levels_screen.dart';
 import 'package:flutterquiz/ui/screens/quiz/multi_match/screens/multi_match_quiz_screen.dart';
 import 'package:flutterquiz/ui/screens/quiz/multi_match/screens/multi_match_result_screen.dart';
@@ -92,6 +96,10 @@ class Routes {
   static const multiUserBattleRoomQuizResult = '/multiUserBattleRoomQuizResult';
 
   static const contest = '/contest';
+  static const league = '/league';
+  static const leagueDetails = '/leagueDetails';
+  static const leagueDailyQuiz = '/leagueDailyQuiz';
+  static const leagueLeaderboard = '/leagueLeaderboard';
   static const contestLeaderboard = '/contestLeaderboard';
   static const contestRules = '/contestRules';
   static const funAndLearnTitle = '/funAndLearnTitle';
@@ -186,6 +194,14 @@ class Routes {
         return MultiUserBattleRoomQuizScreen.route(rs);
       case contest:
         return ContestScreen.route(rs);
+      case league:
+        return LeagueScreen.route(rs);
+      case leagueDetails:
+        return LeagueDetailsScreen.route(rs);
+      case leagueDailyQuiz:
+        return LeagueDailyQuizScreen.route(rs);
+      case leagueLeaderboard:
+        return LeagueLeaderboardScreen.route(rs);
       case contestRules:
         return ContestRulesScreen.route();
       case guessTheWord:

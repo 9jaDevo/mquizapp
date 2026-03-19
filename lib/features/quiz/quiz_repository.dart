@@ -2,6 +2,8 @@ import 'package:flutterquiz/features/quiz/models/category.dart';
 import 'package:flutterquiz/features/quiz/models/comprehension.dart';
 import 'package:flutterquiz/features/quiz/models/contest.dart';
 import 'package:flutterquiz/features/quiz/models/contest_leaderboard.dart';
+import 'package:flutterquiz/features/quiz/models/league.dart';
+import 'package:flutterquiz/features/quiz/models/league_leaderboard.dart';
 import 'package:flutterquiz/features/quiz/models/guess_the_word_question.dart';
 import 'package:flutterquiz/features/quiz/models/leaderboard_monthly.dart';
 import 'package:flutterquiz/features/quiz/models/question.dart';
@@ -169,6 +171,53 @@ final class QuizRepository {
     return Contests.fromJson(result);
   }
 
+  Future<Leagues> getLeagues({
+    required String languageId,
+    required String timezone,
+    required String gmt,
+  }) async {
+    final result = await _quizRemoteDataSource.getLeagues(
+      languageId: languageId,
+      timezone: timezone,
+      gmt: gmt,
+    );
+    return Leagues.fromJson(result);
+  }
+
+  Future<Map<String, dynamic>> optInLeague({
+    required String leagueId,
+    String? deviceToken,
+  }) {
+    return _quizRemoteDataSource.optInLeague(
+      leagueId: leagueId,
+      deviceToken: deviceToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> joinLeague({required String leagueId}) {
+    return _quizRemoteDataSource.joinLeague(leagueId: leagueId);
+  }
+
+  Future<Map<String, dynamic>> getLeagueDailyQuiz({required String leagueId}) {
+    return _quizRemoteDataSource.getLeagueDailyQuiz(leagueId: leagueId);
+  }
+
+  Future<Map<String, dynamic>> submitLeagueQuiz({
+    required String leagueId,
+    required String dailyQuizId,
+    required int correctAnswers,
+    required int totalQuestions,
+    required bool adShown,
+  }) {
+    return _quizRemoteDataSource.submitLeagueQuiz(
+      leagueId: leagueId,
+      dailyQuizId: dailyQuizId,
+      correctAnswers: correctAnswers,
+      totalQuestions: totalQuestions,
+      adShown: adShown,
+    );
+  }
+
   Future<({int total, List<ContestLeaderboard> otherUsersRanks})>
   getContestLeaderboard(
     String contestId, {
@@ -187,6 +236,28 @@ final class QuizRepository {
       otherUsersRanks: otherUsersRanks
           .map(ContestLeaderboard.fromJson)
           .toList(),
+    );
+  }
+
+  Future<LeagueLeaderboardResult> getLeagueLeaderboard({
+    required String leagueId,
+    required int limit,
+    int? offset,
+  }) async {
+    final result = await _quizRemoteDataSource.getLeagueLeaderboard(
+      leagueId: leagueId,
+      limit: limit,
+      offset: offset,
+    );
+
+    return LeagueLeaderboardResult(
+      total: result.total,
+      rows: result.rows.map(LeagueLeaderboardEntry.fromJson).toList(),
+      topThree: result.topThree
+          .map(LeagueLeaderboardEntry.fromJson)
+          .toList(),
+      myRank: result.myRank,
+      myScore: result.myScore,
     );
   }
 

@@ -960,6 +960,19 @@ class HomeScreenState extends State<HomeScreen>
               ),
               const Spacer(),
               GestureDetector(
+                onTap: () => Navigator.of(context).pushNamed(Routes.league),
+                child: Text(
+                  'Leagues',
+                  textAlign: TextAlign.end,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeights.semiBold,
+                    color: context.primaryTextColor.withValues(alpha: 0.5),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              GestureDetector(
                 onTap: onTapViewAll,
                 child: Text(
                   context.tr(viewAllKey) ?? viewAllKey,

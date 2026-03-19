@@ -27,30 +27,30 @@ Use this file as the phase gate tracker. Do not start the next phase until all i
 
 ## Phase 2: Backend APIs
 
-- [ ] League list/details endpoints implemented
-- [ ] Opt-in/join flows implemented
-- [ ] Daily quiz retrieval and daily limit rule implemented
-- [ ] Submission and leaderboard logic implemented
+- [x] League list/details endpoints implemented
+- [x] Opt-in/join flows implemented
+- [x] Daily quiz retrieval and daily limit rule implemented
+- [x] Submission and leaderboard logic implemented
 - [ ] Endpoint tests completed
 
 ## Phase 3: Flutter Frontend
 
-- [ ] League models implemented
-- [ ] League cubits and states implemented
-- [ ] League screens implemented
-- [ ] Navigation integrated with quiz hub
+- [x] League models implemented
+- [x] League cubits and states implemented
+- [x] League screens implemented
+- [x] Navigation integrated with quiz hub
 - [ ] Device/emulator flow test completed
 
 ## Phase 4: Admin Backend
 
-- [ ] League CRUD/admin pages implemented
-- [ ] Daily quiz assignment workflow implemented
-- [ ] Admin validation/permissions verified
+- [x] League CRUD/admin pages implemented
+- [x] Daily quiz assignment workflow implemented
+- [x] Admin validation/permissions verified
 - [ ] Admin smoke tests completed
 
 ## Phase 5: Prize Distribution
 
-- [ ] Prize setup table/logic finalized
+- [x] Prize setup table/logic finalized
 - [ ] Duplicate payout protection verified
 - [ ] Payout run tested and logged
 

@@ -506,6 +506,140 @@ final class QuizRemoteDataSource {
     }
   }
 
+  Future<Map<String, dynamic>> getLeagues({
+    required String languageId,
+    required String timezone,
+    required String gmt,
+  }) async {
+    try {
+      final body = {
+        languageIdKey: languageId,
+        timezoneKey: timezone,
+        gmtFormatKey: gmt,
+      };
+
+      final response = await http.post(
+        Uri.parse(getLeaguesUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
+
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } on SocketException {
+      throw const ApiException(errorCodeNoInternet);
+    } on Exception {
+      throw const ApiException(errorCodeDefaultMessage);
+    }
+  }
+
+  Future<Map<String, dynamic>> optInLeague({
+    required String leagueId,
+    String? deviceToken,
+  }) async {
+    try {
+      final body = {
+        leagueIdKey: leagueId,
+        if (deviceToken != null && deviceToken.isNotEmpty)
+          'device_token': deviceToken,
+      };
+
+      final response = await http.post(
+        Uri.parse(optInLeagueUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
+      if (responseJson['error'] as bool? ?? false) {
+        throw ApiException(responseJson['message'].toString());
+      }
+      return responseJson;
+    } on SocketException {
+      throw const ApiException(errorCodeNoInternet);
+    } on ApiException {
+      rethrow;
+    } on Exception {
+      throw const ApiException(errorCodeDefaultMessage);
+    }
+  }
+
+  Future<Map<String, dynamic>> joinLeague({required String leagueId}) async {
+    try {
+      final response = await http.post(
+        Uri.parse(joinLeagueUrl),
+        body: {leagueIdKey: leagueId},
+        headers: await ApiUtils.getHeaders(),
+      );
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
+      if (responseJson['error'] as bool? ?? false) {
+        throw ApiException(responseJson['message'].toString());
+      }
+      return responseJson;
+    } on SocketException {
+      throw const ApiException(errorCodeNoInternet);
+    } on ApiException {
+      rethrow;
+    } on Exception {
+      throw const ApiException(errorCodeDefaultMessage);
+    }
+  }
+
+  Future<Map<String, dynamic>> getLeagueDailyQuiz({
+    required String leagueId,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse(getLeagueDailyQuizUrl),
+        body: {leagueIdKey: leagueId},
+        headers: await ApiUtils.getHeaders(),
+      );
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
+      if (responseJson['error'] as bool? ?? false) {
+        throw ApiException(responseJson['message'].toString());
+      }
+      return responseJson;
+    } on SocketException {
+      throw const ApiException(errorCodeNoInternet);
+    } on ApiException {
+      rethrow;
+    } on Exception {
+      throw const ApiException(errorCodeDefaultMessage);
+    }
+  }
+
+  Future<Map<String, dynamic>> submitLeagueQuiz({
+    required String leagueId,
+    required String dailyQuizId,
+    required int correctAnswers,
+    required int totalQuestions,
+    required bool adShown,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse(submitLeagueQuizUrl),
+        body: {
+          leagueIdKey: leagueId,
+          dailyQuizIdKey: dailyQuizId,
+          correctAnswersKey: correctAnswers.toString(),
+          questionAttendedKey: totalQuestions.toString(),
+          'ad_shown': adShown ? '1' : '0',
+          'total_questions': totalQuestions.toString(),
+        },
+        headers: await ApiUtils.getHeaders(),
+      );
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
+      if (responseJson['error'] as bool? ?? false) {
+        throw ApiException(responseJson['message'].toString());
+      }
+      return responseJson;
+    } on SocketException {
+      throw const ApiException(errorCodeNoInternet);
+    } on ApiException {
+      rethrow;
+    } on Exception {
+      throw const ApiException(errorCodeDefaultMessage);
+    }
+  }
+
   Future<({int total, List<Map<String, dynamic>> otherUsersRanks})>
   getContestLeaderboard({
     required String contestId,
@@ -542,6 +676,53 @@ final class QuizRemoteDataSource {
         total: total,
         otherUsersRanks: (responseJson['data'] as List? ?? [])
             .cast<Map<String, dynamic>>(),
+      );
+    } on SocketException {
+      throw const ApiException(errorCodeNoInternet);
+    } on ApiException {
+      rethrow;
+    } on Exception {
+      throw const ApiException(errorCodeDefaultMessage);
+    }
+  }
+
+  Future<
+      ({
+        int total,
+        List<Map<String, dynamic>> rows,
+        List<Map<String, dynamic>> topThree,
+        String? myRank,
+        String? myScore,
+      })> getLeagueLeaderboard({
+    required String leagueId,
+    required int limit,
+    int? offset,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse(getLeagueLeaderboardUrl),
+        body: {
+          leagueIdKey: leagueId,
+          limitKey: limit.toString(),
+          if (offset != null) offsetKey: offset.toString(),
+        },
+        headers: await ApiUtils.getHeaders(),
+      );
+
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
+      if (responseJson['error'] as bool? ?? false) {
+        throw ApiException(responseJson['message'].toString());
+      }
+
+      final data = responseJson['data'] as Map<String, dynamic>? ?? {};
+      return (
+        total: int.parse(data['total']?.toString() ?? '0'),
+        rows: (data['leaderboard'] as List? ?? <dynamic>[])
+            .cast<Map<String, dynamic>>(),
+        topThree: (data['top_three'] as List? ?? <dynamic>[])
+            .cast<Map<String, dynamic>>(),
+        myRank: data['user_rank']?.toString(),
+        myScore: data['user_score']?.toString(),
       );
     } on SocketException {
       throw const ApiException(errorCodeNoInternet);
