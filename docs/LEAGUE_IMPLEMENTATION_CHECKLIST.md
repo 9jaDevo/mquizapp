@@ -68,8 +68,8 @@ Note: Runtime verification is blocked in local env due to PHP runtime mismatch (
 
 ## Phase 7: Ads Integration
 
-- [ ] AdMob interstitial integrated for first daily play
-- [ ] One-ad-per-day enforcement verified
+- [x] AdMob interstitial integrated for first daily play
+- [ ] Max-two-ads-per-day enforcement verified (pre-play + post-submit)
 - [ ] Analytics/impression logging verified
 - [ ] UX regression checks passed
 
