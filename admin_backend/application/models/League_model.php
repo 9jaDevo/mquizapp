@@ -81,6 +81,252 @@ class League_model extends CI_Model
         $quiz_date = $this->input->post('quiz_date');
         $question_ids = $this->input->post('question_ids');
 
+        return $this->upsert_daily_quiz_assignment($league_id, $quiz_day, $quiz_date, $question_ids);
+    }
+
+    public function add_daily_quiz_auto($payload)
+    {
+        $league_id = (int)($payload['league_id'] ?? 0);
+        $quiz_day = (int)($payload['quiz_day'] ?? 0);
+        $quiz_date = $payload['quiz_date'] ?? '';
+        $question_count = (int)($payload['question_count'] ?? 20);
+        $category_id = (int)($payload['category_id'] ?? 0);
+        $subcategory_id = (int)($payload['subcategory_id'] ?? 0);
+
+        $easy_percent = max(0, (int)($payload['easy_percent'] ?? 30));
+        $medium_percent = max(0, (int)($payload['medium_percent'] ?? 50));
+        $hard_percent = max(0, (int)($payload['hard_percent'] ?? 20));
+
+        if ($league_id <= 0 || $quiz_day <= 0 || empty($quiz_date) || $category_id <= 0 || $question_count <= 0) {
+            return [
+                'success' => false,
+                'message' => 'Invalid automation inputs.',
+                'assigned_count' => 0,
+                'used_fallback' => false,
+            ];
+        }
+
+        $total_percent = $easy_percent + $medium_percent + $hard_percent;
+        if ($total_percent <= 0) {
+            $easy_percent = 30;
+            $medium_percent = 50;
+            $hard_percent = 20;
+            $total_percent = 100;
+        }
+
+        $league = $this->db->where('id', $league_id)->get('tbl_league')->row_array();
+        if (empty($league)) {
+            return [
+                'success' => false,
+                'message' => 'League not found.',
+                'assigned_count' => 0,
+                'used_fallback' => false,
+            ];
+        }
+
+        $language_id = (int)($league['language_id'] ?? 0);
+
+        $targetEasy = (int)round(($question_count * $easy_percent) / $total_percent);
+        $targetMedium = (int)round(($question_count * $medium_percent) / $total_percent);
+        $targetHard = $question_count - ($targetEasy + $targetMedium);
+
+        $selectedQuestionIds = [];
+        $usedFallback = false;
+
+        $levelTargets = [
+            1 => max(0, $targetEasy),
+            2 => max(0, $targetMedium),
+            3 => max(0, $targetHard),
+        ];
+
+        foreach ($levelTargets as $level => $targetCount) {
+            if ($targetCount <= 0) {
+                continue;
+            }
+
+            $rows = $this->fetch_question_pool([
+                'category_id' => $category_id,
+                'subcategory_id' => $subcategory_id,
+                'language_id' => $language_id,
+                'level' => $level,
+                'limit' => $targetCount,
+                'exclude_ids' => $selectedQuestionIds,
+            ]);
+
+            foreach ($rows as $row) {
+                $selectedQuestionIds[] = (int)$row['id'];
+            }
+
+            if (count($rows) < $targetCount && $subcategory_id > 0) {
+                $usedFallback = true;
+                $remaining = $targetCount - count($rows);
+                $fallbackRows = $this->fetch_question_pool([
+                    'category_id' => $category_id,
+                    'subcategory_id' => 0,
+                    'language_id' => $language_id,
+                    'level' => $level,
+                    'limit' => $remaining,
+                    'exclude_ids' => $selectedQuestionIds,
+                ]);
+                foreach ($fallbackRows as $row) {
+                    $selectedQuestionIds[] = (int)$row['id'];
+                }
+            }
+        }
+
+        if (count($selectedQuestionIds) < $question_count) {
+            $usedFallback = true;
+            $remaining = $question_count - count($selectedQuestionIds);
+            $fillRows = $this->fetch_question_pool([
+                'category_id' => $category_id,
+                'subcategory_id' => 0,
+                'language_id' => $language_id,
+                'level' => null,
+                'limit' => $remaining,
+                'exclude_ids' => $selectedQuestionIds,
+            ]);
+            foreach ($fillRows as $row) {
+                $selectedQuestionIds[] = (int)$row['id'];
+            }
+        }
+
+        if (count($selectedQuestionIds) < $question_count && $language_id > 0) {
+            $usedFallback = true;
+            $remaining = $question_count - count($selectedQuestionIds);
+            $languageRelaxRows = $this->fetch_question_pool([
+                'category_id' => $category_id,
+                'subcategory_id' => 0,
+                'language_id' => 0,
+                'level' => null,
+                'limit' => $remaining,
+                'exclude_ids' => $selectedQuestionIds,
+            ]);
+            foreach ($languageRelaxRows as $row) {
+                $selectedQuestionIds[] = (int)$row['id'];
+            }
+        }
+
+        if (empty($selectedQuestionIds)) {
+            return [
+                'success' => false,
+                'message' => 'No questions found for selected automation rules.',
+                'assigned_count' => 0,
+                'used_fallback' => $usedFallback,
+            ];
+        }
+
+        shuffle($selectedQuestionIds);
+        $selectedQuestionIds = array_slice($selectedQuestionIds, 0, $question_count);
+
+        $contestQuestionIds = [];
+        foreach ($selectedQuestionIds as $sourceQuestionId) {
+            $contestQuestionId = $this->materialize_to_contest_question((int)$sourceQuestionId);
+            if ($contestQuestionId > 0) {
+                $contestQuestionIds[] = $contestQuestionId;
+            }
+        }
+
+        if (empty($contestQuestionIds)) {
+            return [
+                'success' => false,
+                'message' => 'Failed to prepare contest question set for league assignment.',
+                'assigned_count' => 0,
+                'used_fallback' => $usedFallback,
+            ];
+        }
+
+        $this->upsert_daily_quiz_assignment($league_id, $quiz_day, $quiz_date, $contestQuestionIds);
+
+        return [
+            'success' => true,
+            'message' => 'Auto assignment completed.',
+            'assigned_count' => count($contestQuestionIds),
+            'used_fallback' => $usedFallback,
+        ];
+    }
+
+    public function get_auto_assignment_categories()
+    {
+        $rows = $this->db->select('id, category_name, type, row_order')
+            ->where('type', 'quiz-zone')
+            ->order_by('row_order', 'ASC')
+            ->get('tbl_category')
+            ->result();
+
+        if (!empty($rows)) {
+            return $rows;
+        }
+
+        return $this->db->select('id, category_name, type, row_order')
+            ->order_by('row_order', 'ASC')
+            ->get('tbl_category')
+            ->result();
+    }
+
+    public function get_auto_assignment_subcategories()
+    {
+        return $this->db->select('id, maincat_id, subcategory_name')
+            ->order_by('id', 'ASC')
+            ->get('tbl_subcategory')
+            ->result();
+    }
+
+    public function get_daily_quiz_assignments()
+    {
+        return $this->db->select('dq.id, dq.league_id, dq.quiz_day, dq.quiz_date, dq.question_count, dq.date_assigned, l.name as league_name')
+            ->from('tbl_league_daily_quiz dq')
+            ->join('tbl_league l', 'l.id = dq.league_id', 'left')
+            ->order_by('dq.quiz_date', 'DESC')
+            ->order_by('dq.quiz_day', 'ASC')
+            ->get()
+            ->result();
+    }
+
+    public function update_daily_quiz_meta()
+    {
+        $id = (int)$this->input->post('edit_id');
+        $league_id = (int)$this->input->post('league_id');
+        $quiz_day = (int)$this->input->post('quiz_day');
+        $quiz_date = $this->input->post('quiz_date');
+
+        if ($id <= 0 || $league_id <= 0 || $quiz_day <= 0 || empty($quiz_date)) {
+            return false;
+        }
+
+        $duplicate = $this->db->where('league_id', $league_id)
+            ->where('quiz_day', $quiz_day)
+            ->where('id !=', $id)
+            ->get('tbl_league_daily_quiz')
+            ->row_array();
+
+        if (!empty($duplicate)) {
+            return false;
+        }
+
+        $data = [
+            'league_id' => $league_id,
+            'quiz_day' => $quiz_day,
+            'quiz_date' => $quiz_date,
+            'date_assigned' => $this->toDateTime,
+        ];
+
+        $this->db->where('id', $id)->update('tbl_league_daily_quiz', $data);
+        return $this->db->affected_rows() >= 0;
+    }
+
+    public function delete_daily_quiz($id)
+    {
+        $id = (int)$id;
+        if ($id <= 0) {
+            return;
+        }
+
+        $this->db->where('daily_quiz_id', $id)->delete('tbl_league_daily_quiz_questions');
+        $this->db->where('id', $id)->delete('tbl_league_daily_quiz');
+    }
+
+    private function upsert_daily_quiz_assignment($league_id, $quiz_day, $quiz_date, $question_ids)
+    {
         $daily = [
             'league_id' => $league_id,
             'quiz_day' => $quiz_day,
@@ -112,6 +358,70 @@ class League_model extends CI_Model
         }
 
         return $daily_id;
+    }
+
+    private function fetch_question_pool($options)
+    {
+        $category_id = (int)($options['category_id'] ?? 0);
+        $subcategory_id = (int)($options['subcategory_id'] ?? 0);
+        $language_id = (int)($options['language_id'] ?? 0);
+        $level = isset($options['level']) ? $options['level'] : null;
+        $limit = (int)($options['limit'] ?? 0);
+        $exclude_ids = $options['exclude_ids'] ?? [];
+
+        $this->db->select('id')
+            ->from('tbl_question')
+            ->where('category', $category_id);
+
+        if ($subcategory_id > 0) {
+            $this->db->where('subcategory', $subcategory_id);
+        }
+
+        if ($language_id > 0) {
+            $this->db->where('language_id', $language_id);
+        }
+
+        if ($level !== null) {
+            $this->db->where('level', (int)$level);
+        }
+
+        if (!empty($exclude_ids)) {
+            $exclude_ids = array_map('intval', $exclude_ids);
+            $this->db->where_not_in('id', $exclude_ids);
+        }
+
+        $this->db->order_by('RAND()');
+
+        if ($limit > 0) {
+            $this->db->limit($limit);
+        }
+
+        return $this->db->get()->result_array();
+    }
+
+    private function materialize_to_contest_question($sourceQuestionId)
+    {
+        $source = $this->db->where('id', (int)$sourceQuestionId)->get('tbl_question')->row_array();
+        if (empty($source)) {
+            return 0;
+        }
+
+        $insertData = [
+            'contest_id' => 0,
+            'question' => $source['question'] ?? '',
+            'question_type' => $source['question_type'] ?? 1,
+            'optiona' => $source['optiona'] ?? '',
+            'optionb' => $source['optionb'] ?? '',
+            'optionc' => $source['optionc'] ?? '',
+            'optiond' => $source['optiond'] ?? '',
+            'optione' => $source['optione'] ?? '',
+            'answer' => $source['answer'] ?? '',
+            'note' => $source['note'] ?? '',
+            'image' => $source['image'] ?? '',
+        ];
+
+        $this->db->insert('tbl_contest_question', $insertData);
+        return (int)$this->db->insert_id();
     }
 
     public function get_max_top_winner($id)

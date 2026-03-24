@@ -78,15 +78,66 @@ class League extends CI_Controller
         }
 
         if ($this->input->post('btnadd')) {
-            $this->League_model->add_daily_quiz();
-            $this->session->set_flashdata('success', 'Daily quiz assigned successfully');
+            $assignmentMode = $this->input->post('assignment_mode') ?? 'manual';
+
+            if ($assignmentMode === 'auto') {
+                $result = $this->League_model->add_daily_quiz_auto([
+                    'league_id' => (int)$this->input->post('league_id'),
+                    'quiz_day' => (int)$this->input->post('quiz_day'),
+                    'quiz_date' => $this->input->post('quiz_date'),
+                    'question_count' => (int)$this->input->post('question_count'),
+                    'category_id' => (int)$this->input->post('category_id'),
+                    'subcategory_id' => (int)$this->input->post('subcategory_id'),
+                    'easy_percent' => (int)$this->input->post('easy_percent'),
+                    'medium_percent' => (int)$this->input->post('medium_percent'),
+                    'hard_percent' => (int)$this->input->post('hard_percent'),
+                ]);
+
+                if (!empty($result['success'])) {
+                    $fallbackSuffix = !empty($result['used_fallback']) ? ' (fallback rules applied)' : '';
+                    $this->session->set_flashdata('success', 'Daily quiz auto-assigned successfully with ' . (int)$result['assigned_count'] . ' questions' . $fallbackSuffix . '.');
+                } else {
+                    $this->session->set_flashdata('error', $result['message'] ?? 'Auto assignment failed.');
+                }
+            } else {
+                $this->League_model->add_daily_quiz();
+                $this->session->set_flashdata('success', 'Daily quiz assigned successfully');
+            }
+
+            redirect('league-daily-quiz');
+            return;
+        }
+
+        if ($this->input->post('btnupdate')) {
+            $updated = $this->League_model->update_daily_quiz_meta();
+            if ($updated) {
+                $this->session->set_flashdata('success', 'Daily quiz assignment updated successfully');
+            } else {
+                $this->session->set_flashdata('error', 'Unable to update daily quiz assignment. Ensure league/day combination is unique.');
+            }
+
             redirect('league-daily-quiz');
             return;
         }
 
         $this->result['league'] = $this->League_model->get_data();
         $this->result['questions'] = $this->db->select('id,question')->order_by('id', 'DESC')->get('tbl_contest_question')->result();
+        $this->result['categories'] = $this->League_model->get_auto_assignment_categories();
+        $this->result['subcategories'] = $this->League_model->get_auto_assignment_subcategories();
+        $this->result['assignments'] = $this->League_model->get_daily_quiz_assignments();
         $this->load->view('league_daily_quiz', $this->result);
+    }
+
+    public function delete_daily_quiz()
+    {
+        if (!has_permissions('delete', 'manage_contest')) {
+            echo false;
+            return;
+        }
+
+        $id = (int)$this->input->post('id');
+        $this->League_model->delete_daily_quiz($id);
+        echo true;
     }
 
     public function league_prize($id)

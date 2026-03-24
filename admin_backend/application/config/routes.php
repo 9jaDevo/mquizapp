@@ -134,6 +134,18 @@ $route['contest-questions'] = 'Contest/contest_questions';
 $route['delete_contest_questions'] = 'Contest/delete_contest_questions';
 $route['contest-questions-import'] = 'Contest/contest_questions_import';
 
+$route['league'] = 'League';
+$route['delete_league'] = 'League/delete_league';
+$route['update_league_status'] = 'League/update_league_status';
+$route['league-daily-quiz'] = 'League/daily_quiz';
+$route['delete_league_daily_quiz'] = 'League/delete_daily_quiz';
+$route['league-prize/(:num)'] = 'League/league_prize/$1';
+$route['delete_league_prize'] = 'League/delete_league_prize';
+$route['league-prize-distribute/(:num)'] = 'League/league_prize_distribute/$1';
+$route['league-cron-job'] = 'League_Cron_Job';
+$route['league-cron-pre-start'] = 'League_Cron_Job/pre_start';
+$route['league-cron-start-day'] = 'League_Cron_Job/start_day';
+
 $route['fun-n-learn-category'] = 'Category';
 $route['fun-n-learn-subcategory'] = 'Subcategory';
 $route['fun-n-learn-category-order'] = 'Category/category_order';
