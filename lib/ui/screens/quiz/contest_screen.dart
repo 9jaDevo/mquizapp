@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -5,6 +7,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/commons/commons.dart';
 import 'package:flutterquiz/core/core.dart';
 import 'package:flutterquiz/features/ads/blocs/interstitial_ad_cubit.dart';
+import 'package:flutterquiz/features/ads/blocs/rewarded_ad_cubit.dart';
+import 'package:flutterquiz/features/ads/utils/ad_analytics_collector.dart';
 import 'package:flutterquiz/features/profile_management/cubits/update_score_and_coins_cubit.dart';
 import 'package:flutterquiz/features/profile_management/cubits/user_details_cubit.dart';
 import 'package:flutterquiz/features/profile_management/profile_management_repository.dart';
@@ -12,6 +16,7 @@ import 'package:flutterquiz/features/quiz/cubits/contest_cubit.dart';
 import 'package:flutterquiz/features/quiz/models/contest.dart';
 import 'package:flutterquiz/features/quiz/models/quiz_type.dart';
 import 'package:flutterquiz/features/quiz/quiz_repository.dart';
+import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/ui/widgets/already_logged_in_dialog.dart';
 import 'package:flutterquiz/ui/widgets/circular_progress_container.dart';
 import 'package:flutterquiz/ui/widgets/custom_back_button.dart';
@@ -220,7 +225,9 @@ class _ContestCard extends StatefulWidget {
 }
 
 class _ContestCardState extends State<_ContestCard> {
-  void _handleOnTap() {
+  bool _isProcessingEntry = false;
+
+  Future<void> _handleOnTap() async {
     if (widget.contestType == _past) {
       Navigator.of(context).pushNamed(
         Routes.contestLeaderboard,
@@ -228,28 +235,131 @@ class _ContestCardState extends State<_ContestCard> {
       );
     }
     if (widget.contestType == _live) {
-      if (int.parse(context.read<UserDetailsCubit>().getCoins()!) >=
-          int.parse(widget.contestDetails.entry!)) {
+      if (_isProcessingEntry) return; // Prevent duplicate taps
+      
+      _isProcessingEntry = true;
+      
+      try {
+        final userCoins = int.parse(context.read<UserDetailsCubit>().getCoins()!);
+        final entryFee = int.parse(widget.contestDetails.entry!);
+        
+        // Record contest entry attempt (Phase 3)
+        await AdAnalyticsCollector.recordComplianceEvent(
+          eventName: 'contest_entry_attempted',
+          payload: {
+            'contest_id': widget.contestDetails.id,
+            'entry_fee': entryFee,
+            'user_coins': userCoins,
+          },
+        );
+
+        if (userCoins >= entryFee) {
+          // Offer rewarded ad before entry (Phase 3)
+          if (context.mounted) {
+            await _showContestEntryRewardedAdOption();
+          }
+
+          // Deduct entry fee
+          if (context.mounted) {
+            context.read<UpdateCoinsCubit>().updateCoins(
+              coins: entryFee,
+              addCoin: false,
+              title: playedContestKey,
+            );
+
+            context.read<UserDetailsCubit>().updateCoins(
+              addCoin: false,
+              coins: entryFee,
+            );
+            
+            // Record successful entry
+            await AdAnalyticsCollector.recordComplianceEvent(
+              eventName: 'contest_entry_completed',
+              payload: {
+                'contest_id': widget.contestDetails.id,
+                'entry_fee': entryFee,
+              },
+            );
+
+            if (context.mounted) {
+              Navigator.of(context).pushReplacementNamed(
+                Routes.quiz,
+                arguments: {
+                  'quizType': QuizTypes.contest,
+                  'contestId': widget.contestDetails.id,
+                },
+              );
+            }
+          }
+        } else {
+          if (context.mounted) {
+            showNotEnoughCoinsDialog(context);
+          }
+        }
+      } finally {
+        if (mounted) {
+          _isProcessingEntry = false;
+        }
+      }
+    }
+  }
+
+  /// Show optional rewarded ad before contest entry (Phase 3)
+  Future<void> _showContestEntryRewardedAdOption() async {
+    try {
+      final rewardedAdCubit = context.read<RewardedAdCubit>();
+      final sysConfigCubit = context.read<SystemConfigCubit>();
+      
+      if (!sysConfigCubit.isAdsEnable) return;
+
+      // Check if rewarded ad is available
+      final canShowRewarded = await RewardedFrequencyManager.canShowRewarded();
+      if (!canShowRewarded) return;
+
+      bool rewardEarned = false;
+
+      // Show rewarded ad
+      await AdAnalyticsCollector.recordComplianceEvent(
+        eventName: 'contest_entry_ad_offered',
+        payload: {
+          'contest_id': widget.contestDetails.id,
+        },
+      );
+
+      await rewardedAdCubit.showAd(
+        context: context,
+        onAdDismissedCallback: () {},
+        onUserEarnedReward: () {
+          rewardEarned = true;
+        },
+        rewardAmount: 10,
+        rewardCurrencyLabel: 'coins',
+      );
+
+      if (rewardEarned && context.mounted) {
+        // Grant coins if ad was completed
         context.read<UpdateCoinsCubit>().updateCoins(
-          coins: int.parse(widget.contestDetails.entry!),
-          addCoin: false,
-          title: playedContestKey,
+          coins: 10,
+          addCoin: true,
+          title: 'contest_entry_ad_reward',
         );
 
         context.read<UserDetailsCubit>().updateCoins(
-          addCoin: false,
-          coins: int.parse(widget.contestDetails.entry!),
+          addCoin: true,
+          coins: 10,
         );
-        Navigator.of(context).pushReplacementNamed(
-          Routes.quiz,
-          arguments: {
-            'quizType': QuizTypes.contest,
-            'contestId': widget.contestDetails.id,
+
+        await AdAnalyticsCollector.recordComplianceEvent(
+          eventName: 'contest_entry_ad_completed',
+          payload: {
+            'contest_id': widget.contestDetails.id,
+            'reward_coins': 10,
           },
         );
-      } else {
-        showNotEnoughCoinsDialog(context);
       }
+    } catch (e) {
+      // Silently fail - entry can proceed without ad
+      log('Error showing contest entry rewarded ad: $e');
     }
   }
 

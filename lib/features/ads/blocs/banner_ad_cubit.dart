@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/features/ads/utils/banner_visibility_tracker.dart';
 import 'package:flutterquiz/features/ads/utils/ad_impression_quality_tracker.dart';
+import 'package:flutterquiz/features/ads/utils/network_connectivity_tracker.dart';
 import 'package:flutterquiz/features/profile_management/cubits/user_details_cubit.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 import 'package:flutterquiz/features/system_config/model/ad_type.dart';
@@ -166,6 +167,14 @@ class BannerAdCubit extends Cubit<BannerAdState> {
         config.isAdsEnable && !context.read<UserDetailsCubit>().removeAds();
 
     if (!showAds) return;
+
+    // Check if network is suitable for ad requests
+    final isNetworkOk = await NetworkConnectivityTracker.isNetworkSuitableForAdRequest();
+    if (!isNetworkOk) {
+      log('⏸️ [BANNER] SKIPPED - Network unsuitable for ad request', name: 'BannerAd-Diagnostic');
+      emit(BannerAdState.failure);
+      return;
+    }
 
     // Check if we should load based on visibility duration
     final shouldLoad = await BannerVisibilityTracker.shouldLoadBanner(_bannerAdId);

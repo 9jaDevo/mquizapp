@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/features/ads/blocs/interstitial_ad_cubit.dart';
 import 'package:flutterquiz/features/ads/blocs/rewarded_interstitial_ad_cubit.dart';
 import 'package:flutterquiz/features/ads/utils/ad_analytics_collector.dart';
+import 'package:flutterquiz/features/ads/utils/ad_preload_orchestrator.dart';
 import 'package:flutterquiz/features/profile_management/cubits/user_details_cubit.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
 
@@ -30,9 +31,19 @@ final class AdTransitionOrchestrator {
     if (completionCount % 2 == 0) {
       final rewardedInterstitialCubit = context
           .read<RewardedInterstitialAdCubit>();
+      
+      // Check preload orchestrator state before creating new ad (Phase 2)
       if (rewardedInterstitialCubit.state !=
           RewardedInterstitialAdState.loaded) {
-        await rewardedInterstitialCubit.createRewardedInterstitialAd(context);
+        if (!AdPreloadOrchestrator.canShowAd(PreloadQueueState.preloadingRewardedInterstitial)) {
+          log(
+            '⏸️ [AD-TRANSITION] Skipping rewarded interstitial - orchestrator still preloading',
+            name: 'AdTransitionOrchestrator',
+          );
+          // Fall through to interstitial instead
+        } else {
+          await rewardedInterstitialCubit.createRewardedInterstitialAd(context);
+        }
       }
 
       if (rewardedInterstitialCubit.state ==

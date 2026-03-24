@@ -129,6 +129,7 @@ class GeographicSegmentation {
 
   /// Get ad frequency limits based on region
   /// EU users should see fewer ads due to GDPR sensitivity
+  /// Phase 4: Boosted non-EU limits to maximize monetization
   static Future<AdFrequencyLimits> getFrequencyLimits() async {
     try {
       final region = await getUserRegion();
@@ -153,12 +154,13 @@ class GeographicSegmentation {
           );
 
         case AdRegion.other:
-          // Global aggressive-safe baseline selected for monetization.
+          // Phase 4: Boosted aggressive limits for rest of world
+          // (Nepal, Nigeria, Kenya, India, Ghana, etc.)
           return AdFrequencyLimits(
-            minInterstitialGapMs: 60000, // 60 seconds
-            maxInterstitialsPerDay: 5,
-            minRewardedGapMs: 60000, // 1 minute
-            maxRewardedPerDay: 10,
+            minInterstitialGapMs: 30000, // 30 seconds (down from 60s)
+            maxInterstitialsPerDay: 12, // Up from 5
+            minRewardedGapMs: 45000, // 45 seconds (down from 60s)
+            maxRewardedPerDay: 20, // Up from 10
           );
       }
     } catch (e) {

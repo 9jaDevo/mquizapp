@@ -163,6 +163,10 @@ class InterstitialAdCubit extends Cubit<InterstitialAdState>
 
   InterstitialAd? _interstitialAd;
   late LevelPlayInterstitialAd _ironSourceAd;
+  
+  // Track ad load attempts for timeout detection (Phase 1)
+  int? _loadStartTimeMs;
+  static const int _maxLoadTimeoutMs = 45000; // 45 second max load time before considering failed
 
   InterstitialAd? get interstitialAd => _interstitialAd;
 
@@ -177,9 +181,29 @@ class InterstitialAdCubit extends Cubit<InterstitialAdState>
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (InterstitialAd ad) {
           _interstitialAd = ad;
+          
+          // Log load duration (Phase 1)
+          if (_loadStartTimeMs != null) {
+            final loadDurationMs = DateTime.now().millisecondsSinceEpoch - _loadStartTimeMs!;
+            log(
+              '✅ [INTERSTITIAL] Google ad loaded in ${(loadDurationMs / 1000).toStringAsFixed(2)}s',
+              name: 'InterstitialAd-Diagnostic',
+            );
+            _loadStartTimeMs = null; // Reset after successful load
+          }
+          
           emit(const InterstitialAdLoaded());
         },
         onAdFailedToLoad: (err) {
+          // Log load failure with duration
+          if (_loadStartTimeMs != null) {
+            final loadDurationMs = DateTime.now().millisecondsSinceEpoch - _loadStartTimeMs!;
+            log(
+              '❌ [INTERSTITIAL] Google ad failed after ${(loadDurationMs / 1000).toStringAsFixed(2)}s: ${err.message}',
+              name: 'InterstitialAd-Diagnostic',
+            );
+            _loadStartTimeMs = null;
+          }
           emit(const InterstitialAdFailToLoad());
         },
       ),
@@ -216,6 +240,10 @@ class InterstitialAdCubit extends Cubit<InterstitialAdState>
     }
 
     emit(const InterstitialAdLoadInProgress());
+    
+    // Track load start time for timeout detection (Phase 1)
+    _loadStartTimeMs = DateTime.now().millisecondsSinceEpoch;
+    
     log(
       '🔄 [INTERSTITIAL] Creating interstitial ad | Network: ${systemConfigCubit.adsType}',
       name: 'InterstitialAd-Diagnostic',
@@ -255,6 +283,23 @@ class InterstitialAdCubit extends Cubit<InterstitialAdState>
       return;
     }
 
+    // Check if ad load timed out (Phase 1 - prevent stale show attempts)
+    if (_loadStartTimeMs != null) {
+      final elapsedMs = DateTime.now().millisecondsSinceEpoch - _loadStartTimeMs!;
+      if (elapsedMs > _maxLoadTimeoutMs && state is! InterstitialAdLoaded) {
+        log(
+          '❌ [INTERSTITIAL] Show skipped - Ad load timeout exceeded (${(elapsedMs / 1000).toStringAsFixed(1)}s)',
+          name: 'InterstitialAd-Diagnostic',
+        );
+        await AdAnalyticsCollector.recordComplianceEvent(
+          eventName: 'interstitial_load_timeout',
+          payload: {'elapsed_ms': elapsedMs, 'max_ms': _maxLoadTimeoutMs},
+        );
+        emit(const InterstitialAdFailToLoad());
+        return;
+      }
+    }
+
     log(
       '📊 [INTERSTITIAL] Show attempt | State: $state',
       name: 'InterstitialAd-Diagnostic',
@@ -287,6 +332,7 @@ class InterstitialAdCubit extends Cubit<InterstitialAdState>
                 name: 'InterstitialAd-Diagnostic',
               );
               ad.dispose();
+              _loadStartTimeMs = null; // Reset timeout on dismiss
               createInterstitialAd(context);
             },
             onAdFailedToShowFullScreenContent:
@@ -296,6 +342,7 @@ class InterstitialAdCubit extends Cubit<InterstitialAdState>
                     name: 'InterstitialAd-Diagnostic',
                   );
                   ad.dispose();
+                  _loadStartTimeMs = null; // Reset timeout on error
                   createInterstitialAd(context);
                 },
           );

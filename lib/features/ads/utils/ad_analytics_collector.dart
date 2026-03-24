@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutterquiz/core/constants/constants.dart';
+import 'package:flutterquiz/features/ads/utils/geographic_segmentation.dart';
+import 'package:flutterquiz/features/ads/utils/network_connectivity_tracker.dart';
 import 'package:flutterquiz/utils/api_utils.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -71,7 +73,7 @@ class AdAnalyticsCollector {
   static const String _dailyStatsKey = 'daily_stats_';
   static const String _complianceEventsKey = 'ad_compliance_events';
 
-  /// Store lightweight compliance/audit events locally.
+  /// Store lightweight compliance/audit events locally with region + network context.
   static Future<void> recordComplianceEvent({
     required String eventName,
     required Map<String, dynamic> payload,
@@ -88,9 +90,15 @@ class AdAnalyticsCollector {
               ),
             );
 
+      // Automatically enrich event with region + network type
+      final region = await GeographicSegmentation.getUserRegion();
+      final networkType = await NetworkConnectivityTracker.getCurrentNetworkType();
+
       events.add({
         'event': eventName,
         'ts': DateTime.now().toUtc().toIso8601String(),
+        'region': region.name,
+        'network': networkType.name,
         ...payload,
       });
 
