@@ -147,6 +147,8 @@
                     <ul class="dropdown-menu">
                         <?php if (has_permissions('read', 'manage_contest')) { ?>
                             <li><a href="<?= base_url(); ?>contest"> <?= lang('manage_contest'); ?></a></li>
+                            <li><a href="<?= base_url(); ?>league">Manage League</a></li>
+                            <li><a href="<?= base_url(); ?>league-daily-quiz">League Daily Quiz</a></li>
                         <?php } ?>
                         <?php if (has_permissions('read', 'manage_contest_question')) { ?>
                             <li><a href="<?= base_url(); ?>contest-questions"> <?= lang('manage_questions'); ?></a></li>

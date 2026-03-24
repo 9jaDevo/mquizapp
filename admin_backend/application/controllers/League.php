@@ -8,15 +8,16 @@ class League extends CI_Controller
     {
         parent::__construct();
         if (!$this->session->userdata('isLoggedIn')) {
-            redirect('/');
+            redirect('login');
         }
         $this->load->model('League_model');
+        $this->load->model('Language_model');
     }
 
     public function index()
     {
         if (!has_permissions('read', 'manage_contest')) {
-            redirect('/');
+            redirect('dashboard');
             return;
         }
 
@@ -72,7 +73,7 @@ class League extends CI_Controller
     public function daily_quiz()
     {
         if (!has_permissions('update', 'manage_contest')) {
-            redirect('/');
+            redirect('dashboard');
             return;
         }
 
@@ -91,7 +92,7 @@ class League extends CI_Controller
     public function league_prize($id)
     {
         if (!has_permissions('read', 'manage_contest')) {
-            redirect('/');
+            redirect('dashboard');
             return;
         }
 
@@ -137,7 +138,7 @@ class League extends CI_Controller
     public function league_prize_distribute($id)
     {
         if (!has_permissions('read', 'manage_contest')) {
-            redirect('/');
+            redirect('dashboard');
             return;
         }
 

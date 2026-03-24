@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutterquiz/commons/commons.dart';
 import 'package:flutterquiz/core/core.dart';
 import 'package:flutterquiz/features/quiz/cubits/league_action_cubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/league_cubit.dart';
@@ -22,7 +23,9 @@ class LeagueScreen extends StatefulWidget {
     return CupertinoPageRoute(
       builder: (_) => MultiBlocProvider(
         providers: [
-          BlocProvider<LeagueCubit>(create: (_) => LeagueCubit(QuizRepository())),
+          BlocProvider<LeagueCubit>(
+            create: (_) => LeagueCubit(QuizRepository()),
+          ),
           BlocProvider<LeagueActionCubit>(
             create: (_) => LeagueActionCubit(QuizRepository()),
           ),
@@ -43,8 +46,8 @@ class _LeagueScreenState extends State<LeagueScreen>
 
   void _load() {
     context.read<LeagueCubit>().getLeagues(
-          languageId: UiUtils.getCurrentQuizLanguageId(context),
-        );
+      languageId: UiUtils.getCurrentQuizLanguageId(context),
+    );
   }
 
   @override
@@ -143,8 +146,8 @@ class _LeagueScreenState extends State<LeagueScreen>
     if (mode == 'upcoming') {
       return TextButton(
         onPressed: () => context.read<LeagueActionCubit>().optInLeague(
-              leagueId: leagueId,
-            ),
+          leagueId: leagueId,
+        ),
         child: const Text('Opt-in'),
       );
     }
@@ -152,8 +155,8 @@ class _LeagueScreenState extends State<LeagueScreen>
     if (mode == 'active') {
       return TextButton(
         onPressed: () => context.read<LeagueActionCubit>().joinLeague(
-              leagueId: leagueId,
-            ),
+          leagueId: leagueId,
+        ),
         child: const Text('Join'),
       );
     }
