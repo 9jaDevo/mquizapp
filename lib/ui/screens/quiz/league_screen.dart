@@ -303,7 +303,7 @@ class _LeagueScreenState extends State<LeagueScreen>
     }
 
     return GestureDetector(
-      onPressed: () {
+      onTap: () {
         Navigator.of(context).pushNamed(
           Routes.leagueLeaderboard,
           arguments: {'leagueId': leagueId},
