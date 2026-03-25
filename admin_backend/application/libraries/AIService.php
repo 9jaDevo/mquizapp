@@ -332,6 +332,7 @@ class AiService
                     $prompt .= "- 'options': an object containing labeled options (a, b, c, d) with text values.\n";
                     $prompt .= "- 'answer': the correct sequence of option letters in order, separated by commas (e.g. 'b,a,c,d').\n";
                     $prompt .= "Do NOT give a single letter as the answer. Always provide a full ordered sequence of letters (like 'b,a,c,d').\n";
+                    $prompt .= "Avoid trivial alphabetical sequences such as 'a,b,c,d' or 'a,b,c,d,e' unless the real logical order truly requires it.\n";
                     $prompt .= json_encode([
                         'questions' => [
                             [
@@ -343,7 +344,7 @@ class AiService
                                     'd' => 'Option D text',
                                     'e' => 'Option E text'
                                 ],
-                                'correctAnswer' => 'a,b,c,d,e',
+                                'correctAnswer' => 'c,a,e,b,d',
                                 'note' => 'string'
                             ]
                         ]

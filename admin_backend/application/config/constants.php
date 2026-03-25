@@ -103,6 +103,7 @@ define('SUBCATEGORY_IMG_PATH', 'images/subcategory/');
 define('QUESTION_IMG_PATH', 'images/questions/');
 define('NOTIFICATION_IMG_PATH', 'images/notifications/');
 define('CONTEST_IMG_PATH', 'images/contest/');
+define('LEAGUE_IMG_PATH', 'images/league/');
 define('CONTEST_QUESTION_IMG_PATH', 'images/contest-question/');
 define('GUESS_WORD_IMG_PATH', 'images/guess-word/');
 define('USER_IMG_PATH', 'images/profile/');

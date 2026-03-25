@@ -5,6 +5,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
 class League_model extends CI_Model
 {
     public $toDateTime;
+    private $last_error = '';
 
     public function __construct()
     {
@@ -20,6 +21,7 @@ class League_model extends CI_Model
 
     public function add_league()
     {
+        $this->last_error = '';
         $data = [
             'name' => $this->input->post('name'),
             'language_id' => $this->input->post('language_id') ?? 0,
@@ -33,13 +35,28 @@ class League_model extends CI_Model
             'date_created' => $this->toDateTime,
         ];
 
+        if ($this->league_image_column_exists()) {
+            $data['image'] = '';
+        }
+
+        if ($this->league_image_column_exists() && !empty($_FILES['file']['name'])) {
+            $upload = $this->upload_league_image('file');
+            if (empty($upload['success'])) {
+                $this->last_error = $upload['message'];
+                return false;
+            }
+            $data['image'] = $upload['file_name'];
+        }
+
         $this->db->insert('tbl_league', $data);
         return $this->db->insert_id();
     }
 
     public function update_league()
     {
+        $this->last_error = '';
         $id = (int)$this->input->post('edit_id');
+        $oldImage = $this->input->post('old_image') ?? '';
 
         $data = [
             'name' => $this->input->post('name'),
@@ -51,12 +68,33 @@ class League_model extends CI_Model
             'date_updated' => $this->toDateTime,
         ];
 
+        if ($this->league_image_column_exists() && !empty($_FILES['update_file']['name'])) {
+            $upload = $this->upload_league_image('update_file', $oldImage);
+            if (empty($upload['success'])) {
+                $this->last_error = $upload['message'];
+                return false;
+            }
+            $data['image'] = $upload['file_name'];
+        }
+
         $this->db->where('id', $id)->update('tbl_league', $data);
         return true;
     }
 
+    public function get_last_error()
+    {
+        return !empty($this->last_error) ? $this->last_error : IMAGE_ALLOW_MSG;
+    }
+
     public function delete_league($id)
     {
+        if ($this->league_image_column_exists()) {
+            $row = $this->db->select('image')->where('id', (int)$id)->get('tbl_league')->row();
+            if (!empty($row) && !empty($row->image) && file_exists(LEAGUE_IMG_PATH . $row->image)) {
+                unlink(LEAGUE_IMG_PATH . $row->image);
+            }
+        }
+
         $this->db->where('league_id', $id)->delete('tbl_league_prize');
         $this->db->where('league_id', $id)->delete('tbl_league_notification_log');
         $this->db->where('league_id', $id)->delete('tbl_league_submission');
@@ -457,5 +495,46 @@ class League_model extends CI_Model
     public function delete_league_prize($id)
     {
         $this->db->where('id', (int)$id)->delete('tbl_league_prize');
+    }
+
+    private function league_image_column_exists()
+    {
+        static $exists = null;
+        if ($exists === null) {
+            $exists = $this->db->field_exists('image', 'tbl_league');
+        }
+
+        return $exists;
+    }
+
+    private function upload_league_image($fileField, $oldImage = '')
+    {
+        if (!is_dir(LEAGUE_IMG_PATH)) {
+            mkdir(LEAGUE_IMG_PATH, 0777, true);
+        }
+
+        $config['upload_path'] = LEAGUE_IMG_PATH;
+        $config['allowed_types'] = IMG_ALLOWED_TYPES;
+        $config['file_name'] = time() . '_' . mt_rand(1000, 9999);
+
+        $this->load->library('upload', $config);
+        $this->upload->initialize($config);
+
+        if (!$this->upload->do_upload($fileField)) {
+            return [
+                'success' => false,
+                'message' => $this->upload->display_errors('', ''),
+            ];
+        }
+
+        $uploaded = $this->upload->data();
+        if (!empty($oldImage) && file_exists(LEAGUE_IMG_PATH . $oldImage)) {
+            unlink(LEAGUE_IMG_PATH . $oldImage);
+        }
+
+        return [
+            'success' => true,
+            'file_name' => $uploaded['file_name'],
+        ];
     }
 }

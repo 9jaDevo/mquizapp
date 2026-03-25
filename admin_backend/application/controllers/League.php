@@ -25,8 +25,12 @@ class League extends CI_Controller
             if (!has_permissions('create', 'manage_contest')) {
                 $this->session->set_flashdata('error', lang(PERMISSION_ERROR_MSG));
             } else {
-                $this->League_model->add_league();
-                $this->session->set_flashdata('success', 'League created successfully');
+                $created = $this->League_model->add_league();
+                if ($created) {
+                    $this->session->set_flashdata('success', 'League created successfully');
+                } else {
+                    $this->session->set_flashdata('error', $this->League_model->get_last_error());
+                }
             }
             redirect('league');
             return;
@@ -36,8 +40,12 @@ class League extends CI_Controller
             if (!has_permissions('update', 'manage_contest')) {
                 $this->session->set_flashdata('error', lang(PERMISSION_ERROR_MSG));
             } else {
-                $this->League_model->update_league();
-                $this->session->set_flashdata('success', 'League updated successfully');
+                $updated = $this->League_model->update_league();
+                if ($updated) {
+                    $this->session->set_flashdata('success', 'League updated successfully');
+                } else {
+                    $this->session->set_flashdata('error', $this->League_model->get_last_error());
+                }
             }
             redirect('league');
             return;

@@ -593,6 +593,8 @@ class Api extends REST_Controller
                         $data[$i] = $this->suffleOptions($data[$i], $firebase_id);
                         unset($data[$i]['session_answer']);
                     } else if ($type == 6 || $type == '6') {
+                        $seedSource = 'bookmark_multi_match|' . $user_id . '|' . ($data[$i]['id'] ?? '') . '|' . ($data[$i]['question_id'] ?? '');
+                        $data[$i] = $this->remapMultiMatchSequenceQuestion($data[$i], $seedSource);
                         $data[$i]['image'] = ($data[$i]['image']) ? base_url() . MULTIMATCH_QUESTION_IMG_PATH . $data[$i]['image'] : '';
                         $answers = explode(',', trim($data[$i]['answer']));
                         $data[$i]['answer'] = array_map(function ($answer) use ($firebase_id) {
@@ -4443,6 +4445,8 @@ class Api extends REST_Controller
                 $data = $this->db->get('tbl_multi_match')->result_array();
                 if (!empty($data)) {
                     for ($i = 0; $i < count($data); $i++) {
+                        $seedSource = 'multi_match|' . $user_id . '|' . ($data[$i]['id'] ?? '') . '|' . ($type ?? '') . '|' . ($id ?? '');
+                        $data[$i] = $this->remapMultiMatchSequenceQuestion($data[$i], $seedSource);
                         $data[$i]['image'] = ($data[$i]['image']) ? base_url() . MULTIMATCH_QUESTION_IMG_PATH . $data[$i]['image'] : '';
                         $answers = explode(',', trim($data[$i]['answer']));
                         $data[$i]['answer'] = array_map(function ($answer) use ($firebase_id) {
@@ -4503,6 +4507,8 @@ class Api extends REST_Controller
 
                 if (!empty($data)) {
                     for ($i = 0; $i < count($data); $i++) {
+                        $seedSource = 'multi_match_by_type|' . $user_id . '|' . ($data[$i]['id'] ?? '') . '|' . ($type ?? '') . '|' . ($language_id ?? '');
+                        $data[$i] = $this->remapMultiMatchSequenceQuestion($data[$i], $seedSource);
                         $data[$i]['image'] = ($data[$i]['image']) ? base_url() . MULTIMATCH_QUESTION_IMG_PATH . $data[$i]['image'] : '';
                         $answers = explode(',', trim($data[$i]['answer']));
                         $data[$i]['answer'] = array_map(function ($answer) use ($firebase_id) {
@@ -4568,6 +4574,8 @@ class Api extends REST_Controller
                 $questionData = [];
                 if (!empty($data)) {
                     for ($i = 0; $i < count($data); $i++) {
+                        $seedSource = 'multi_match_by_level|' . $user_id . '|' . ($data[$i]['id'] ?? '') . '|' . ($level ?? '') . '|' . ($category_id ?? '') . '|' . ($subcategory_id ?? '');
+                        $data[$i] = $this->remapMultiMatchSequenceQuestion($data[$i], $seedSource);
                         $data[$i]['image'] = ($data[$i]['image']) ? base_url() . MULTIMATCH_QUESTION_IMG_PATH . $data[$i]['image'] : '';
                         $questionData[] = [
                             'id' => $data[$i]['id'],
@@ -6740,6 +6748,107 @@ class Api extends REST_Controller
         return $data;
     }
 
+    function remapMultiMatchSequenceQuestion($data, $seedSource = '')
+    {
+        if (!isset($data['answer_type']) || intval($data['answer_type']) !== 2) {
+            return $data;
+        }
+
+        $letters = $this->getMultiMatchOptionLetters($data);
+        if (empty($letters)) {
+            return $data;
+        }
+
+        $answerLetters = $this->normalizeSequenceAnswerLetters($data['answer'] ?? '', $letters);
+        if (empty($answerLetters)) {
+            return $data;
+        }
+
+        $sourceOrder = $this->buildDeterministicLetterPermutation($letters, $seedSource);
+        if (empty($sourceOrder)) {
+            return $data;
+        }
+
+        $originalOptionValues = [];
+        foreach ($letters as $letter) {
+            $originalOptionValues[$letter] = trim((string)($data['option' . $letter] ?? ''));
+        }
+
+        $sourceToTarget = [];
+        foreach ($letters as $index => $targetLetter) {
+            $sourceLetter = $sourceOrder[$index] ?? $targetLetter;
+            $data['option' . $targetLetter] = $originalOptionValues[$sourceLetter] ?? ($originalOptionValues[$targetLetter] ?? '');
+            $sourceToTarget[$sourceLetter] = $targetLetter;
+        }
+
+        $remappedAnswer = [];
+        foreach ($answerLetters as $answerLetter) {
+            if (isset($sourceToTarget[$answerLetter])) {
+                $remappedAnswer[] = $sourceToTarget[$answerLetter];
+            }
+        }
+
+        if (!empty($remappedAnswer)) {
+            $data['answer'] = implode(',', $remappedAnswer);
+        }
+
+        return $data;
+    }
+
+    function getMultiMatchOptionLetters($data)
+    {
+        $letters = ['a', 'b'];
+        if (($data['question_type'] ?? '') == 1) {
+            $letters[] = 'c';
+            $letters[] = 'd';
+            $optione = trim((string)($data['optione'] ?? ''));
+            if ($optione !== '') {
+                $letters[] = 'e';
+            }
+        }
+        return $letters;
+    }
+
+    function normalizeSequenceAnswerLetters($answerString, $allowedLetters)
+    {
+        $allowedLookup = array_fill_keys($allowedLetters, true);
+        $tokens = explode(',', strtolower((string)$answerString));
+        $normalized = [];
+
+        foreach ($tokens as $token) {
+            $letter = trim($token);
+            if (isset($allowedLookup[$letter]) && !in_array($letter, $normalized, true)) {
+                $normalized[] = $letter;
+            }
+        }
+
+        return $normalized;
+    }
+
+    function buildDeterministicLetterPermutation($letters, $seedSource)
+    {
+        $pool = array_values($letters);
+        $result = [];
+        $hash = sha1((string)$seedSource);
+        $cursor = 0;
+
+        while (!empty($pool)) {
+            if ($cursor + 8 > strlen($hash)) {
+                $hash = sha1($hash . '|' . count($result));
+                $cursor = 0;
+            }
+
+            $chunk = substr($hash, $cursor, 8);
+            $cursor += 8;
+            $index = hexdec($chunk) % count($pool);
+
+            $result[] = $pool[$index];
+            array_splice($pool, $index, 1);
+        }
+
+        return $result;
+    }
+
     function getCategoryData($category, $categorySlug)
     {
         if ($category) {
@@ -7627,14 +7736,17 @@ class Api extends REST_Controller
             foreach ($active as &$row) {
                 $row['start_date'] = date('d-M H:i', strtotime($row['start_date']));
                 $row['end_date'] = date('d-M H:i', strtotime($row['end_date']));
+                $row['image'] = !empty($row['image']) ? (base_url() . LEAGUE_IMG_PATH . $row['image']) : '';
             }
             foreach ($upcoming as &$row) {
                 $row['start_date'] = date('d-M H:i', strtotime($row['start_date']));
                 $row['end_date'] = date('d-M H:i', strtotime($row['end_date']));
+                $row['image'] = !empty($row['image']) ? (base_url() . LEAGUE_IMG_PATH . $row['image']) : '';
             }
             foreach ($past as &$row) {
                 $row['start_date'] = date('d-M', strtotime($row['start_date']));
                 $row['end_date'] = date('d-M', strtotime($row['end_date']));
+                $row['image'] = !empty($row['image']) ? (base_url() . LEAGUE_IMG_PATH . $row['image']) : '';
             }
 
             $response['active_leagues'] = [

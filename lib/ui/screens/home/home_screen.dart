@@ -24,9 +24,11 @@ import 'package:flutterquiz/features/profile_management/cubits/user_details_cubi
 import 'package:flutterquiz/features/profile_management/profile_management_local_data_source.dart';
 import 'package:flutterquiz/features/profile_management/profile_management_repository.dart';
 import 'package:flutterquiz/features/quiz/cubits/contest_cubit.dart';
+import 'package:flutterquiz/features/quiz/cubits/league_cubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/quiz_category_cubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/subcategory_cubit.dart';
 import 'package:flutterquiz/features/quiz/models/quiz_type.dart';
+import 'package:flutterquiz/features/quiz/quiz_repository.dart';
 import 'package:flutterquiz/features/skill_tier/models/skill_tier.dart';
 import 'package:flutterquiz/features/skill_tier/skill_tier_service.dart';
 import 'package:flutterquiz/features/system_config/cubits/system_config_cubit.dart';
@@ -102,6 +104,7 @@ class HomeScreenState extends State<HomeScreen>
   ///
   late String _currLangId;
   late final SystemConfigCubit _sysConfigCubit;
+  late final LeagueCubit _homeLeagueCubit;
   late Future<SkillTier> _skillTierFuture;
 
   @override
@@ -111,6 +114,7 @@ class HomeScreenState extends State<HomeScreen>
     showAppUnderMaintenanceDialog();
 
     _sysConfigCubit = context.read<SystemConfigCubit>();
+    _homeLeagueCubit = LeagueCubit(QuizRepository());
     _skillTierFuture = SkillTierService.computeTier();
 
     setQuizMenu();
@@ -148,6 +152,7 @@ class HomeScreenState extends State<HomeScreen>
       });
 
       context.read<ContestCubit>().getContest(languageId: _currLangId);
+      _homeLeagueCubit.getLeagues(languageId: _currLangId);
 
       // Step 2: Register device after login
       _registerDevice();
@@ -538,6 +543,7 @@ class HomeScreenState extends State<HomeScreen>
   @override
   void dispose() {
     _scrollController.dispose();
+    _homeLeagueCubit.close();
     ProfileManagementLocalDataSource().updateReversedCoins(0);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -1542,6 +1548,342 @@ class HomeScreenState extends State<HomeScreen>
     );
   }
 
+  Widget _buildLeagueSection() {
+    void onTapViewAll() {
+      Navigator.of(context).pushNamed(Routes.league);
+    }
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: hzMargin, vertical: 10),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Text(
+                'Leagues',
+                textAlign: TextAlign.start,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeights.semiBold,
+                  color: context.primaryTextColor,
+                ),
+              ),
+              const Spacer(),
+              GestureDetector(
+                onTap: onTapViewAll,
+                child: Text(
+                  context.tr(viewAllKey) ?? viewAllKey,
+                  textAlign: TextAlign.end,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeights.semiBold,
+                    color: context.primaryTextColor.withValues(alpha: 0.3),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          BlocBuilder<LeagueCubit, LeagueState>(
+            bloc: _homeLeagueCubit,
+            builder: (context, state) {
+              if (state is LeagueInitial || state is LeagueProgress) {
+                return Container(
+                  height: 180,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: const CircularProgressContainer(),
+                );
+              }
+
+              if (state is LeagueFailure) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  height: 100,
+                  alignment: Alignment.center,
+                  child: Text(
+                    state.errorMessage,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeights.regular,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                    maxLines: 2,
+                  ),
+                );
+              }
+
+              final leagues = (state as LeagueSuccess).leagues;
+              final active = leagues.active;
+              final upcoming = leagues.upcoming;
+
+              final hasActive =
+                  active.errorMessage.isEmpty && active.items.isNotEmpty;
+              final hasUpcoming =
+                  upcoming.errorMessage.isEmpty && upcoming.items.isNotEmpty;
+
+              if (!hasActive && !hasUpcoming) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  height: 100,
+                  alignment: Alignment.center,
+                  child: Text(
+                    'No leagues available right now',
+                    style: _boldTextStyle.copyWith(
+                      fontSize: 16,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                );
+              }
+
+              final leagueItem = hasActive
+                  ? active.items.first
+                  : upcoming.items.first;
+              final isActiveLeague = hasActive;
+              final entryFee = int.tryParse(leagueItem.entry ?? '0') ?? 0;
+
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(16),
+                            topRight: Radius.circular(16),
+                          ),
+                          child: Container(
+                            height: 160,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: isActiveLeague
+                                    ? const [
+                                        Color(0xFF2563EB),
+                                        Color(0xFF1D4ED8),
+                                      ]
+                                    : const [
+                                        Color(0xFF7C3AED),
+                                        Color(0xFFA855F7),
+                                      ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: 12,
+                          right: 12,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isActiveLeague
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFFF59E0B),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              isActiveLeague
+                                  ? 'LIVE'
+                                  : (context.tr('upcomingLbl') ?? 'UPCOMING'),
+                              style: GoogleFonts.nunito(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withValues(alpha: 0.7),
+                                ],
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  leagueItem.name ?? 'League',
+                                  style: GoogleFonts.nunito(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  leagueItem.description ?? '',
+                                  style: GoogleFonts.nunito(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w400,
+                                    color: Colors.white.withValues(alpha: 0.95),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  context.tr('endsOnLbl')!,
+                                  style: GoogleFonts.nunito(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w400,
+                                    color: const Color(0xFF64748B),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  (leagueItem.endDate ?? '').split(' ').first,
+                                  style: GoogleFonts.nunito(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF1E293B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  context.tr('entryFeesLbl') ?? 'Entry Fee',
+                                  style: GoogleFonts.nunito(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w400,
+                                    color: const Color(0xFF64748B),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  entryFee == 0
+                                      ? context.tr('freeLbl') ?? 'Free'
+                                      : '$entryFee ${context.tr('coinsLbl') ?? 'Coins'}',
+                                  style: GoogleFonts.nunito(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF1E293B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: onTapViewAll,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: isActiveLeague
+                                      ? const [
+                                          Color(0xFF4A75E8),
+                                          Color(0xFF60A5FA),
+                                        ]
+                                      : const [
+                                          Color(0xFF7C3AED),
+                                          Color(0xFFA855F7),
+                                        ],
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color:
+                                        (isActiveLeague
+                                                ? const Color(0xFF4A75E8)
+                                                : const Color(0xFF7C3AED))
+                                            .withValues(alpha: 0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                context.tr('viewDetailsLbl') ?? 'View Details',
+                                style: GoogleFonts.nunito(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   String _userRank = '0';
   String _userCoins = '0';
   String _userScore = '0';
@@ -1605,6 +1947,9 @@ class HomeScreenState extends State<HomeScreen>
                                 await context.read<ContestCubit>().getContest(
                                   languageId: _currLangId,
                                 );
+                                await _homeLeagueCubit.getLeagues(
+                                  languageId: _currLangId,
+                                );
 
                                 // Refresh monetization data
                                 context
@@ -1650,6 +1995,8 @@ class HomeScreenState extends State<HomeScreen>
                                 ],
                                 if (!_isGuest &&
                                     _sysConfigCubit.isContestEnabled) ...[
+                                  _buildLeagueSection(),
+                                  const SizedBox(height: 8),
                                   _buildLiveContestSection(),
                                 ],
                                 _buildBattle(),
