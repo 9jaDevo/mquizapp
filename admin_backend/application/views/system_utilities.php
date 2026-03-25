@@ -739,6 +739,22 @@
                                                 </div>
 
                                             </div>
+
+                                            <hr class="row">
+
+                                            <!-- League Quiz Settings -->
+                                            <h4 class="row">
+                                                <label class="control-label"><b>League Quiz Settings</b></label>
+                                            </h4>
+                                            <div class="row bg-light rounded p-3">
+
+                                                <!-- League Visibility -->
+                                                <div class="form-group col-md-3 col-sm-6 mt-2">
+                                                    <label class="control-label"><?= lang('visible_mode'); ?></label><br>
+                                                    <input type="checkbox" id="league_mode_btn" data-plugin="switchery" <?php ((isset($league_mode) && !empty($league_mode)) ? $league_mode['message'] : ((isset($contest_mode) && !empty($contest_mode)) ? $contest_mode['message'] : '0')) == '1' ? print_r('checked') : "" ?>>
+                                                    <input type="hidden" id="league_mode" name="league_mode" value="<?= (isset($league_mode) && !empty($league_mode)) ? $league_mode['message'] : ((isset($contest_mode) && !empty($contest_mode)) ? $contest_mode['message'] : 0); ?>">
+                                                </div>
+                                            </div>
                                             <hr class="row">
 
                                             <!-- Multi Match Settings -->
@@ -1187,6 +1203,16 @@
                 $('#contest_mode').val(1);
             } else {
                 $('#contest_mode').val(0);
+            }
+        };
+
+        /* on change of League mode - switchery js */
+        var leagueMode = document.querySelector('#league_mode_btn');
+        leagueMode.onchange = function() {
+            if (leagueMode.checked) {
+                $('#league_mode').val(1);
+            } else {
+                $('#league_mode').val(0);
             }
         };
 

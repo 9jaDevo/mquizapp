@@ -2606,6 +2606,7 @@ class Api extends REST_Controller
                 'exam_module',
                 'exam_module_resume_exam_timeout',
                 'contest_mode',
+                'league_mode',
                 // 'contest_mode_wrong_deduct_score',
                 // 'contest_mode_correct_credit_score',
                 'multi_match_mode',
@@ -7714,6 +7715,18 @@ class Api extends REST_Controller
             if ($is_user['error']) {
                 $this->response($is_user, REST_Controller::HTTP_OK);
                 return false;
+            }
+
+            $leagueMode = is_settings('league_mode');
+            if ($leagueMode === null || $leagueMode === '') {
+                $leagueMode = is_settings('contest_mode');
+            }
+            if ($leagueMode != '1') {
+                $response['active_leagues'] = ['error' => true, 'message' => 'League mode is disabled', 'data' => []];
+                $response['upcoming_leagues'] = ['error' => true, 'message' => 'League mode is disabled', 'data' => []];
+                $response['past_leagues'] = ['error' => true, 'message' => 'League mode is disabled', 'data' => []];
+                $this->response($response, REST_Controller::HTTP_OK);
+                return;
             }
 
             $user_id = (int)$is_user['user_id'];

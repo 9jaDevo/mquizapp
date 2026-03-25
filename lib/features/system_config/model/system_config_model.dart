@@ -24,6 +24,7 @@ final class SystemConfigModel {
     required this.coinAmount,
     required this.coinLimit,
     required this.contestMode,
+    required this.leagueMode,
     required this.currencySymbol,
     required this.dailyQuizMode,
     required this.earnCoin,
@@ -127,6 +128,7 @@ final class SystemConfigModel {
       coinAmount = int.parse(json['coin_amount'] as String? ?? '0'),
       coinLimit = int.parse(json['coin_limit'] as String? ?? '0'),
       contestMode = (json['contest_mode'] ?? '0') == '1',
+      leagueMode = (json['league_mode'] ?? json['contest_mode'] ?? '0') == '1',
       currencySymbol = json['currency_symbol'] as String? ?? r'$',
       dailyQuizMode = (json['daily_quiz_mode'] ?? '0') == '1',
       earnCoin = json['earn_coin'] as String? ?? '',
@@ -276,6 +278,7 @@ final class SystemConfigModel {
   final int coinAmount;
   final int coinLimit;
   final bool contestMode;
+  final bool leagueMode;
   final String currencySymbol;
   final bool dailyQuizMode;
   final String earnCoin;

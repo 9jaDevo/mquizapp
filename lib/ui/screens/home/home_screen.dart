@@ -152,7 +152,9 @@ class HomeScreenState extends State<HomeScreen>
       });
 
       context.read<ContestCubit>().getContest(languageId: _currLangId);
-      _homeLeagueCubit.getLeagues(languageId: _currLangId);
+      if (_sysConfigCubit.isLeagueEnabled) {
+        _homeLeagueCubit.getLeagues(languageId: _currLangId);
+      }
 
       // Step 2: Register device after login
       _registerDevice();
@@ -965,19 +967,21 @@ class HomeScreenState extends State<HomeScreen>
                 ),
               ),
               const Spacer(),
-              GestureDetector(
-                onTap: () => Navigator.of(context).pushNamed(Routes.league),
-                child: Text(
-                  'Leagues',
-                  textAlign: TextAlign.end,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeights.semiBold,
-                    color: context.primaryTextColor.withValues(alpha: 0.5),
+              if (_sysConfigCubit.isLeagueEnabled) ...[
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pushNamed(Routes.league),
+                  child: Text(
+                    'Leagues',
+                    textAlign: TextAlign.end,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeights.semiBold,
+                      color: context.primaryTextColor.withValues(alpha: 0.5),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
+                const SizedBox(width: 12),
+              ],
               GestureDetector(
                 onTap: onTapViewAll,
                 child: Text(
@@ -1947,9 +1951,11 @@ class HomeScreenState extends State<HomeScreen>
                                 await context.read<ContestCubit>().getContest(
                                   languageId: _currLangId,
                                 );
-                                await _homeLeagueCubit.getLeagues(
-                                  languageId: _currLangId,
-                                );
+                                if (_sysConfigCubit.isLeagueEnabled) {
+                                  await _homeLeagueCubit.getLeagues(
+                                    languageId: _currLangId,
+                                  );
+                                }
 
                                 // Refresh monetization data
                                 context
@@ -1994,8 +2000,11 @@ class HomeScreenState extends State<HomeScreen>
                                   _buildDailyAds(),
                                 ],
                                 if (!_isGuest &&
-                                    _sysConfigCubit.isContestEnabled) ...[
+                                  _sysConfigCubit.isLeagueEnabled) ...[
                                   _buildLeagueSection(),
+                                ],
+                                if (!_isGuest &&
+                                  _sysConfigCubit.isContestEnabled) ...[
                                   const SizedBox(height: 8),
                                   _buildLiveContestSection(),
                                 ],

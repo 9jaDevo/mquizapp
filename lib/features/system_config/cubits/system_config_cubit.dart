@@ -117,6 +117,8 @@ final class SystemConfigCubit extends Cubit<SystemConfigState> {
 
   bool get isContestEnabled => systemConfigModel?.contestMode ?? false;
 
+    bool get isLeagueEnabled => systemConfigModel?.leagueMode ?? false;
+
   bool get isFunNLearnEnabled => systemConfigModel?.funNLearnMode ?? false;
 
   bool get isOneVsOneBattleEnabled =>

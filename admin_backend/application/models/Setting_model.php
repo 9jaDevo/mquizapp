@@ -174,6 +174,7 @@ class Setting_model extends CI_Model
             'exam_module',
             'exam_module_resume_exam_timeout',
             'contest_mode',
+            'league_mode',
             'contest_mode_wrong_deduct_score',
             'contest_mode_correct_credit_score',
             'multi_match_mode',
