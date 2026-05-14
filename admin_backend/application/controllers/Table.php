@@ -3021,16 +3021,16 @@ class Table extends REST_Controller
             $scope_where = "AND u.continent='{$region}'";
         }
 
-        $sub_query = "SELECT u.id AS user_id, u.name, u.email, u.profile, u.country_name, u.continent, u.country_code, \
-                      ROUND(SUM(e.duration_seconds) / 60, 2) AS total_minutes, \
-                      MAX(e.session_end) AS last_updated \
-                      FROM tbl_user_engagement e \
-                      JOIN tbl_users u ON u.id = e.user_id \
-                      WHERE u.status=1 {$period_where} {$scope_where} \
+        $sub_query = "SELECT u.id AS user_id, u.name, u.email, u.profile, u.country_name, u.continent, u.country_code,
+                      ROUND(SUM(e.duration_seconds) / 60, 2) AS total_minutes,
+                      MAX(e.session_end) AS last_updated
+                      FROM tbl_user_engagement e
+                      JOIN tbl_users u ON u.id = e.user_id
+                      WHERE u.status=1 {$period_where} {$scope_where}
                       GROUP BY e.user_id";
 
-        $ranked_query = "SELECT s.*, @user_rank := @user_rank + 1 user_rank \
-                         FROM ({$sub_query}) s, (SELECT @user_rank := 0) init \
+        $ranked_query = "SELECT s.*, @user_rank := @user_rank + 1 user_rank
+                         FROM ({$sub_query}) s, (SELECT @user_rank := 0) init
                          ORDER BY s.total_minutes DESC, s.last_updated ASC";
 
         $this->db->select('r.*');

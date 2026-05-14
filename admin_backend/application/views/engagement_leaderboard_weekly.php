@@ -144,10 +144,15 @@
             var today = new Date();
             document.getElementById("year").value = today.getFullYear();
 
-            // Get current week number
-            var onejan = new Date(today.getFullYear(), 0, 1);
-            var week = Math.ceil((((today - onejan) / 86400000) + onejan.getDay() + 1) / 7);
-            document.getElementById("week").value = week;
+            // Get current ISO 8601 week number (matches PHP date('W'))
+            function getISOWeek(date) {
+                var d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+                var dayNum = d.getUTCDay() || 7;
+                d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+                var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+                return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+            }
+            document.getElementById("week").value = getISOWeek(today);
 
             $('#engagement_weekly_table').bootstrapTable('refresh');
             $('#engagement_weekly_table').show();
