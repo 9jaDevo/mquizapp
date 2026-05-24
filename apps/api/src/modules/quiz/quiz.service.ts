@@ -195,6 +195,166 @@ export class QuizService {
     return result;
   }
 
+  async getDailyChallenge(firebaseUid: string, languageId = 1) {
+    const userId = await this.resolveUserId(firebaseUid);
+    const today = this.startOfToday();
+
+    const dailyQuiz = await this.prisma.tbl_daily_quiz.findFirst({
+      where: { language_id: languageId, date_published: today },
+    });
+
+    if (!dailyQuiz) {
+      throw new NotFoundException({
+        error: 'NO_DAILY_CHALLENGE',
+        message: 'No daily challenge available for today',
+      });
+    }
+
+    const alreadyCompleted = !!(await this.prisma.tbl_daily_quiz_user.findFirst({
+      where: { user_id: userId, date: today },
+    }));
+
+    const questionIds = dailyQuiz.questions_id
+      .split(',')
+      .map((s) => parseInt(s.trim(), 10))
+      .filter((n) => !isNaN(n) && n > 0);
+
+    const questions = await this.prisma.question.findMany({
+      where: { id: { in: questionIds } },
+      select: {
+        id: true,
+        category: true,
+        subcategory: true,
+        languageId: true,
+        image: true,
+        question: true,
+        questionType: true,
+        optiona: true,
+        optionb: true,
+        optionc: true,
+        optiond: true,
+        optione: true,
+        level: true,
+        // answer intentionally omitted
+      },
+    });
+
+    return {
+      dailyQuizId: dailyQuiz.id,
+      date: dailyQuiz.date_published,
+      alreadyCompleted,
+      questions: questions.map((q) => ({
+        id: q.id,
+        categoryId: q.category,
+        subcategoryId: q.subcategory,
+        languageId: q.languageId,
+        image: q.image,
+        text: q.question,
+        type: q.questionType,
+        options: {
+          a: q.optiona,
+          b: q.optionb,
+          c: q.optionc,
+          d: q.optiond,
+          ...(q.optione ? { e: q.optione } : {}),
+        },
+        level: q.level,
+      })),
+    };
+  }
+
+  async submitDailyChallenge(firebaseUid: string, body: SubmitQuizDto) {
+    if (!body.answers?.length) {
+      throw new BadRequestException({ error: 'EMPTY_ANSWERS', message: 'No answers submitted' });
+    }
+
+    const userId = await this.resolveUserId(firebaseUid);
+    const today = this.startOfToday();
+
+    // Idempotency — one submission per calendar day per user
+    const alreadyDone = await this.prisma.tbl_daily_quiz_user.findFirst({
+      where: { user_id: userId, date: today },
+    });
+    if (alreadyDone) {
+      throw new BadRequestException({
+        error: 'ALREADY_SUBMITTED',
+        message: 'Daily challenge already completed today',
+      });
+    }
+
+    const questionIds = body.answers.map((a) => a.questionId);
+    const questions = await this.prisma.question.findMany({
+      where: { id: { in: questionIds } },
+      select: { id: true, answer: true },
+    });
+    if (questions.length !== questionIds.length) {
+      throw new NotFoundException({
+        error: 'QUESTION_NOT_FOUND',
+        message: 'One or more questions not found',
+      });
+    }
+
+    const answerById = new Map(questions.map((q) => [q.id, q.answer]));
+    const breakdown = body.answers.map((a) => {
+      const correctAnswer = answerById.get(a.questionId)!;
+      const isCorrect = this.normalize(a.answer) === this.normalize(correctAnswer);
+      return { questionId: a.questionId, isCorrect, correctAnswer };
+    });
+
+    const correctCount = breakdown.filter((b) => b.isCorrect).length;
+    const score = correctCount * POINTS_PER_CORRECT;
+    const coinsEarned = correctCount * COINS_PER_CORRECT_DEFAULT;
+
+    await this.prisma.$transaction(async (tx) => {
+      // Mark as done (prevents duplicate submissions today)
+      await tx.tbl_daily_quiz_user.create({ data: { user_id: userId, date: today } });
+
+      if (coinsEarned > 0) {
+        await tx.user.update({
+          where: { id: userId },
+          data: { coins: { increment: coinsEarned } },
+        });
+        await tx.tracker.create({
+          data: {
+            userId,
+            uid: userId.toString(),
+            points: coinsEarned.toString(),
+            type: 'daily_challenge',
+            status: 0,
+            date: new Date(),
+          },
+        });
+      }
+
+      if (score > 0) {
+        await tx.leaderboardDaily.create({ data: { userId, score, dateCreated: new Date() } });
+      }
+
+      await tx.userProgress.upsert({
+        where: { userId },
+        update: { totalScore: { increment: score } },
+        create: { userId, stageNumber: 1, totalScore: score },
+      });
+    });
+
+    return {
+      correctCount,
+      wrongCount: body.answers.length - correctCount,
+      score,
+      coinsEarned,
+      accuracy: body.answers.length
+        ? Math.round((correctCount / body.answers.length) * 100)
+        : 0,
+      breakdown,
+    };
+  }
+
+  private startOfToday(): Date {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
   private buildRandomIdsSql(where: Record<string, unknown>): string {
     const conditions: string[] = [];
     if ('languageId' in where) conditions.push('language_id = ?');

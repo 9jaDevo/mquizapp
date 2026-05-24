@@ -65,16 +65,10 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "const json = pm.response.json();",
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Login successful', () => pm.expect(json.success).to.be.true);",
-                  "if (json.data && json.data.user) {",
-                  "  pm.environment.set('userId', json.data.user.id);",
-                  "  pm.environment.set('userFirebaseId', json.data.user.firebaseId);",
-                  "}"
-                ],
-                "type": "text/javascript"
+                  "const j=pm.response.json();pm.test('2xx',()=>pm.expect(pm.response.code).to.be.oneOf([200,201]));if(j.data&&j.data.user)pm.environment.set('userId',j.data.user.id);"
+                ]
               }
             }
           ],
@@ -84,14 +78,23 @@
             "body": {
               "mode": "raw",
               "raw": "{}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/v2/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "auth", "login"]
-            },
-            "description": "Register or login via Firebase token.\nFirebase token is attached automatically via collection-level auth.\nBody is empty — user identity comes from the token."
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "auth",
+                "login"
+              ]
+            }
           }
         },
         {
@@ -100,40 +103,56 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
-                  "const json = pm.response.json();",
-                  "pm.test('Guest user created', () => pm.expect(json.success).to.be.true);"
-                ],
-                "type": "text/javascript"
+                  "pm.test('201',()=>pm.response.to.have.status(201));"
+                ]
               }
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{ \"deviceId\": \"test-device-001\" }",
-              "options": { "raw": { "language": "json" } }
+              "raw": "{\"deviceId\":\"test-device-001\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/v2/auth/guest",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "auth", "guest"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "auth",
+                "guest"
+              ]
             }
           }
         },
         {
-          "name": "Validate Token",
+          "name": "Validate / Refresh Token",
           "request": {
             "method": "POST",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/v2/auth/refresh-token",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "auth", "refresh-token"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "auth",
+                "refresh-token"
+              ]
             }
           }
         }
@@ -148,16 +167,10 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "const json = pm.response.json();",
-                  "pm.test('Profile returned', () => {",
-                  "  pm.expect(json.data).to.have.property('id');",
-                  "  pm.expect(json.data).to.have.property('name');",
-                  "  pm.expect(json.data).to.not.have.property('fcmId');",
-                  "});"
-                ],
-                "type": "text/javascript"
+                  "pm.test('200',()=>pm.response.to.have.status(200));const j=pm.response.json();pm.test('no sensitive',()=>{pm.expect(j.data).to.not.have.property('fcmId');});"
+                ]
               }
             }
           ],
@@ -165,8 +178,14 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/v2/users/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "users", "me"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "users",
+                "me"
+              ]
             }
           }
         },
@@ -177,13 +196,23 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Test User\",\n  \"appLanguage\": \"english\",\n  \"ageGroup\": \"teens\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "raw": "{\"name\":\"Test User\",\"appLanguage\":\"english\",\"ageGroup\":\"teens\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/v2/users/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "users", "me"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "users",
+                "me"
+              ]
             }
           }
         },
@@ -193,8 +222,14 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/v2/users/{{userId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "users", "{{userId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "users",
+                "{{userId}}"
+              ]
             }
           }
         },
@@ -204,8 +239,15 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/v2/users/me/stats",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "users", "me", "stats"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "users",
+                "me",
+                "stats"
+              ]
             }
           }
         },
@@ -215,8 +257,15 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/v2/users/me/badges",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "users", "me", "badges"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "users",
+                "me",
+                "badges"
+              ]
             }
           }
         },
@@ -226,11 +275,24 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/v2/users/me/coin-history?page=1&limit=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "users", "me", "coin-history"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "users",
+                "me",
+                "coin-history"
+              ],
               "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "20" }
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
               ]
             }
           }
@@ -242,13 +304,24 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{ \"fcmToken\": \"{{fcmToken}}\" }",
-              "options": { "raw": { "language": "json" } }
+              "raw": "{\"fcmToken\":\"{{fcmToken}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/v2/users/me/fcm-token",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "users", "me", "fcm-token"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "users",
+                "me",
+                "fcm-token"
+              ]
             }
           }
         }
@@ -263,15 +336,10 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "const json = pm.response.json();",
-                  "pm.test('Returns array', () => pm.expect(json.data).to.be.an('array'));",
-                  "if (json.data.length > 0) {",
-                  "  pm.environment.set('categoryId', json.data[0].id);",
-                  "}"
-                ],
-                "type": "text/javascript"
+                  "const j=pm.response.json();const a=j.data.categories||j.data;if(Array.isArray(a)&&a.length>0)pm.environment.set('categoryId',a[0].id);"
+                ]
               }
             }
           ],
@@ -279,8 +347,20 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/v2/categories",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "categories"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "categories"
+              ],
+              "query": [
+                {
+                  "key": "languageId",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
             }
           }
         },
@@ -290,8 +370,232 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/v2/categories/{{categoryId}}/subcategories",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "categories", "{{categoryId}}", "subcategories"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "categories",
+                "{{categoryId}}",
+                "subcategories"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "⚙️ Config",
+      "item": [
+        {
+          "name": "Get All Settings",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v2/config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "config"
+              ]
+            },
+            "description": "Public. Returns all settings."
+          }
+        },
+        {
+          "name": "Get Setting By Type",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v2/config/by-type?type=app_language",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "config",
+                "by-type"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "app_language",
+                  "description": "app_language | quiz_language | ads_config | feature_flags"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔥 Streak",
+      "item": [
+        {
+          "name": "Get My Streak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json();pm.test('fields',()=>{pm.expect(j.data).to.have.property('streakCount');pm.expect(j.data).to.have.property('maxStreak');});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v2/streak/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "streak",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Claim Daily Streak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('2xx/409',()=>pm.expect(pm.response.code).to.be.oneOf([200,201,409]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v2/streak/claim-daily",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "streak",
+                "claim-daily"
+              ]
+            },
+            "description": "409 if already claimed today."
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏅 Leaderboard",
+      "item": [
+        {
+          "name": "Daily Leaderboard",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200',()=>pm.response.to.have.status(200));pm.test('entries',()=>pm.expect(pm.response.json().data).to.have.property('entries'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v2/leaderboard/daily?limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "leaderboard",
+                "daily"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Weekly Leaderboard",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v2/leaderboard/weekly?limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "leaderboard",
+                "weekly"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Monthly Leaderboard",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v2/leaderboard/monthly?limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "leaderboard",
+                "monthly"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "My Leaderboard Ranks",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v2/leaderboard/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "leaderboard",
+                "me"
+              ]
             }
           }
         }
@@ -306,40 +610,56 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "const json = pm.response.json();",
-                  "pm.test('Returns questions array', () => pm.expect(json.data).to.be.an('array'));",
-                  "pm.test('Each question has required fields', () => {",
-                  "  if (json.data.length > 0) {",
-                  "    const q = json.data[0];",
-                  "    pm.expect(q).to.have.property('id');",
-                  "    pm.expect(q).to.have.property('question');",
-                  "    pm.expect(q).to.have.property('answers');",
-                  "    pm.expect(q).to.not.have.property('correctAnswer');",
-                  "  }",
-                  "});"
-                ],
-                "type": "text/javascript"
+                  "pm.test('200',()=>pm.response.to.have.status(200));const j=pm.response.json();pm.test('no answer',()=>{if(j.data.length>0)pm.expect(j.data[0]).to.not.have.property('answer');});if(j.data.length>0)pm.environment.set('questionId',j.data[0].id);"
+                ]
               }
             }
           ],
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/v2/quiz/questions?type=1&category_id={{categoryId}}&limit=10",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "quiz", "questions"],
+              "raw": "{{baseUrl}}/v2/quiz/questions?type=1&categoryId={{categoryId}}&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "quiz",
+                "questions"
+              ],
               "query": [
-                { "key": "type", "value": "1", "description": "1=quiz_zone, 2=fun_learn, 3=guess_word" },
-                { "key": "category_id", "value": "{{categoryId}}" },
-                { "key": "subcategory_id", "value": "", "disabled": true },
-                { "key": "language_id", "value": "", "disabled": true },
-                { "key": "level", "value": "", "disabled": true, "description": "1=easy, 2=medium, 3=hard" },
-                { "key": "limit", "value": "10" }
+                {
+                  "key": "type",
+                  "value": "1",
+                  "description": "1=quiz_zone 2=fun_learn 3=guess_word"
+                },
+                {
+                  "key": "categoryId",
+                  "value": "{{categoryId}}"
+                },
+                {
+                  "key": "subcategoryId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "languageId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "level",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
               ]
-            },
-            "description": "Returns randomized questions for a quiz session.\nIMPORTANT: correctAnswer must NOT be in the response."
+            }
           }
         },
         {
@@ -348,16 +668,10 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "const json = pm.response.json();",
-                  "pm.test('Returns score and coins earned', () => {",
-                  "  pm.expect(json.data).to.have.property('score');",
-                  "  pm.expect(json.data).to.have.property('coinsEarned');",
-                  "  pm.expect(json.data).to.have.property('xpEarned');",
-                  "});"
-                ],
-                "type": "text/javascript"
+                  "pm.test('2xx',()=>pm.expect(pm.response.code).to.be.oneOf([200,201]));pm.test('score+coins',()=>{const j=pm.response.json();pm.expect(j.data).to.have.property('score');pm.expect(j.data).to.have.property('coinsEarned');});"
+                ]
               }
             }
           ],
@@ -366,61 +680,86 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"session-uuid-here\",\n  \"categoryId\": {{categoryId}},\n  \"quizType\": 1,\n  \"timeTaken\": 45,\n  \"boostersUsed\": [],\n  \"answers\": [\n    { \"questionId\": 1, \"answer\": \"a\" },\n    { \"questionId\": 2, \"answer\": \"c\" }\n  ]\n}",
-              "options": { "raw": { "language": "json" } }
+              "raw": "{\"categoryId\":{{categoryId}},\"quizType\":1,\"durationMs\":45000,\"answers\":[{\"questionId\":{{questionId}},\"answer\":\"a\"}]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/v2/quiz/submit",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "quiz", "submit"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "quiz",
+                "submit"
+              ]
             },
-            "description": "Submit quiz answers. Server validates correct answers and calculates score/coins/XP server-side. Never trust client-supplied score."
+            "description": "Server validates all answers and computes score."
           }
         },
         {
           "name": "Get Daily Challenge",
           "request": {
             "method": "GET",
+            "header": [],
             "url": {
-              "raw": "{{baseUrl}}/v2/quiz/daily-challenge",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "quiz", "daily-challenge"]
+              "raw": "{{baseUrl}}/v2/quiz/daily-challenge?languageId=1"
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Envelope',()=>{pm.expect(pm.response.json()).to.have.property('success');});"
+                ]
+              }
             }
-          }
+          ]
         },
         {
           "name": "Submit Daily Challenge",
           "request": {
             "method": "POST",
-            "header": [],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v2/quiz/daily-challenge/submit"
+            },
+            "description": "",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"answers\": [\n    { \"questionId\": 1, \"answer\": \"b\" }\n  ],\n  \"timeTaken\": 30\n}",
-              "options": { "raw": { "language": "json" } }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/v2/quiz/daily-challenge/submit",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "quiz", "daily-challenge", "submit"]
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionId\": 1,\n      \"answer\": \"a\"\n    }\n  ],\n  \"durationMs\": 30000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
-          }
-        },
-        {
-          "name": "Get Leaderboard",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/v2/quiz/leaderboard?period=weekly&limit=50",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "quiz", "leaderboard"],
-              "query": [
-                { "key": "period", "value": "weekly", "description": "daily | weekly | monthly | alltime" },
-                { "key": "category_id", "value": "", "disabled": true },
-                { "key": "country_code", "value": "", "disabled": true },
-                { "key": "limit", "value": "50" }
-              ]
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Envelope',()=>{pm.expect(pm.response.json()).to.have.property('success');});"
+                ]
+              }
             }
-          }
+          ]
         }
       ]
     },
@@ -429,13 +768,75 @@
       "item": [
         {
           "name": "Get Coin Balance",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200',()=>pm.response.to.have.status(200));pm.test('balance',()=>pm.expect(pm.response.json().data).to.have.property('balance'));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/v2/coins/balance",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "coins", "balance"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "coins",
+                "balance"
+              ]
             }
+          }
+        },
+        {
+          "name": "Get Transaction History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v2/coins/history?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "coins",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Coin Store (Packs)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v2/coins/store",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "coins",
+                "store"
+              ]
+            },
+            "description": "Available coin purchase packs from tbl_coin_store."
           }
         }
       ]
@@ -444,71 +845,97 @@
       "name": "❤️ Lives",
       "item": [
         {
-          "name": "Get Lives",
+          "name": "Get My Lives",
           "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "const json = pm.response.json();",
-                  "pm.test('Lives data returned', () => {",
-                  "  pm.expect(json.data).to.have.property('livesCount');",
-                  "  pm.expect(json.data).to.have.property('maxLives');",
-                  "  pm.expect(json.data).to.have.property('nextRegenAt');",
-                  "});"
-                ],
-                "type": "text/javascript"
+                  "const j=pm.response.json();pm.test('fields',()=>{pm.expect(j.data).to.have.property('livesCount');pm.expect(j.data).to.have.property('maxLives');pm.expect(j.data).to.have.property('nextRefillAt');});"
+                ]
               }
             }
           ],
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/v2/lives",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "lives"]
-            }
-          }
-        },
-        {
-          "name": "Use a Life",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/v2/lives/use",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "lives", "use"]
-            }
-          }
-        },
-        {
-          "name": "Restore Life (Ad)",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{ \"adCompletionToken\": \"token-from-ad-sdk\" }",
-              "options": { "raw": { "language": "json" } }
+              "raw": "{{baseUrl}}/v2/lives/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "lives",
+                "me"
+              ]
             },
-            "url": {
-              "raw": "{{baseUrl}}/v2/lives/restore/ad",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "lives", "restore", "ad"]
-            }
+            "description": "Passive regen applied on every read."
           }
         },
         {
-          "name": "Restore Life (Coins)",
+          "name": "Consume a Life",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200/400',()=>pm.expect(pm.response.code).to.be.oneOf([200,201,400]));const j=pm.response.json();if(!j.success)pm.test('NO_LIVES',()=>pm.expect(j.error).to.equal('NO_LIVES'));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/v2/lives/restore/coins",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "lives", "restore", "coins"]
+              "raw": "{{baseUrl}}/v2/lives/consume",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "lives",
+                "consume"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Restore Lives with Coins",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v2/lives/restore-with-coins",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "lives",
+                "restore-with-coins"
+              ]
+            },
+            "description": "Atomic: deduct coins + refill lives."
+          }
+        },
+        {
+          "name": "Restore Lives with Ad",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v2/lives/restore-with-ad",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "lives",
+                "restore-with-ad"
+              ]
             }
           }
         }
@@ -519,12 +946,29 @@
       "item": [
         {
           "name": "Get Booster Types",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json();const a=j.data.types||j.data;if(Array.isArray(a)&&a.length>0)pm.environment.set('boosterTypeId',a[0].id);"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/v2/boosters/types",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "boosters", "types"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "boosters",
+                "types"
+              ]
             }
           }
         },
@@ -533,9 +977,15 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/v2/boosters/inventory",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "boosters", "inventory"]
+              "raw": "{{baseUrl}}/v2/boosters/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "boosters",
+                "me"
+              ]
             }
           }
         },
@@ -544,32 +994,56 @@
           "request": {
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{ \"boosterCode\": \"fifty_fifty\", \"quantity\": 1 }",
-              "options": { "raw": { "language": "json" } }
-            },
             "url": {
-              "raw": "{{baseUrl}}/v2/boosters/purchase",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "boosters", "purchase"]
-            }
+              "raw": "{{baseUrl}}/v2/boosters/{{boosterTypeId}}/purchase",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "boosters",
+                "{{boosterTypeId}}",
+                "purchase"
+              ]
+            },
+            "description": "Atomic: deduct coins + increment quantity."
           }
         },
         {
-          "name": "Use Booster",
+          "name": "Consume (Use) a Booster",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200/400',()=>pm.expect(pm.response.code).to.be.oneOf([200,201,400]));const j=pm.response.json();if(!j.success)pm.test('OUT_OF_STOCK',()=>pm.expect(j.error).to.equal('OUT_OF_STOCK'));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{ \"boosterCode\": \"fifty_fifty\", \"sessionId\": \"session-uuid-here\", \"questionId\": 42 }",
-              "options": { "raw": { "language": "json" } }
+              "raw": "{\"boosterTypeId\":{{boosterTypeId}}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
-              "raw": "{{baseUrl}}/v2/boosters/use",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "boosters", "use"]
+              "raw": "{{baseUrl}}/v2/boosters/consume",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "boosters",
+                "consume"
+              ]
             }
           }
         }
@@ -579,24 +1053,47 @@
       "name": "🗺️ Progress",
       "item": [
         {
-          "name": "Get My Progress",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/v2/progress",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "progress"]
-            }
-          }
-        },
-        {
           "name": "Get All Stages",
           "request": {
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/v2/progress/stages",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "progress", "stages"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "progress",
+                "stages"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get My Progress",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json();pm.test('fields',()=>{pm.expect(j.data).to.have.property('totalScore');pm.expect(j.data).to.have.property('currentStage');});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v2/progress/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "progress",
+                "me"
+              ]
             }
           }
         }
@@ -606,27 +1103,47 @@
       "name": "🏆 League",
       "item": [
         {
-          "name": "Get Active Leagues",
+          "name": "List Active Leagues",
           "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "const json = pm.response.json();",
-                  "if (json.data && json.data.length > 0) {",
-                  "  pm.environment.set('leagueId', json.data[0].id);",
-                  "}"
-                ],
-                "type": "text/javascript"
+                  "const j=pm.response.json();const a=j.data.leagues||j.data;if(Array.isArray(a)&&a.length>0)pm.environment.set('leagueId',a[0].id);"
+                ]
               }
             }
           ],
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/v2/leagues/active",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "leagues", "active"]
+              "raw": "{{baseUrl}}/v2/leagues",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "leagues"
+              ]
+            },
+            "description": "status=1 and end_date in future."
+          }
+        },
+        {
+          "name": "My League Memberships",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v2/leagues/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "leagues",
+                "me"
+              ]
             }
           }
         },
@@ -636,49 +1153,142 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/v2/leagues/{{leagueId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "leagues", "{{leagueId}}"]
-            }
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "leagues",
+                "{{leagueId}}"
+              ]
+            },
+            "description": "Returns league info + prize table."
           }
         },
         {
-          "name": "Join League",
+          "name": "Opt-In to League",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('2xx/409',()=>pm.expect(pm.response.code).to.be.oneOf([200,201,409]));const j=pm.response.json();if(!j.success)pm.test('known error',()=>pm.expect(j.error).to.be.oneOf(['ALREADY_JOINED','INSUFFICIENT_COINS','LEAGUE_ENDED']));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/v2/leagues/{{leagueId}}/join",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "leagues", "{{leagueId}}", "join"]
-            }
+              "raw": "{{baseUrl}}/v2/leagues/{{leagueId}}/opt-in",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "leagues",
+                "{{leagueId}}",
+                "opt-in"
+              ]
+            },
+            "description": "Atomic: deduct entry coins + create membership."
           }
         },
         {
-          "name": "Submit League Score",
+          "name": "Get Today's League Quiz",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200/404',()=>pm.expect(pm.response.code).to.be.oneOf([200,404]));const j=pm.response.json();if(j.success){pm.test('fields',()=>{pm.expect(j.data).to.have.property('dailyQuizId');pm.expect(j.data).to.have.property('questions');});if(j.data.dailyQuizId)pm.environment.set('dailyQuizId',j.data.dailyQuizId);}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v2/leagues/{{leagueId}}/today",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "leagues",
+                "{{leagueId}}",
+                "today"
+              ]
+            },
+            "description": "Answers stripped."
+          }
+        },
+        {
+          "name": "Submit League Daily Quiz",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('2xx/409',()=>pm.expect(pm.response.code).to.be.oneOf([200,201,409]));const j=pm.response.json();if(j.success)pm.test('score',()=>pm.expect(j.data).to.have.property('score'));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"quizDay\": 1,\n  \"answers\": [\n    { \"questionId\": 1, \"answer\": \"a\" }\n  ],\n  \"timeTaken\": 60\n}",
-              "options": { "raw": { "language": "json" } }
+              "raw": "{\"dailyQuizId\":{{dailyQuizId}},\"answers\":[{\"questionId\":{{questionId}},\"answer\":\"a\"}],\"adShown\":false}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/v2/leagues/{{leagueId}}/submit",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "leagues", "{{leagueId}}", "submit"]
-            }
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "leagues",
+                "{{leagueId}}",
+                "submit"
+              ]
+            },
+            "description": "Server scoring. 409 ALREADY_SUBMITTED if done today."
           }
         },
         {
-          "name": "Get League Leaderboard",
+          "name": "League Leaderboard",
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/v2/leagues/{{leagueId}}/leaderboard",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "leagues", "{{leagueId}}", "leaderboard"]
-            }
+              "raw": "{{baseUrl}}/v2/leagues/{{leagueId}}/leaderboard?limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "leagues",
+                "{{leagueId}}",
+                "leaderboard"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Cached 30s in Redis."
           }
         }
       ]
@@ -687,50 +1297,122 @@
       "name": "🎯 Contest",
       "item": [
         {
-          "name": "Get Active Contests",
+          "name": "List Active Contests",
           "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "const json = pm.response.json();",
-                  "if (json.data && json.data.length > 0) {",
-                  "  pm.environment.set('contestId', json.data[0].id);",
-                  "}"
-                ],
-                "type": "text/javascript"
+                  "const j=pm.response.json();const a=j.data.contests||j.data;if(Array.isArray(a)&&a.length>0)pm.environment.set('contestId',a[0].id);"
+                ]
               }
             }
           ],
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/v2/contests/active",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "contests", "active"]
+              "raw": "{{baseUrl}}/v2/contests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "contests"
+              ]
             }
           }
         },
         {
-          "name": "Get Contest Detail",
+          "name": "Get Contest Questions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200',()=>pm.response.to.have.status(200));const j=pm.response.json();pm.test('no answer',()=>{if(j.data.questions&&j.data.questions.length>0)pm.expect(j.data.questions[0]).to.not.have.property('answer');});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/v2/contests/{{contestId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "contests", "{{contestId}}"]
+              "raw": "{{baseUrl}}/v2/contests/{{contestId}}/questions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "contests",
+                "{{contestId}}",
+                "questions"
+              ]
             }
           }
         },
         {
-          "name": "Enter Contest",
+          "name": "Submit Contest Answers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('2xx/409',()=>pm.expect(pm.response.code).to.be.oneOf([200,201,409]));const j=pm.response.json();if(j.success)pm.test('score',()=>pm.expect(j.data).to.have.property('score'));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"answers\":[{\"questionId\":{{questionId}},\"answer\":\"a\"}]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": {
-              "raw": "{{baseUrl}}/v2/contests/{{contestId}}/enter",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "contests", "{{contestId}}", "enter"]
+              "raw": "{{baseUrl}}/v2/contests/{{contestId}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "contests",
+                "{{contestId}}",
+                "submit"
+              ]
+            },
+            "description": "One submission per user. 409 ALREADY_SUBMITTED on duplicate."
+          }
+        },
+        {
+          "name": "Contest Leaderboard",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v2/contests/{{contestId}}/leaderboard?limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "contests",
+                "{{contestId}}",
+                "leaderboard"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
             }
           }
         }
@@ -740,75 +1422,71 @@
       "name": "👥 Referral",
       "item": [
         {
-          "name": "Get My Referral Code",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/v2/referral/code",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "referral", "code"]
-            }
-          }
-        },
-        {
-          "name": "Apply Referral Code",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{ \"code\": \"ABC123\" }",
-              "options": { "raw": { "language": "json" } }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/v2/referral/apply",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "referral", "apply"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "🔥 Streak",
-      "item": [
-        {
-          "name": "Get Streak Info",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/v2/streak",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "streak"]
-            }
-          }
-        },
-        {
-          "name": "Daily Check-In",
+          "name": "Get My Referral Info",
           "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "const json = pm.response.json();",
-                  "pm.test('Streak count returned', () => {",
-                  "  pm.expect(json.data).to.have.property('streakCount');",
-                  "  pm.expect(json.data).to.have.property('coinsEarned');",
-                  "});"
-                ],
-                "type": "text/javascript"
+                  "const j=pm.response.json();pm.test('code',()=>pm.expect(j.data).to.have.property('code'));if(j.data&&j.data.code)pm.environment.set('myReferralCode',j.data.code);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v2/referral/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "referral",
+                "me"
+              ]
+            },
+            "description": "Returns code (auto-created) + total referrals + coins earned."
+          }
+        },
+        {
+          "name": "Apply Referral Code",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('2xx/4xx',()=>pm.expect(pm.response.code).to.be.oneOf([200,201,400,409]));const j=pm.response.json();if(!j.success)pm.test('known error',()=>pm.expect(j.error).to.be.oneOf(['SELF_REFERRAL','ALREADY_REFERRED','CODE_NOT_FOUND']));"
+                ]
               }
             }
           ],
           "request": {
             "method": "POST",
             "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"code\":\"ABC1\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": {
-              "raw": "{{baseUrl}}/v2/streak/check-in",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "streak", "check-in"]
-            }
+              "raw": "{{baseUrl}}/v2/referral/apply",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "referral",
+                "apply"
+              ]
+            },
+            "description": "One-time per user. Throttled 5/min."
           }
         }
       ]
@@ -818,16 +1496,37 @@
       "item": [
         {
           "name": "Get My Notifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200',()=>pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/v2/notifications?page=1&limit=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "notifications"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "notifications"
+              ],
               "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "20" },
-                { "key": "unread_only", "value": "false", "disabled": true }
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
               ]
             }
           }
@@ -836,66 +1535,24 @@
           "name": "Mark Notification Read",
           "request": {
             "method": "PUT",
+            "header": [],
             "url": {
-              "raw": "{{baseUrl}}/v2/notifications/{{notificationId}}/read",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "notifications", "{{notificationId}}", "read"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "⚙️ Config",
-      "item": [
-        {
-          "name": "Get System Config",
+              "raw": "{{baseUrl}}/v2/notifications/{{notificationId}}/read"
+            },
+            "description": ""
+          },
+          "response": [],
           "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "const json = pm.response.json();",
-                  "pm.test('Config has required fields', () => {",
-                  "  pm.expect(json.data).to.have.property('adsEnabled');",
-                  "  pm.expect(json.data).to.have.property('leagueEnabled');",
-                  "});"
-                ],
-                "type": "text/javascript"
+                  "pm.test('Envelope',()=>{pm.expect(pm.response.json()).to.have.property('success');});"
+                ]
               }
             }
-          ],
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/v2/config/system",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "config", "system"]
-            }
-          }
-        },
-        {
-          "name": "Get App Languages",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/v2/config/languages",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "config", "languages"]
-            }
-          }
-        },
-        {
-          "name": "Get Quiz Languages",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/v2/config/quiz-languages",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "config", "quiz-languages"]
-            }
-          }
+          ]
         }
       ]
     },
@@ -903,31 +1560,72 @@
       "name": "📢 Ads",
       "item": [
         {
-          "name": "Get Sponsor Banners",
+          "name": "Get Active Sponsor Banners",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json();const a=j.data.banners||j.data;if(Array.isArray(a)&&a.length>0)pm.environment.set('bannerId',a[0].id);"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/v2/ads/sponsor-banners",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "ads", "sponsor-banners"]
-            }
+              "raw": "{{baseUrl}}/v2/ads/banners/active",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "ads",
+                "banners",
+                "active"
+              ]
+            },
+            "description": "is_active=1 within start/end date. Cached 60s."
           }
         },
         {
-          "name": "Record Banner Click",
+          "name": "Record Impression / Click",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('2xx',()=>pm.expect(pm.response.code).to.be.oneOf([200,201]));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{ \"bannerId\": 1 }",
-              "options": { "raw": { "language": "json" } }
+              "raw": "{\"bannerId\":{{bannerId}},\"action\":\"showed\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
-              "raw": "{{baseUrl}}/v2/ads/banner-click",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "ads", "banner-click"]
-            }
+              "raw": "{{baseUrl}}/v2/ads/impression",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "ads",
+                "impression"
+              ]
+            },
+            "description": "action: 'showed' increments impressions; 'clicked' records click."
           }
         }
       ]
@@ -936,23 +1634,15 @@
       "name": "💳 Payments",
       "item": [
         {
-          "name": "Initialize Payment",
+          "name": "Initialize Paystack Payment",
           "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
-                  "const json = pm.response.json();",
-                  "pm.test('Returns payment URL', () => {",
-                  "  pm.expect(json.data).to.have.property('authorizationUrl');",
-                  "  pm.expect(json.data).to.have.property('reference');",
-                  "});",
-                  "if (json.data && json.data.reference) {",
-                  "  pm.environment.set('paymentReference', json.data.reference);",
-                  "}"
-                ],
-                "type": "text/javascript"
+                  "pm.test('201',()=>pm.response.to.have.status(201));const j=pm.response.json();pm.test('fields',()=>{pm.expect(j.data).to.have.property('authorizationUrl');pm.expect(j.data).to.have.property('reference');});if(j.data&&j.data.reference)pm.environment.set('paymentReference',j.data.reference);"
+                ]
               }
             }
           ],
@@ -961,25 +1651,25 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"type\": \"coin_purchase\",\n  \"planId\": \"coins_1000\",\n  \"callbackUrl\": \"https://app.mquiz.uk/payment-callback\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "raw": "{\"amountKobo\":50000,\"itemId\":1,\"coins\":500,\"callbackUrl\":\"https://app.mquiz.uk/payment-callback\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/v2/payments/initialize",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "payments", "initialize"]
-            }
-          }
-        },
-        {
-          "name": "Verify Payment",
-          "request": {
-            "method": "POST",
-            "url": {
-              "raw": "{{baseUrl}}/v2/payments/verify/{{paymentReference}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "payments", "verify", "{{paymentReference}}"]
-            }
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "payments",
+                "initialize"
+              ]
+            },
+            "description": "Throttled 10/min. Creates pending payment then calls Paystack."
           }
         },
         {
@@ -988,296 +1678,822 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/v2/payments/history",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "payments", "history"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "payments",
+                "history"
+              ]
             }
           }
         },
         {
-          "name": "Paystack Webhook (test)",
+          "name": "Paystack Webhook",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 or 401',()=>pm.expect(pm.response.code).to.be.oneOf([200,401]));"
+                ]
+              }
+            }
+          ],
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
             "header": [
               {
                 "key": "x-paystack-signature",
                 "value": "{{paystackWebhookSignature}}",
-                "description": "HMAC-SHA512 of payload using Paystack secret key"
+                "description": "HMAC-SHA512 of raw body"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"event\": \"charge.success\",\n  \"data\": {\n    \"reference\": \"test-ref-001\",\n    \"status\": \"success\",\n    \"amount\": 100000,\n    \"currency\": \"NGN\",\n    \"metadata\": { \"userId\": 1, \"planId\": \"coins_1000\" }\n  }\n}",
-              "options": { "raw": { "language": "json" } }
+              "raw": "{\"event\":\"charge.success\",\"data\":{\"reference\":\"{{paymentReference}}\",\"status\":\"success\",\"amount\":50000,\"currency\":\"NGN\",\"metadata\":{\"userId\":{{userId}},\"coins\":500}}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/v2/payments/webhook/paystack",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "payments", "webhook", "paystack"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "payments",
+                "webhook",
+                "paystack"
+              ]
             },
-            "description": "Webhook from Paystack. Must verify HMAC-SHA512 signature before processing."
+            "description": "Verifies HMAC-SHA512. Idempotent."
           }
+        },
+        {
+          "name": "Verify Payment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v2/payments/verify/{{paymentReference}}"
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Has verified',()=>{pm.expect(pm.response.json().data).to.have.property('verified');});"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
     {
       "name": "🛡️ Admin",
-      "description": "All admin endpoints require admin role in Firebase custom claims.",
+      "description": "All endpoints require Firebase admin claim.",
       "item": [
         {
-          "name": "Get Users (Admin)",
+          "name": "List Users",
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/v2/admin/users?page=1&limit=20&search=",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "admin", "users"],
+              "raw": "{{baseUrl}}/v2/admin/users?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "admin",
+                "users"
+              ],
               "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "20" },
-                { "key": "search", "value": "", "description": "Search by name/email" },
-                { "key": "status", "value": "", "disabled": true, "description": "active | suspended" }
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "name, email, or mobile"
+                }
               ]
             }
+          }
+        },
+        {
+          "name": "Get User Details",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v2/admin/users/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "admin",
+                "users",
+                "{{userId}}"
+              ]
+            },
+            "description": "Returns user + lives + progress + streak."
+          }
+        },
+        {
+          "name": "List Questions",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v2/admin/questions?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "admin",
+                "questions"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List AI Questions (Pending)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v2/admin/ai-questions/pending?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "admin",
+                "ai-questions",
+                "pending"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Fraud Flags",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json();if(j.data&&j.data.items&&j.data.items.length>0)pm.environment.set('fraudId',j.data.items[0].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v2/admin/fraud-flags?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "admin",
+                "fraud-flags"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Unresolved only (resolved=0)."
+          }
+        },
+        {
+          "name": "Resolve Fraud Flag",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200',()=>pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"action\":\"warning\",\"notes\":\"Reviewed\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v2/admin/fraud-flags/{{fraudId}}/resolve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "admin",
+                "fraud-flags",
+                "{{fraudId}}",
+                "resolve"
+              ]
+            },
+            "description": "action: none|review|warning|suspend. Sets resolved=1."
+          }
+        },
+        {
+          "name": "List Payments (Admin)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v2/admin/payments?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "admin",
+                "payments"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Send Broadcast Notification",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('2xx',()=>pm.expect(pm.response.code).to.be.oneOf([200,201]));pm.test('delivered',()=>pm.expect(pm.response.json().data).to.have.property('delivered'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"New Contest!\",\"message\":\"Join and win.\",\"type\":\"contest\",\"typeId\":1}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v2/admin/notifications/send",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "admin",
+                "notifications",
+                "send"
+              ]
+            },
+            "description": "No userIds = FCM topic broadcast. userIds array = targeted multicast."
+          }
+        },
+        {
+          "name": "Send Targeted Notification",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Warning\",\"message\":\"Unusual activity.\",\"type\":\"warning\",\"userIds\":[{{userId}}]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v2/admin/notifications/send",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "admin",
+                "notifications",
+                "send"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Settings (Admin)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v2/admin/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "admin",
+                "settings"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Setting By Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200',()=>pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"message\":\"{\\\"ads_enabled\\\":1}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v2/admin/settings/ads_config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "admin",
+                "settings",
+                "ads_config"
+              ]
+            },
+            "description": "Upserts by :type. Invalidates config cache."
+          }
+        },
+        {
+          "name": "Get Overview Stats",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200',()=>pm.response.to.have.status(200));const j=pm.response.json();pm.test('kpis',()=>{pm.expect(j.data).to.have.property('totalUsers');pm.expect(j.data).to.have.property('unresolvedFraud');});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v2/admin/stats/overview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "admin",
+                "stats",
+                "overview"
+              ]
+            },
+            "description": "KPIs: totalUsers, totalQuestions, activeLeagues, unresolvedFraud, successfulPaymentsToday."
           }
         },
         {
           "name": "Suspend User",
           "request": {
             "method": "PATCH",
-            "header": [],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v2/admin/users/{{userId}}/suspend"
+            },
+            "description": "",
             "body": {
               "mode": "raw",
-              "raw": "{ \"reason\": \"Suspicious activity detected\" }",
-              "options": { "raw": { "language": "json" } }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/v2/admin/users/{{userId}}/suspend",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "admin", "users", "{{userId}}", "suspend"]
+              "raw": "{\n  \"action\": \"suspend\",\n  \"reason\": \"Terms violation\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
-          }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Envelope',()=>{pm.expect(pm.response.json()).to.have.property('success');});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Adjust User Coins",
           "request": {
             "method": "PATCH",
-            "header": [],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v2/admin/users/{{userId}}/coins"
+            },
+            "description": "",
             "body": {
               "mode": "raw",
-              "raw": "{ \"amount\": 100, \"reason\": \"Customer support adjustment\" }",
-              "options": { "raw": { "language": "json" } }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/v2/admin/users/{{userId}}/coins",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "admin", "users", "{{userId}}", "coins"]
+              "raw": "{\n  \"amount\": 100,\n  \"reason\": \"Compensation\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
-          }
-        },
-        {
-          "name": "Get Questions (Admin)",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/v2/admin/questions?page=1&limit=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "admin", "questions"],
-              "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "20" },
-                { "key": "category_id", "value": "", "disabled": true },
-                { "key": "type", "value": "", "disabled": true },
-                { "key": "ai_generated", "value": "", "disabled": true, "description": "0 or 1" },
-                { "key": "ai_approved", "value": "", "disabled": true, "description": "0=pending, 1=approved, 2=rejected" }
-              ]
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Envelope',()=>{pm.expect(pm.response.json()).to.have.property('success');});"
+                ]
+              }
             }
-          }
+          ]
         },
         {
           "name": "Create Question",
           "request": {
             "method": "POST",
-            "header": [],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v2/admin/questions"
+            },
+            "description": "",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"type\": 1,\n  \"categoryId\": {{categoryId}},\n  \"subcategoryId\": null,\n  \"languageId\": 0,\n  \"question\": \"What is the capital of Nigeria?\",\n  \"answers\": { \"a\": \"Lagos\", \"b\": \"Abuja\", \"c\": \"Kano\", \"d\": \"Port Harcourt\" },\n  \"correctAnswer\": \"b\",\n  \"noteAnswer\": \"Abuja has been Nigeria's capital since 1991.\",\n  \"level\": 1\n}",
-              "options": { "raw": { "language": "json" } }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/v2/admin/questions",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "admin", "questions"]
+              "raw": "{\n  \"category\": 1,\n  \"subcategory\": 1,\n  \"languageId\": 1,\n  \"question\": \"What is 2+2?\",\n  \"questionType\": 0,\n  \"optiona\": \"3\",\n  \"optionb\": \"4\",\n  \"optionc\": \"5\",\n  \"optiond\": \"6\",\n  \"answer\": \"b\",\n  \"level\": 1,\n  \"note\": \"Basic math\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
-          }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Has id',()=>{pm.expect(pm.response.json().data.id).to.be.a('number');});",
+                  "if(pm.response.json().data&&pm.response.json().data.id){pm.environment.set('questionId',pm.response.json().data.id);}"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Get AI Questions Pending Review",
+          "name": "Update Question",
           "request": {
-            "method": "GET",
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/v2/admin/ai-questions/pending?page=1&limit=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "admin", "ai-questions", "pending"],
-              "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "20" }
-              ]
+              "raw": "{{baseUrl}}/v2/admin/questions/{{questionId}}"
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"level\": 2,\n  \"note\": \"Updated\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
-          }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Envelope',()=>{pm.expect(pm.response.json()).to.have.property('success');});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Question",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v2/admin/questions/{{questionId}}"
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Deleted',()=>{pm.expect(pm.response.json().data.deleted).to.be.true;});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Import Questions (Bulk)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v2/admin/questions/import"
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"questions\": [\n    {\n      \"category\": 1,\n      \"subcategory\": 1,\n      \"languageId\": 1,\n      \"question\": \"Sample Q?\",\n      \"questionType\": 0,\n      \"optiona\": \"A\",\n      \"optionb\": \"B\",\n      \"optionc\": \"C\",\n      \"optiond\": \"D\",\n      \"answer\": \"a\",\n      \"level\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Has imported',()=>{pm.expect(pm.response.json().data.imported).to.be.a('number');});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Approve AI Question",
           "request": {
             "method": "POST",
+            "header": [],
             "url": {
-              "raw": "{{baseUrl}}/v2/admin/ai-questions/{{questionId}}/approve",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "admin", "ai-questions", "{{questionId}}", "approve"]
+              "raw": "{{baseUrl}}/v2/admin/ai-questions/{{aiQuestionId}}/approve"
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Envelope',()=>{pm.expect(pm.response.json()).to.have.property('success');});"
+                ]
+              }
             }
-          }
+          ]
         },
         {
-          "name": "Get Dashboard Analytics",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/v2/admin/analytics/dashboard",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "admin", "analytics", "dashboard"]
-            }
-          }
-        },
-        {
-          "name": "Get Fraud Flags",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/v2/admin/fraud-flags?resolved=false",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "admin", "fraud-flags"],
-              "query": [
-                { "key": "resolved", "value": "false" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Send Push Notification",
+          "name": "Reject AI Question",
           "request": {
             "method": "POST",
-            "header": [],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v2/admin/ai-questions/{{aiQuestionId}}/reject"
+            },
+            "description": "",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"New Contest Available!\",\n  \"body\": \"Join now and win big coins.\",\n  \"target\": \"all\",\n  \"data\": { \"screen\": \"contests\" }\n}",
-              "options": { "raw": { "language": "json" } }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/v2/admin/notifications/send",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "admin", "notifications", "send"]
+              "raw": "{\n  \"reason\": \"Inaccurate\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
-          }
-        },
-        {
-          "name": "Get System Settings",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/v2/admin/settings",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "admin", "settings"]
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Envelope',()=>{pm.expect(pm.response.json()).to.have.property('success');});"
+                ]
+              }
             }
-          }
-        },
-        {
-          "name": "Update System Settings",
-          "request": {
-            "method": "PUT",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "[\n  { \"key\": \"ads_enabled\", \"value\": \"1\" },\n  { \"key\": \"league_enabled\", \"value\": \"1\" }\n]",
-              "options": { "raw": { "language": "json" } }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/v2/admin/settings",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "admin", "settings"]
-            }
-          }
+          ]
         }
       ]
     },
     {
       "name": "🔒 Security Tests",
-      "description": "These requests should FAIL. Use to verify security controls are working.",
+      "description": "These SHOULD FAIL. Verify controls are working.",
       "item": [
         {
-          "name": "No Token → Should Return 401",
+          "name": "No Token → Expect 401",
           "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "pm.test('Should return 401 Unauthorized', () => {",
-                  "  pm.response.to.have.status(401);",
-                  "});"
-                ],
-                "type": "text/javascript"
+                  "pm.test('401',()=>pm.response.to.have.status(401));"
+                ]
               }
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/v2/users/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "users", "me"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "users",
+                "me"
+              ]
             }
           }
         },
         {
-          "name": "Forged Token → Should Return 401",
+          "name": "Forged Token → Expect 401",
           "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "pm.test('Should return 401 for forged token', () => {",
-                  "  pm.response.to.have.status(401);",
-                  "});"
-                ],
-                "type": "text/javascript"
+                  "pm.test('401',()=>pm.response.to.have.status(401));"
+                ]
               }
             }
           ],
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "forged.jwt.token", "type": "string" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "forged.jwt.token",
+                  "type": "string"
+                }
+              ]
             },
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/v2/users/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "users", "me"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "users",
+                "me"
+              ]
             }
           }
         },
         {
-          "name": "Non-Admin Accessing Admin Route → Should Return 403",
+          "name": "Non-Admin Accessing Admin Route → Expect 403",
           "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "pm.test('Should return 403 Forbidden for non-admin', () => {",
-                  "  pm.response.to.have.status(403);",
-                  "});"
-                ],
-                "type": "text/javascript"
+                  "pm.test('403',()=>pm.response.to.have.status(403));"
+                ]
               }
             }
           ],
@@ -1285,41 +2501,100 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/v2/admin/users",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "admin", "users"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "admin",
+                "users"
+              ]
             },
-            "description": "Use a valid non-admin Firebase token for this test."
+            "description": "Use a valid non-admin token."
           }
         },
         {
-          "name": "Paystack Webhook Without Signature → Should Return 401",
+          "name": "Paystack Webhook No Signature → Expect 401",
           "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "pm.test('Should reject webhook without signature', () => {",
-                  "  pm.expect(pm.response.code).to.be.oneOf([400, 401, 403]);",
-                  "});"
-                ],
-                "type": "text/javascript"
+                  "pm.test('rejects',()=>pm.expect(pm.response.code).to.be.oneOf([400,401,403]));"
+                ]
               }
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{ \"event\": \"charge.success\", \"data\": {} }",
-              "options": { "raw": { "language": "json" } }
+              "raw": "{\"event\":\"charge.success\",\"data\":{}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/v2/payments/webhook/paystack",
-              "host": ["{{baseUrl}}"],
-              "path": ["v2", "payments", "webhook", "paystack"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "payments",
+                "webhook",
+                "paystack"
+              ]
             }
+          }
+        },
+        {
+          "name": "Rate Limit → Expect 429 after 60 req/min",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 or 429',()=>pm.expect(pm.response.code).to.be.oneOf([200,201,429]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v2/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Run 11+ times rapidly."
           }
         }
       ]

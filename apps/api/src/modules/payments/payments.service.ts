@@ -218,6 +218,90 @@ export class PaymentsService {
     };
   }
 
+  async verifyPayment(firebaseUid: string, reference: string) {
+    if (!reference || reference.length > 200) {
+      throw new BadRequestException({ error: 'INVALID_REFERENCE', message: 'Invalid payment reference' });
+    }
+
+    const secret = this.config.get<string>('PAYSTACK_SECRET_KEY');
+    if (!secret) {
+      throw new InternalServerErrorException({
+        error: 'PAYSTACK_NOT_CONFIGURED',
+        message: 'Payment provider is not configured',
+      });
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: { firebaseId: firebaseUid },
+      select: { id: true },
+    });
+    if (!user) throw new NotFoundException({ error: 'USER_NOT_FOUND', message: 'User not found' });
+
+    // Check if this reference was already fulfilled
+    const existing = await this.prisma.tbl_payment_request.findMany({
+      where: { user_id: user.id },
+      orderBy: { id: 'desc' },
+      take: 50,
+    });
+    const match = existing.find((r) => r.details.includes(reference));
+    if (match?.status === 1) {
+      return { verified: true, alreadyProcessed: true };
+    }
+
+    // Call Paystack verify API
+    const verifyRes = await fetch(
+      `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
+      { headers: { Authorization: `Bearer ${secret}` } },
+    );
+
+    if (!verifyRes.ok) {
+      throw new InternalServerErrorException({
+        error: 'PAYSTACK_VERIFY_FAILED',
+        message: 'Could not verify payment with Paystack',
+      });
+    }
+
+    interface PaystackVerifyResponse {
+      status: boolean;
+      data: { status: string; amount: number; metadata?: Record<string, unknown> };
+    }
+    const json = (await verifyRes.json()) as PaystackVerifyResponse;
+
+    if (!json.status || json.data.status !== 'success') {
+      return { verified: false, paystackStatus: json.data.status };
+    }
+
+    const meta = json.data.metadata ?? {};
+    const coins = Number(meta['coins'] ?? 0);
+
+    // Fulfill if we have a pending request for this user and reference
+    if (match && match.status === 0 && coins > 0) {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.tbl_payment_request.update({
+          where: { id: match.id },
+          data: { status: 1, status_date: new Date() },
+        });
+        await tx.user.update({
+          where: { id: user.id },
+          data: { coins: { increment: coins } },
+        });
+        await tx.tracker.create({
+          data: {
+            userId: user.id,
+            uid: user.id.toString(),
+            points: coins.toString(),
+            type: `paystack_verify:${reference}`,
+            status: 0,
+            date: new Date(),
+          },
+        });
+      });
+      return { verified: true, alreadyProcessed: false, coinsAwarded: coins };
+    }
+
+    return { verified: true, alreadyProcessed: false, coinsAwarded: 0 };
+  }
+
   private async callPaystack(
     secret: string,
     email: string,

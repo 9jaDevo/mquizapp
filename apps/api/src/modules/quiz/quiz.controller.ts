@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, DefaultValuePipe, Get, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { DecodedIdToken } from 'firebase-admin/auth';
@@ -26,5 +26,21 @@ export class QuizController {
   @ApiOperation({ summary: 'Submit answers and receive scored results' })
   submit(@CurrentUser() user: DecodedIdToken, @Body() body: SubmitQuizDto) {
     return this.service.submitAnswers(user.uid, body);
+  }
+
+  @Get('daily-challenge')
+  @ApiOperation({ summary: "Today's daily challenge questions (answers stripped)" })
+  getDailyChallenge(
+    @CurrentUser() user: DecodedIdToken,
+    @Query('languageId', new DefaultValuePipe(1), ParseIntPipe) languageId: number,
+  ) {
+    return this.service.getDailyChallenge(user.uid, languageId);
+  }
+
+  @Post('daily-challenge/submit')
+  @Throttle({ default: { limit: 5, ttl: 86_400_000 } })
+  @ApiOperation({ summary: 'Submit daily challenge answers (once per day, server-scored)' })
+  submitDailyChallenge(@CurrentUser() user: DecodedIdToken, @Body() body: SubmitQuizDto) {
+    return this.service.submitDailyChallenge(user.uid, body);
   }
 }

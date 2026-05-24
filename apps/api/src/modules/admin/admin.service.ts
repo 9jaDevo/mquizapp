@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { FirebaseService } from '../../firebase/firebase.service';
 import { RedisService } from '../../redis/redis.service';
@@ -6,6 +11,12 @@ import { ListPaginationDto } from './dto/list-pagination.dto';
 import { ResolveFraudDto } from './dto/resolve-fraud.dto';
 import { SendNotificationDto } from './dto/send-notification.dto';
 import { UpdateSettingDto } from './dto/update-setting.dto';
+import { SuspendUserDto, SuspendAction } from './dto/suspend-user.dto';
+import { AdjustCoinsDto } from './dto/adjust-coins.dto';
+import { CreateQuestionDto } from './dto/create-question.dto';
+import { UpdateQuestionDto } from './dto/update-question.dto';
+import { ImportQuestionsDto } from './dto/import-questions.dto';
+import { RejectAiQuestionDto } from './dto/reject-ai-question.dto';
 
 @Injectable()
 export class AdminService {
@@ -196,6 +207,208 @@ export class AdminService {
       this.logger.error('FCM multicast failed', e);
       return { delivered: 0, error: 'fcm_failed' };
     }
+  }
+
+  async suspendUser(id: number, dto: SuspendUserDto) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException({ error: 'USER_NOT_FOUND', message: 'User not found' });
+
+    const newStatus = dto.action === SuspendAction.SUSPEND ? 1 : 0;
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: { status: newStatus },
+      select: { id: true, name: true, email: true, status: true },
+    });
+
+    this.logger.log(
+      `Admin ${dto.action} user ${id}${dto.reason ? ` — reason: ${dto.reason}` : ''}`,
+    );
+    return updated;
+  }
+
+  async adjustUserCoins(id: number, dto: AdjustCoinsDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true, coins: true },
+    });
+    if (!user) throw new NotFoundException({ error: 'USER_NOT_FOUND', message: 'User not found' });
+
+    if (user.coins + dto.amount < 0) {
+      throw new BadRequestException({
+        error: 'INSUFFICIENT_COINS',
+        message: 'Adjustment would leave user with negative coins',
+      });
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id },
+        data: { coins: { increment: dto.amount } },
+        select: { id: true, coins: true },
+      });
+      await tx.tracker.create({
+        data: {
+          userId: id,
+          uid: id.toString(),
+          points: dto.amount.toString(),
+          type: 'admin_adjustment',
+          status: 0,
+          date: new Date(),
+        },
+      });
+      return {
+        userId: id,
+        coinsAfter: updated.coins,
+        adjustment: dto.amount,
+        reason: dto.reason,
+      };
+    });
+  }
+
+  async createQuestion(dto: CreateQuestionDto) {
+    return this.prisma.question.create({
+      data: {
+        category: dto.category,
+        subcategory: dto.subcategory,
+        languageId: dto.languageId ?? 0,
+        image: dto.image ?? '',
+        question: dto.question,
+        questionType: dto.questionType,
+        optiona: dto.optiona,
+        optionb: dto.optionb,
+        optionc: dto.optionc,
+        optiond: dto.optiond,
+        optione: dto.optione ?? null,
+        answer: dto.answer,
+        level: dto.level,
+        note: dto.note ?? '',
+      },
+    });
+  }
+
+  async updateQuestion(id: number, dto: UpdateQuestionDto) {
+    const existing = await this.prisma.question.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException({ error: 'QUESTION_NOT_FOUND', message: 'Question not found' });
+    }
+
+    const data: Record<string, unknown> = {};
+    if (dto.category !== undefined) data['category'] = dto.category;
+    if (dto.subcategory !== undefined) data['subcategory'] = dto.subcategory;
+    if (dto.languageId !== undefined) data['languageId'] = dto.languageId;
+    if (dto.image !== undefined) data['image'] = dto.image;
+    if (dto.question !== undefined) data['question'] = dto.question;
+    if (dto.questionType !== undefined) data['questionType'] = dto.questionType;
+    if (dto.optiona !== undefined) data['optiona'] = dto.optiona;
+    if (dto.optionb !== undefined) data['optionb'] = dto.optionb;
+    if (dto.optionc !== undefined) data['optionc'] = dto.optionc;
+    if (dto.optiond !== undefined) data['optiond'] = dto.optiond;
+    if (dto.optione !== undefined) data['optione'] = dto.optione;
+    if (dto.answer !== undefined) data['answer'] = dto.answer;
+    if (dto.level !== undefined) data['level'] = dto.level;
+    if (dto.note !== undefined) data['note'] = dto.note;
+
+    return this.prisma.question.update({ where: { id }, data });
+  }
+
+  async deleteQuestion(id: number) {
+    const existing = await this.prisma.question.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException({ error: 'QUESTION_NOT_FOUND', message: 'Question not found' });
+    }
+    await this.prisma.question.delete({ where: { id } });
+    return { deleted: true, id };
+  }
+
+  async importQuestions(dto: ImportQuestionsDto) {
+    const result = await this.prisma.question.createMany({
+      data: dto.questions.map((q) => ({
+        category: q.category,
+        subcategory: q.subcategory,
+        languageId: q.languageId ?? 0,
+        image: q.image ?? '',
+        question: q.question,
+        questionType: q.questionType,
+        optiona: q.optiona,
+        optionb: q.optionb,
+        optionc: q.optionc,
+        optiond: q.optiond,
+        optione: q.optione ?? null,
+        answer: q.answer,
+        level: q.level,
+        note: q.note ?? '',
+      })),
+    });
+    return { imported: result.count };
+  }
+
+  async approveAiQuestion(id: number) {
+    const ai = await this.prisma.aiQuestion.findUnique({ where: { id: BigInt(id) } });
+    if (!ai) {
+      throw new NotFoundException({ error: 'AI_QUESTION_NOT_FOUND', message: 'AI question not found' });
+    }
+    if (ai.status !== 0) {
+      throw new BadRequestException({
+        error: 'ALREADY_REVIEWED',
+        message: 'AI question has already been reviewed',
+      });
+    }
+
+    // Parse options JSON stored in ai.options (e.g. {"a":"...","b":"...","c":"...","d":"..."})
+    let parsedOptions: Record<string, string> = {};
+    try {
+      parsedOptions = JSON.parse(ai.options) as Record<string, string>;
+    } catch {
+      // fallback — leave options empty and let admin fill manually
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const question = await tx.question.create({
+        data: {
+          category: ai.category,
+          subcategory: ai.subcategory,
+          languageId: ai.languageId,
+          image: '',
+          question: ai.question,
+          questionType: ai.questionType,
+          optiona: parsedOptions['a'] ?? parsedOptions['optiona'] ?? '',
+          optionb: parsedOptions['b'] ?? parsedOptions['optionb'] ?? '',
+          optionc: parsedOptions['c'] ?? parsedOptions['optionc'] ?? '',
+          optiond: parsedOptions['d'] ?? parsedOptions['optiond'] ?? '',
+          optione: parsedOptions['e'] ?? parsedOptions['optione'] ?? null,
+          answer: ai.correctAnswer,
+          level: ai.level,
+          note: ai.note ?? '',
+        },
+      });
+
+      await tx.aiQuestion.update({
+        where: { id: BigInt(id) },
+        data: { status: 1 },
+      });
+
+      return { approved: true, questionId: question.id };
+    });
+  }
+
+  async rejectAiQuestion(id: number, dto: RejectAiQuestionDto) {
+    const ai = await this.prisma.aiQuestion.findUnique({ where: { id: BigInt(id) } });
+    if (!ai) {
+      throw new NotFoundException({ error: 'AI_QUESTION_NOT_FOUND', message: 'AI question not found' });
+    }
+    if (ai.status !== 0) {
+      throw new BadRequestException({
+        error: 'ALREADY_REVIEWED',
+        message: 'AI question has already been reviewed',
+      });
+    }
+
+    const updated = await this.prisma.aiQuestion.update({
+      where: { id: BigInt(id) },
+      data: { status: 2, note: dto.reason ?? 'Rejected by admin' },
+    });
+
+    return { rejected: true, id: updated.id.toString() };
   }
 
   async listSettings() {

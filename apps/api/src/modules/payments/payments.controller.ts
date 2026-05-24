@@ -4,6 +4,7 @@ import {
   Get,
   Headers,
   HttpCode,
+  Param,
   Post,
   Query,
   Req,
@@ -36,6 +37,16 @@ export class PaymentsController {
 
   @ApiBearerAuth('firebase-token')
   @UseGuards(FirebaseAuthGuard)
+  @Post('verify/:reference')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Verify a Paystack payment by reference and fulfill if successful' })
+  verify(@CurrentUser() user: DecodedIdToken, @Param('reference') reference: string) {
+    return this.service.verifyPayment(user.uid, reference);
+  }
+
+  @ApiBearerAuth('firebase-token')
+  @UseGuards(FirebaseAuthGuard)
   @Get('history')
   @ApiOperation({ summary: 'My payment history' })
   history(@CurrentUser() user: DecodedIdToken, @Query() q: CoinHistoryQueryDto) {
@@ -51,7 +62,6 @@ export class PaymentsController {
     @Headers('x-paystack-signature') signature: string,
     @Body() body: Record<string, unknown>,
   ) {
-    // raw body required for HMAC; rely on rawBody set by main bootstrap
     const raw = (req as unknown as { rawBody?: Buffer }).rawBody;
     return this.service.handleWebhook(raw, signature, body);
   }
