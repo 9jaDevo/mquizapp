@@ -1,0 +1,373 @@
+// =============================================================================
+// mQuiz Prisma Schema
+// =============================================================================
+// All existing tables keep their `tbl_` prefix via @@map() for compatibility
+// with the live PHP backend during migration.
+// MySQL/MariaDB initially; provider can swap to "postgresql" later with no
+// application code changes.
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// CORE: Users
+// =============================================================================
+
+model User {
+  id                  Int       @id @default(autoincrement()) @db.UnsignedInt
+  firebaseId          String    @map("firebase_id") @db.Text
+  name                String    @default("") @db.VarChar(128)
+  email               String    @db.VarChar(128)
+  countryCode         String?   @map("country_code") @db.VarChar(3)
+  countryName         String?   @map("country_name") @db.VarChar(100)
+  continent           String?   @db.VarChar(50)
+  regionAutoDetected  Int?      @default(1) @map("region_auto_detected") @db.TinyInt
+  mobile              String    @db.VarChar(32)
+  type                String    @db.VarChar(16)
+  profile             String    @db.VarChar(128)
+  fcmId               String?   @map("fcm_id") @db.VarChar(1024)
+  webFcmId            String?   @map("web_fcm_id") @db.VarChar(1024)
+  coins               Int       @default(0)
+  referCode           String?   @map("refer_code") @db.VarChar(128)
+  friendsCode         String?   @map("friends_code") @db.VarChar(128)
+  removeAds           Int       @default(0) @map("remove_ads") @db.TinyInt
+  dailyAdsCounter     Int       @default(0) @map("daily_ads_counter")
+  dailyAdsDate        DateTime  @default(dbgenerated("'2023-10-19'")) @map("daily_ads_date") @db.Date
+  status              Int?      @default(0) @db.UnsignedInt
+  dateRegistered      DateTime  @map("date_registered") @db.DateTime(0)
+  apiToken            String    @map("api_token") @db.Text
+  appLanguage         String?   @map("app_language") @db.VarChar(512)
+  webLanguage         String?   @map("web_language") @db.VarChar(512)
+
+  // Relations (new tables added in this migration)
+  lives               UserLives?
+  progress            UserProgress?
+  boosterInventory    UserBoosterInventory[]
+  notifications       Notification[]
+  payments            Payment[]
+
+  @@index([firebaseId(length: 191)])
+  @@index([email])
+  @@index([referCode])
+  @@map("tbl_users")
+}
+
+// =============================================================================
+// CONTENT: Categories, Subcategories, Questions
+// =============================================================================
+
+model Category {
+  id           Int     @id @default(autoincrement())
+  languageId   Int     @default(0) @map("language_id")
+  categoryName String  @map("category_name") @db.VarChar(250)
+  slug         String? @db.VarChar(250)
+  type         Int
+  isPremium    Int     @default(0) @map("is_premium") @db.TinyInt
+  coins        Int     @default(0)
+  image        String? @db.Text
+  rowOrder     Int     @map("row_order")
+
+  @@index([type])
+  @@map("tbl_category")
+}
+
+model Subcategory {
+  id              Int     @id @default(autoincrement())
+  languageId      Int     @default(0) @map("language_id")
+  maincatId       Int     @map("maincat_id")
+  subcategoryName String  @map("subcategory_name") @db.VarChar(250)
+  slug            String? @db.VarChar(250)
+  image           String? @db.Text
+  status          Int     @default(1) @db.TinyInt
+  isPremium       Int     @default(0) @map("is_premium") @db.TinyInt
+  coins           Int     @default(0)
+  rowOrder        Int     @map("row_order")
+
+  @@index([maincatId])
+  @@map("tbl_subcategory")
+}
+
+model Question {
+  id           Int    @id @default(autoincrement())
+  category     Int
+  subcategory  Int
+  languageId   Int    @default(0) @map("language_id")
+  image        String @db.VarChar(512)
+  question     String @db.Text
+  questionType Int    @map("question_type") @db.TinyInt
+  optiona      String @db.Text
+  optionb      String @db.Text
+  optionc      String @db.Text
+  optiond      String @db.Text
+  optione      String? @db.Text
+  answer       String @db.Text
+  level        Int
+  note         String @db.Text
+
+  @@index([category, subcategory])
+  @@index([level])
+  @@map("tbl_question")
+}
+
+model AiQuestion {
+  id            BigInt   @id @default(autoincrement())
+  languageId    Int      @default(0) @map("language_id")
+  quizType      Int      @default(0) @map("quiz_type")
+  contestId     Int      @default(0) @map("contest_id")
+  examId        Int      @default(0) @map("exam_id")
+  category      Int
+  subcategory   Int      @default(0)
+  level         Int      @default(0)
+  questionType  Int      @default(0) @map("question_type")
+  answerType    Int      @default(0) @map("answer_type")
+  question      String   @db.Text
+  options       String   @db.LongText
+  correctAnswer String   @map("correct_answer") @db.VarChar(50)
+  marks         Int      @default(0)
+  status        Int      @default(0)
+  note          String?  @db.VarChar(255)
+  dateTime      DateTime @map("date_time") @db.DateTime(0)
+
+  @@index([status])
+  @@index([category])
+  @@map("tbl_ai_questions")
+}
+
+// =============================================================================
+// GAMIFICATION: Streaks, Tracker (coin history), Leaderboards
+// =============================================================================
+
+model DailyStreak {
+  id              Int       @id @default(autoincrement())
+  userId          Int       @map("user_id")
+  uid             String?   @db.VarChar(255)
+  lastLoginDate   DateTime? @map("last_login_date") @db.Date
+  streakCount     Int?      @default(0) @map("streak_count")
+  maxStreak       Int?      @default(0) @map("max_streak")
+  coinEarnedToday Int?      @default(0) @map("coin_earned_today")
+  createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt       DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([userId])
+  @@map("tbl_daily_streak")
+}
+
+model Tracker {
+  id     Int      @id @default(autoincrement())
+  userId Int      @map("user_id")
+  uid    String   @db.Text
+  points String   @db.VarChar(255)
+  type   String   @db.Text
+  status Int      @db.TinyInt
+  date   DateTime @db.Date
+
+  @@index([userId])
+  @@map("tbl_tracker")
+}
+
+model LeaderboardDaily {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  score       Int
+  dateCreated DateTime @map("date_created") @db.DateTime(0)
+
+  @@index([userId])
+  @@index([dateCreated])
+  @@map("tbl_leaderboard_daily")
+}
+
+model LeaderboardWeekly {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  score       Int      @default(0)
+  weekNumber  Int      @map("week_number")
+  year        Int
+  lastUpdated DateTime @map("last_updated") @db.DateTime(0)
+  dateCreated DateTime @map("date_created") @db.DateTime(0)
+
+  @@index([userId])
+  @@index([weekNumber, year])
+  @@map("tbl_leaderboard_weekly")
+}
+
+model LeaderboardMonthly {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  score       Int
+  lastUpdated DateTime @map("last_updated") @db.DateTime(0)
+  dateCreated DateTime @map("date_created") @db.DateTime(0)
+
+  @@index([userId])
+  @@map("tbl_leaderboard_monthly")
+}
+
+// =============================================================================
+// SECURITY & FRAUD
+// =============================================================================
+
+model FraudDetection {
+  id           BigInt    @id @default(autoincrement())
+  userId       Int       @map("user_id")
+  firebaseId   String?   @map("firebase_id") @db.VarChar(255)
+  flagType     String    @map("flag_type") @db.VarChar(100)
+  severity     String    @default("low") @db.VarChar(20)
+  details      String?   @db.Text
+  ipAddress    String?   @map("ip_address") @db.VarChar(45)
+  resolved     Int       @default(0) @db.TinyInt
+  resolvedAt   DateTime? @map("resolved_at") @db.DateTime(0)
+  resolvedBy   Int?      @map("resolved_by")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.DateTime(0)
+
+  @@index([userId])
+  @@index([resolved])
+  @@map("tbl_fraud_detection")
+}
+
+// =============================================================================
+// CONFIG
+// =============================================================================
+
+model Settings {
+  id      Int    @id @default(autoincrement())
+  type    String @db.VarChar(512)
+  message String @db.Text
+
+  @@index([type(length: 191)])
+  @@map("tbl_settings")
+}
+
+// =============================================================================
+// ADS
+// =============================================================================
+
+model SponsorBanner {
+  id          Int       @id @default(autoincrement())
+  title       String    @db.VarChar(255)
+  imageUrl    String    @map("image_url") @db.VarChar(500)
+  targetUrl   String?   @map("target_url") @db.VarChar(500)
+  status      Int       @default(1) @db.TinyInt
+  startDate   DateTime? @map("start_date") @db.Date
+  endDate     DateTime? @map("end_date") @db.Date
+  rowOrder    Int       @default(0) @map("row_order")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.DateTime(0)
+
+  @@index([status])
+  @@map("tbl_sponsor_banners")
+}
+
+// =============================================================================
+// NEW TABLES — added in initial Phase 1 migration
+// =============================================================================
+
+model UserLives {
+  id                   Int      @id @default(autoincrement())
+  userId               Int      @unique @map("user_id")
+  livesCount           Int      @default(5) @map("lives_count")
+  maxLives             Int      @default(5) @map("max_lives")
+  lastRegenAt          DateTime @default(now()) @map("last_regen_at") @db.DateTime(0)
+  regenIntervalMinutes Int      @default(30) @map("regen_interval_minutes")
+  updatedAt            DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("tbl_user_lives")
+}
+
+model BoosterType {
+  id          Int     @id @default(autoincrement())
+  code        String  @unique @db.VarChar(64)
+  name        String  @db.VarChar(128)
+  description String? @db.Text
+  coinCost    Int     @default(0) @map("coin_cost")
+  iconUrl     String? @map("icon_url") @db.VarChar(500)
+  status      Int     @default(1) @db.TinyInt
+
+  inventory UserBoosterInventory[]
+
+  @@map("tbl_booster_type")
+}
+
+model UserBoosterInventory {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  boosterTypeId Int      @map("booster_type_id")
+  quantity      Int      @default(0)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  boosterType BoosterType @relation(fields: [boosterTypeId], references: [id])
+
+  @@unique([userId, boosterTypeId])
+  @@index([userId])
+  @@map("tbl_user_booster_inventory")
+}
+
+model ProgressStage {
+  id           Int    @id @default(autoincrement())
+  stageNumber  Int    @unique @map("stage_number")
+  name         String @db.VarChar(128)
+  xpRequired   Int    @map("xp_required")
+  rewardCoins  Int    @default(0) @map("reward_coins")
+  iconUrl      String? @map("icon_url") @db.VarChar(500)
+
+  @@map("tbl_progress_stage")
+}
+
+model UserProgress {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @unique @map("user_id")
+  currentStage Int      @default(1) @map("current_stage")
+  totalXp      Int      @default(0) @map("total_xp")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("tbl_user_progress")
+}
+
+model Notification {
+  id        BigInt    @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  title     String    @db.VarChar(255)
+  body      String    @db.Text
+  type      String    @default("system") @db.VarChar(50)
+  data      String?   @db.Text
+  readAt    DateTime? @map("read_at") @db.DateTime(0)
+  createdAt DateTime  @default(now()) @map("created_at") @db.DateTime(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([createdAt])
+  @@map("tbl_notification")
+}
+
+model Payment {
+  id            BigInt    @id @default(autoincrement())
+  reference     String    @unique @db.VarChar(128)
+  userId        Int       @map("user_id")
+  provider      String    @db.VarChar(32)
+  type          String    @db.VarChar(64)
+  planId        String?   @map("plan_id") @db.VarChar(64)
+  amountKobo    Int       @map("amount_kobo")
+  currency      String    @default("NGN") @db.VarChar(8)
+  status        String    @default("pending") @db.VarChar(32)
+  metadata      String?   @db.Text
+  webhookRaw    String?   @map("webhook_raw") @db.LongText
+  paidAt        DateTime? @map("paid_at") @db.DateTime(0)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("tbl_payment")
+}
