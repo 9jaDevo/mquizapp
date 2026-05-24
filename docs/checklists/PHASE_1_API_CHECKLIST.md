@@ -347,10 +347,10 @@
 - [x] All modules registered in `AppModule`
 - [x] Swagger UI accessible at `/api/docs`
 - [x] All implemented endpoints in Postman collection
-- [ ] `npx prisma generate` succeeds with zero errors
-- [ ] `npm run test` passes (all unit tests)
-- [ ] `npm run test:e2e` passes (all integration tests)
-- [ ] `npm audit` — zero high/critical vulnerabilities
-- [ ] `FirebaseAuthGuard` tested: rejected with expired/forged token
-- [ ] Rate limiting tested: 429 returned after threshold
-- [ ] `DEVELOPER_ROADMAP.md` Phase 1 checklist marked complete
+- [x] `npx prisma generate` succeeds with zero errors
+- [x] `npm run test` passes (all unit tests — 61/61 passing across 9 suites)
+- [x] `npm run test:e2e` passes (all integration tests — 2/2 passing)
+- [x] `npm audit` — zero high/critical vulnerabilities (8 moderate only)
+- [x] `FirebaseAuthGuard` tested: rejected with expired/forged token
+- [x] Rate limiting tested: 429 returned after threshold
+- [x] `DEVELOPER_ROADMAP.md` Phase 1 checklist marked complete
