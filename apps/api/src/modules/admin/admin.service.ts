@@ -17,6 +17,18 @@ import { CreateQuestionDto } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { ImportQuestionsDto } from './dto/import-questions.dto';
 import { RejectAiQuestionDto } from './dto/reject-ai-question.dto';
+import { CreateCategoryDto } from './dto/create-category.dto';
+import { UpdateCategoryDto } from './dto/update-category.dto';
+import { ReorderCategoriesDto } from './dto/reorder-categories.dto';
+import { CreateContestDto } from './dto/create-contest.dto';
+import { UpdateContestDto } from './dto/update-contest.dto';
+import { CreateLeagueDto } from './dto/create-league.dto';
+import { UpdateLeagueDto } from './dto/update-league.dto';
+import { CreateSponsorDto } from './dto/create-sponsor.dto';
+import { UpdateSponsorDto } from './dto/update-sponsor.dto';
+import { ListQuestionsQueryDto } from './dto/list-questions-query.dto';
+import { GenerateQuestionsDto } from './dto/generate-questions.dto';
+import OpenAI from 'openai';
 
 @Injectable()
 export class AdminService {
@@ -77,10 +89,13 @@ export class AdminService {
     return { user, lives, progress, streak };
   }
 
-  async listQuestions(q: ListPaginationDto) {
+  async listQuestions(q: ListQuestionsQueryDto) {
     const take = Math.min(q.limit ?? 50, 200);
     const skip = ((q.page ?? 1) - 1) * take;
-    const where = q.search ? { question: { contains: q.search } } : {};
+    const where: Record<string, unknown> = {};
+    if (q.search) where.question = { contains: q.search };
+    if (q.categoryId !== undefined) where.category = q.categoryId;
+    if (q.difficulty !== undefined) where.level = q.difficulty;
     const [items, total] = await Promise.all([
       this.prisma.question.findMany({ where, orderBy: { id: 'desc' }, skip, take }),
       this.prisma.question.count({ where }),
@@ -89,6 +104,12 @@ export class AdminService {
       items,
       pagination: { page: q.page ?? 1, limit: take, total, pages: Math.ceil(total / take) },
     };
+  }
+
+  async getQuestion(id: number) {
+    const q = await this.prisma.question.findUnique({ where: { id } });
+    if (!q) throw new NotFoundException({ error: 'QUESTION_NOT_FOUND', message: 'Question not found' });
+    return q;
   }
 
   async listPendingAiQuestions(q: ListPaginationDto) {
@@ -265,6 +286,55 @@ export class AdminService {
     });
   }
 
+  async listUserFraudFlags(userId: number, q: ListPaginationDto) {
+    const take = Math.min(q.limit ?? 50, 200);
+    const skip = ((q.page ?? 1) - 1) * take;
+    const where = { userId };
+    const [items, total] = await Promise.all([
+      this.prisma.fraudDetection.findMany({
+        where,
+        orderBy: { id: 'desc' },
+        skip,
+        take,
+      }),
+      this.prisma.fraudDetection.count({ where }),
+    ]);
+    return this.paginate(items, total, q.page ?? 1, take);
+  }
+
+  async getUserBadges(userId: number) {
+    const row = await this.prisma.tbl_users_badges.findFirst({ where: { user_id: userId } });
+    if (!row) return { userId, badges: [] };
+    type RowRec = Record<string, unknown>;
+    const r = row as unknown as RowRec;
+    const labels: Record<string, string> = {
+      dashing_debut: 'Dashing Debut',
+      combat_winner: 'Combat Winner',
+      clash_winner: 'Clash Winner',
+      most_wanted_winner: 'Most Wanted Winner',
+      ultimate_player: 'Ultimate Player',
+      quiz_warrior: 'Quiz Warrior',
+      super_sonic: 'Super Sonic',
+      flashback: 'Flashback',
+      brainiac: 'Brainiac',
+      big_thing: 'Big Thing',
+      elite: 'Elite',
+      thirsty: 'Thirsty',
+      power_elite: 'Power Elite',
+      sharing_caring: 'Sharing & Caring',
+      streak: 'Streak',
+    };
+    const badges = Object.entries(labels)
+      .map(([key, label]) => ({
+        key,
+        label,
+        earned: Number(r[key] ?? 0) === 1,
+        counter: Number(r[`${key}_counter`] ?? 0),
+      }))
+      .filter((b) => b.earned || b.counter > 0);
+    return { userId, badges };
+  }
+
   async createQuestion(dto: CreateQuestionDto) {
     return this.prisma.question.create({
       data: {
@@ -342,6 +412,94 @@ export class AdminService {
     return { imported: result.count };
   }
 
+  async generateQuestions(dto: GenerateQuestionsDto) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new BadRequestException({
+        error: 'OPENAI_NOT_CONFIGURED',
+        message: 'OPENAI_API_KEY is not configured on the server',
+      });
+    }
+
+    const difficultyToLevel: Record<string, number> = { easy: 1, medium: 2, hard: 3 };
+    const level = difficultyToLevel[dto.difficultyLevel];
+
+    const client = new OpenAI({ apiKey });
+    const prompt = `Generate exactly ${dto.count} multiple-choice quiz questions about "${dto.topic}" at ${dto.difficultyLevel} difficulty. Return a JSON object with a "questions" array. Each question must have: question (string), optiona, optionb, optionc, optiond (strings), answer (one of "a","b","c","d" — the correct option key), note (short explanation).`;
+
+    let parsed: { questions: Array<{ question: string; optiona: string; optionb: string; optionc: string; optiond: string; answer: string; note?: string }> };
+    try {
+      const completion = await client.chat.completions.create({
+        model: process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: 'You are a quiz question generator. Output strict JSON only.' },
+          { role: 'user', content: prompt },
+        ],
+      });
+      const content = completion.choices[0]?.message?.content ?? '{"questions":[]}';
+      parsed = JSON.parse(content);
+    } catch (e) {
+      this.logger.error('OpenAI generation failed', e);
+      throw new BadRequestException({
+        error: 'GENERATION_FAILED',
+        message: e instanceof Error ? e.message : 'Failed to generate questions',
+      });
+    }
+
+    if (!Array.isArray(parsed.questions) || parsed.questions.length === 0) {
+      throw new BadRequestException({
+        error: 'NO_QUESTIONS_GENERATED',
+        message: 'AI returned no usable questions',
+      });
+    }
+
+    const now = new Date();
+    const created = await Promise.all(
+      parsed.questions.slice(0, dto.count).map((q) =>
+        this.prisma.aiQuestion.create({
+          data: {
+            category: dto.categoryId,
+            subcategory: 0,
+            level,
+            question: String(q.question ?? '').slice(0, 4000),
+            options: JSON.stringify({
+              a: String(q.optiona ?? ''),
+              b: String(q.optionb ?? ''),
+              c: String(q.optionc ?? ''),
+              d: String(q.optiond ?? ''),
+            }),
+            correctAnswer: String(q.answer ?? 'a').toLowerCase().slice(0, 50),
+            note: q.note ? String(q.note).slice(0, 255) : null,
+            status: 0,
+            dateTime: now,
+          },
+        }),
+      ),
+    );
+
+    return created.map((ai, i) => {
+      const src = parsed.questions[i];
+      return {
+        id: Number(ai.id),
+        category: ai.category,
+        subcategory: ai.subcategory,
+        languageId: ai.languageId,
+        image: '',
+        question: ai.question,
+        questionType: ai.questionType,
+        optiona: String(src.optiona ?? ''),
+        optionb: String(src.optionb ?? ''),
+        optionc: String(src.optionc ?? ''),
+        optiond: String(src.optiond ?? ''),
+        optione: null,
+        answer: ai.correctAnswer,
+        level: ai.level,
+        note: ai.note ?? '',
+      };
+    });
+  }
+
   async approveAiQuestion(id: number) {
     const ai = await this.prisma.aiQuestion.findUnique({ where: { id: BigInt(id) } });
     if (!ai) {
@@ -391,6 +549,28 @@ export class AdminService {
     });
   }
 
+  async approveAiQuestionBatch(ids: number[]) {
+    const results: Array<{ id: number; approved: boolean; questionId?: number; error?: string }> = [];
+    for (const id of ids) {
+      try {
+        const r = await this.approveAiQuestion(id);
+        results.push({ id, approved: true, questionId: r.questionId });
+      } catch (e) {
+        results.push({
+          id,
+          approved: false,
+          error: e instanceof Error ? e.message : 'Failed',
+        });
+      }
+    }
+    return {
+      total: ids.length,
+      approved: results.filter((r) => r.approved).length,
+      failed: results.filter((r) => !r.approved).length,
+      results,
+    };
+  }
+
   async rejectAiQuestion(id: number, dto: RejectAiQuestionDto) {
     const ai = await this.prisma.aiQuestion.findUnique({ where: { id: BigInt(id) } });
     if (!ai) {
@@ -426,21 +606,192 @@ export class AdminService {
   }
 
   async getOverviewStats() {
-    const [totalUsers, totalQuestions, totalLeagues, unresolvedFraud, paymentsToday] = await Promise.all([
+    const now = new Date();
+    const startToday = this.startOfDay();
+    const dau30Ago = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
+    const mau30Ago = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const [
+      totalUsers,
+      totalQuestions,
+      totalLeagues,
+      unresolvedFraud,
+      paymentsToday,
+      activeContests,
+      pendingAi,
+      dauRows,
+      mauRows,
+      recentFraudRaw,
+    ] = await Promise.all([
       this.prisma.user.count(),
       this.prisma.question.count(),
       this.prisma.tbl_league.count({ where: { status: 1 } }),
       this.prisma.fraudDetection.count({ where: { resolved: 0 } }),
       this.prisma.tbl_payment_request.count({
-        where: { date: { gte: this.startOfDay() }, status: 1 },
+        where: { date: { gte: startToday }, status: 1 },
+      }),
+      this.prisma.tbl_contest.count({
+        where: { status: 1, end_date: { gte: now } },
+      }),
+      this.prisma.aiQuestion.count({ where: { status: 0 } }),
+      this.prisma.tracker.groupBy({
+        by: ['userId'],
+        where: { date: { gte: dau30Ago } },
+      }),
+      this.prisma.tracker.groupBy({
+        by: ['userId'],
+        where: { date: { gte: mau30Ago } },
+      }),
+      this.prisma.fraudDetection.findMany({
+        where: { resolved: 0 },
+        orderBy: { id: 'desc' },
+        take: 10,
+        select: {
+          id: true,
+          userId: true,
+          detection_type: true,
+          severity: true,
+          reason: true,
+          createdAt: true,
+        },
       }),
     ]);
     return {
       totalUsers,
       totalQuestions,
       activeLeagues: totalLeagues,
+      activeContests,
       unresolvedFraud,
       successfulPaymentsToday: paymentsToday,
+      paymentsToday,
+      pendingAiQuestions: pendingAi,
+      dau: dauRows.length,
+      mau: mauRows.length,
+      recentFraud: recentFraudRaw.map((f) => ({
+        id: f.id,
+        userId: f.userId,
+        detectionType: f.detection_type ?? 'unknown',
+        severity: f.severity ?? 'low',
+        reason: f.reason,
+        createdAt: f.createdAt?.toISOString() ?? null,
+      })),
+    };
+  }
+
+  // ─── Analytics ────────────────────────────────────────────────────
+
+  private dateSeries(days: number): string[] {
+    const out: string[] = [];
+    const today = this.startOfDay();
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(today.getTime() - i * 86_400_000);
+      out.push(d.toISOString().slice(0, 10));
+    }
+    return out;
+  }
+
+  async analyticsUserGrowth(days: number) {
+    const since = new Date(this.startOfDay().getTime() - (days - 1) * 86_400_000);
+    const rows = await this.prisma.$queryRawUnsafe<Array<{ day: string; count: bigint }>>(
+      `SELECT DATE(date_registered) AS day, COUNT(*) AS count
+         FROM tbl_users
+        WHERE date_registered >= ?
+        GROUP BY DATE(date_registered)
+        ORDER BY day ASC`,
+      since,
+    );
+    const map = new Map<string, number>();
+    for (const r of rows) map.set(String(r.day), Number(r.count));
+    return {
+      series: this.dateSeries(days).map((d) => ({ date: d, count: map.get(d) ?? 0 })),
+    };
+  }
+
+  async analyticsRevenue(days: number) {
+    const since = new Date(this.startOfDay().getTime() - (days - 1) * 86_400_000);
+    const rows = await this.prisma.$queryRawUnsafe<
+      Array<{ day: string; total: string | null; count: bigint }>
+    >(
+      `SELECT DATE(date) AS day,
+              SUM(CAST(payment_amount AS DECIMAL(12,2))) AS total,
+              COUNT(*) AS count
+         FROM tbl_payment_request
+        WHERE date >= ? AND status = 1
+        GROUP BY DATE(date)
+        ORDER BY day ASC`,
+      since,
+    );
+    const map = new Map<string, { total: number; count: number }>();
+    for (const r of rows) {
+      map.set(String(r.day), {
+        total: Number(r.total ?? 0),
+        count: Number(r.count),
+      });
+    }
+    const series = this.dateSeries(days).map((d) => ({
+      date: d,
+      total: map.get(d)?.total ?? 0,
+      count: map.get(d)?.count ?? 0,
+    }));
+    const grandTotal = series.reduce((s, r) => s + r.total, 0);
+    return { series, grandTotal };
+  }
+
+  async analyticsQuizCompletions(days: number) {
+    const since = new Date(this.startOfDay().getTime() - (days - 1) * 86_400_000);
+    const rows = await this.prisma.$queryRawUnsafe<Array<{ day: string; count: bigint }>>(
+      `SELECT DATE(date) AS day, COUNT(*) AS count
+         FROM tbl_user_quiz_zone_session
+        WHERE date >= ?
+        GROUP BY DATE(date)
+        ORDER BY day ASC`,
+      since,
+    );
+    const map = new Map<string, number>();
+    for (const r of rows) map.set(String(r.day), Number(r.count));
+    return {
+      series: this.dateSeries(days).map((d) => ({ date: d, count: map.get(d) ?? 0 })),
+    };
+  }
+
+  async analyticsTopCategories() {
+    const grouped = await this.prisma.question.groupBy({
+      by: ['category'],
+      _count: { _all: true },
+      orderBy: { _count: { id: 'desc' } },
+      take: 10,
+    });
+    if (grouped.length === 0) return { items: [] };
+    const ids = grouped.map((g) => g.category);
+    const cats = await this.prisma.category.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, categoryName: true },
+    });
+    const nameMap = new Map(cats.map((c) => [c.id, c.categoryName]));
+    return {
+      items: grouped.map((g) => ({
+        categoryId: g.category,
+        name: nameMap.get(g.category) ?? `Category ${g.category}`,
+        questionCount: g._count._all,
+      })),
+    };
+  }
+
+  async analyticsCountryDistribution() {
+    const rows = await this.prisma.$queryRawUnsafe<
+      Array<{ country: string | null; count: bigint }>
+    >(
+      `SELECT country_code AS country, COUNT(*) AS count
+         FROM tbl_users
+        WHERE country_code IS NOT NULL AND country_code <> ''
+        GROUP BY country_code
+        ORDER BY count DESC
+        LIMIT 10`,
+    );
+    return {
+      items: rows.map((r) => ({
+        country: r.country ?? 'Unknown',
+        count: Number(r.count),
+      })),
     };
   }
 
@@ -448,5 +799,521 @@ export class AdminService {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d;
+  }
+
+  private paginate<T>(items: T[], total: number, page: number, limit: number) {
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
+  }
+
+  // ─── Categories ───────────────────────────────────────────────────────────
+
+  async listAdminCategories() {
+    const rows = await this.prisma.category.findMany({
+      orderBy: [{ rowOrder: 'asc' }, { id: 'asc' }],
+    });
+    const items = rows.map((c) => ({
+      id: c.id,
+      name: c.categoryName,
+      slug: c.slug,
+      type: c.type,
+      isPremium: c.isPremium,
+      coins: c.coins,
+      image: c.image,
+      rowOrder: c.rowOrder,
+      languageId: c.languageId,
+      isActive: true,
+      sortOrder: c.rowOrder,
+      iconUrl: c.image,
+      description: null,
+      colorHex: null,
+      createdAt: null,
+      updatedAt: null,
+    }));
+    return { items };
+  }
+
+  async createCategory(dto: CreateCategoryDto) {
+    const last = await this.prisma.category.findFirst({ orderBy: { rowOrder: 'desc' } });
+    const nextOrder = dto.rowOrder ?? (last ? last.rowOrder + 1 : 0);
+    const created = await this.prisma.category.create({
+      data: {
+        categoryName: dto.name,
+        slug: dto.slug ?? null,
+        type: dto.type ?? 0,
+        isPremium: dto.isPremium ?? 0,
+        coins: dto.coins ?? 0,
+        image: dto.image ?? null,
+        languageId: dto.languageId ?? 0,
+        rowOrder: nextOrder,
+      },
+    });
+    return {
+      id: created.id,
+      name: created.categoryName,
+      slug: created.slug,
+      type: created.type,
+      isPremium: created.isPremium,
+      coins: created.coins,
+      image: created.image,
+      rowOrder: created.rowOrder,
+      languageId: created.languageId,
+    };
+  }
+
+  async updateCategory(id: number, dto: UpdateCategoryDto) {
+    const existing = await this.prisma.category.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException({ error: 'CATEGORY_NOT_FOUND', message: 'Category not found' });
+    }
+    const data: Record<string, unknown> = {};
+    if (dto.name !== undefined) data['categoryName'] = dto.name;
+    if (dto.slug !== undefined) data['slug'] = dto.slug;
+    if (dto.type !== undefined) data['type'] = dto.type;
+    if (dto.isPremium !== undefined) data['isPremium'] = dto.isPremium;
+    if (dto.coins !== undefined) data['coins'] = dto.coins;
+    if (dto.image !== undefined) data['image'] = dto.image;
+    if (dto.languageId !== undefined) data['languageId'] = dto.languageId;
+    if (dto.rowOrder !== undefined) data['rowOrder'] = dto.rowOrder;
+    const updated = await this.prisma.category.update({ where: { id }, data });
+    return {
+      id: updated.id,
+      name: updated.categoryName,
+      slug: updated.slug,
+      type: updated.type,
+      isPremium: updated.isPremium,
+      coins: updated.coins,
+      image: updated.image,
+      rowOrder: updated.rowOrder,
+      languageId: updated.languageId,
+    };
+  }
+
+  async deleteCategory(id: number) {
+    const existing = await this.prisma.category.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException({ error: 'CATEGORY_NOT_FOUND', message: 'Category not found' });
+    }
+    await this.prisma.category.delete({ where: { id } });
+    return { deleted: true, id };
+  }
+
+  async reorderCategories(dto: ReorderCategoriesDto) {
+    await this.prisma.$transaction(
+      dto.items.map((i) =>
+        this.prisma.category.update({ where: { id: i.id }, data: { rowOrder: i.rowOrder } }),
+      ),
+    );
+    return { reordered: dto.items.length };
+  }
+
+  // ─── Contests ─────────────────────────────────────────────────────────────
+
+  private mapContest(c: {
+    id: number;
+    language_id: number;
+    name: string;
+    description: string;
+    image: string;
+    entry: number;
+    prize_status: number;
+    status: number;
+    start_date: Date;
+    end_date: Date;
+    date_created: Date;
+  }) {
+    const now = Date.now();
+    const start = c.start_date.getTime();
+    const end = c.end_date.getTime();
+    const statusLabel =
+      c.status === 0
+        ? 'cancelled'
+        : end < now
+        ? 'ended'
+        : start > now
+        ? 'draft'
+        : 'active';
+    return {
+      id: c.id,
+      title: c.name,
+      name: c.name,
+      description: c.description,
+      image: c.image,
+      entry: c.entry,
+      entryFee: c.entry,
+      prizePool: 0,
+      prizeStatus: c.prize_status,
+      languageId: c.language_id,
+      startDate: c.start_date.toISOString(),
+      endDate: c.end_date.toISOString(),
+      startTime: c.start_date.toISOString(),
+      endTime: c.end_date.toISOString(),
+      maxParticipants: null as number | null,
+      participantCount: 0,
+      status: statusLabel,
+      statusCode: c.status,
+      createdAt: c.date_created.toISOString(),
+      updatedAt: c.date_created.toISOString(),
+    };
+  }
+
+  async listContests(q: ListPaginationDto) {
+    const take = Math.min(q.limit ?? 50, 200);
+    const page = q.page ?? 1;
+    const skip = (page - 1) * take;
+    const where = q.search ? { name: { contains: q.search } } : {};
+    const [rows, total] = await Promise.all([
+      this.prisma.tbl_contest.findMany({ where, orderBy: { id: 'desc' }, skip, take }),
+      this.prisma.tbl_contest.count({ where }),
+    ]);
+    return this.paginate(rows.map((r) => this.mapContest(r)), total, page, take);
+  }
+
+  async getContest(id: number) {
+    const row = await this.prisma.tbl_contest.findUnique({ where: { id } });
+    if (!row) {
+      throw new NotFoundException({ error: 'CONTEST_NOT_FOUND', message: 'Contest not found' });
+    }
+    return this.mapContest(row);
+  }
+
+  async createContest(dto: CreateContestDto) {
+    const start = new Date(dto.startDate);
+    const end = new Date(dto.endDate);
+    if (end <= start) {
+      throw new BadRequestException({
+        error: 'INVALID_DATE_RANGE',
+        message: 'endDate must be after startDate',
+      });
+    }
+    const row = await this.prisma.tbl_contest.create({
+      data: {
+        name: dto.name,
+        description: dto.description,
+        image: dto.image ?? '',
+        entry: dto.entry,
+        prize_status: dto.prizeStatus ?? 0,
+        status: dto.status ?? 1,
+        language_id: dto.languageId ?? 0,
+        start_date: start,
+        end_date: end,
+        date_created: new Date(),
+      },
+    });
+    return this.mapContest(row);
+  }
+
+  async updateContest(id: number, dto: UpdateContestDto) {
+    const existing = await this.prisma.tbl_contest.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException({ error: 'CONTEST_NOT_FOUND', message: 'Contest not found' });
+    }
+    const data: Record<string, unknown> = {};
+    if (dto.name !== undefined) data['name'] = dto.name;
+    if (dto.description !== undefined) data['description'] = dto.description;
+    if (dto.image !== undefined) data['image'] = dto.image;
+    if (dto.entry !== undefined) data['entry'] = dto.entry;
+    if (dto.prizeStatus !== undefined) data['prize_status'] = dto.prizeStatus;
+    if (dto.status !== undefined) data['status'] = dto.status;
+    if (dto.languageId !== undefined) data['language_id'] = dto.languageId;
+    if (dto.startDate !== undefined) data['start_date'] = new Date(dto.startDate);
+    if (dto.endDate !== undefined) data['end_date'] = new Date(dto.endDate);
+    const updated = await this.prisma.tbl_contest.update({ where: { id }, data });
+    return this.mapContest(updated);
+  }
+
+  async deleteContest(id: number) {
+    const existing = await this.prisma.tbl_contest.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException({ error: 'CONTEST_NOT_FOUND', message: 'Contest not found' });
+    }
+    await this.prisma.tbl_contest.delete({ where: { id } });
+    return { deleted: true, id };
+  }
+
+  async distributeContestPrizes(id: number) {
+    const existing = await this.prisma.tbl_contest.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException({ error: 'CONTEST_NOT_FOUND', message: 'Contest not found' });
+    }
+    if (existing.prize_status === 1) {
+      throw new BadRequestException({
+        error: 'ALREADY_DISTRIBUTED',
+        message: 'Prizes already distributed for this contest',
+      });
+    }
+    const updated = await this.prisma.tbl_contest.update({
+      where: { id },
+      data: { prize_status: 1 },
+    });
+    this.logger.log(`Contest ${id} prizes marked as distributed`);
+    return this.mapContest(updated);
+  }
+
+  // ─── Leagues ──────────────────────────────────────────────────────────────
+
+  private mapLeague(l: {
+    id: number;
+    language_id: number;
+    name: string;
+    description: string | null;
+    image: string | null;
+    entry: number;
+    prize_status: number;
+    status: number;
+    start_date: Date;
+    end_date: Date;
+    date_created: Date;
+    date_updated: Date | null;
+  }) {
+    const now = Date.now();
+    const start = l.start_date.getTime();
+    const end = l.end_date.getTime();
+    const statusLabel =
+      l.status === 0 ? 'ended' : start > now ? 'upcoming' : end < now ? 'ended' : 'active';
+    return {
+      id: l.id,
+      name: l.name,
+      description: l.description,
+      image: l.image,
+      entry: l.entry,
+      languageId: l.language_id,
+      prizeStatus: l.prize_status,
+      startDate: l.start_date.toISOString(),
+      endDate: l.end_date.toISOString(),
+      tier: 1,
+      season: 1,
+      minXp: 0,
+      maxXp: null as number | null,
+      iconUrl: l.image,
+      colorHex: null as string | null,
+      memberCount: 0,
+      participantCount: 0,
+      status: statusLabel,
+      statusCode: l.status,
+      createdAt: l.date_created.toISOString(),
+      updatedAt: (l.date_updated ?? l.date_created).toISOString(),
+    };
+  }
+
+  async listLeagues(q: ListPaginationDto) {
+    const take = Math.min(q.limit ?? 50, 200);
+    const page = q.page ?? 1;
+    const skip = (page - 1) * take;
+    const where = q.search ? { name: { contains: q.search } } : {};
+    const [rows, total] = await Promise.all([
+      this.prisma.tbl_league.findMany({ where, orderBy: { id: 'desc' }, skip, take }),
+      this.prisma.tbl_league.count({ where }),
+    ]);
+    return this.paginate(rows.map((r) => this.mapLeague(r)), total, page, take);
+  }
+
+  async getLeague(id: number) {
+    const row = await this.prisma.tbl_league.findUnique({ where: { id } });
+    if (!row) {
+      throw new NotFoundException({ error: 'LEAGUE_NOT_FOUND', message: 'League not found' });
+    }
+    return this.mapLeague(row);
+  }
+
+  async createLeague(dto: CreateLeagueDto) {
+    const start = new Date(dto.startDate);
+    const end = new Date(dto.endDate);
+    if (end <= start) {
+      throw new BadRequestException({
+        error: 'INVALID_DATE_RANGE',
+        message: 'endDate must be after startDate',
+      });
+    }
+    const row = await this.prisma.tbl_league.create({
+      data: {
+        name: dto.name,
+        description: dto.description ?? null,
+        image: dto.image ?? null,
+        entry: dto.entry ?? 0,
+        language_id: dto.languageId ?? 0,
+        status: dto.status ?? 1,
+        start_date: start,
+        end_date: end,
+      },
+    });
+    return this.mapLeague(row);
+  }
+
+  async updateLeague(id: number, dto: UpdateLeagueDto) {
+    const existing = await this.prisma.tbl_league.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException({ error: 'LEAGUE_NOT_FOUND', message: 'League not found' });
+    }
+    const data: Record<string, unknown> = { date_updated: new Date() };
+    if (dto.name !== undefined) data['name'] = dto.name;
+    if (dto.description !== undefined) data['description'] = dto.description;
+    if (dto.image !== undefined) data['image'] = dto.image;
+    if (dto.entry !== undefined) data['entry'] = dto.entry;
+    if (dto.status !== undefined) data['status'] = dto.status;
+    if (dto.languageId !== undefined) data['language_id'] = dto.languageId;
+    if (dto.startDate !== undefined) data['start_date'] = new Date(dto.startDate);
+    if (dto.endDate !== undefined) data['end_date'] = new Date(dto.endDate);
+    const updated = await this.prisma.tbl_league.update({ where: { id }, data });
+    return this.mapLeague(updated);
+  }
+
+  async deleteLeague(id: number) {
+    const existing = await this.prisma.tbl_league.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException({ error: 'LEAGUE_NOT_FOUND', message: 'League not found' });
+    }
+    await this.prisma.tbl_league.delete({ where: { id } });
+    return { deleted: true, id };
+  }
+
+  // ─── Sponsors ─────────────────────────────────────────────────────────────
+
+  private mapSponsor(s: {
+    id: number;
+    sponsor_name: string;
+    title: string | null;
+    imageUrl: string | null;
+    redirect_url: string | null;
+    redirect_type: string | null;
+    impression_limit: number | null;
+    impression_period: string | null;
+    current_impressions: number | null;
+    startDate: Date;
+    endDate: Date;
+    is_active: number | null;
+    priority: number | null;
+    createdAt: Date | null;
+  }) {
+    return {
+      id: s.id,
+      sponsorName: s.sponsor_name,
+      name: s.sponsor_name,
+      title: s.title,
+      imageUrl: s.imageUrl,
+      logoUrl: s.imageUrl,
+      redirectUrl: s.redirect_url,
+      websiteUrl: s.redirect_url,
+      contactEmail: null as string | null,
+      redirectType: s.redirect_type,
+      impressionLimit: s.impression_limit ?? 0,
+      impressionPeriod: s.impression_period,
+      currentImpressions: s.current_impressions ?? 0,
+      startDate: s.startDate.toISOString(),
+      endDate: s.endDate.toISOString(),
+      priority: s.priority ?? 0,
+      isActive: (s.is_active ?? 0) === 1,
+      createdAt: s.createdAt?.toISOString() ?? null,
+      updatedAt: s.createdAt?.toISOString() ?? null,
+    };
+  }
+
+  async listSponsors(q: ListPaginationDto) {
+    const take = Math.min(q.limit ?? 50, 200);
+    const page = q.page ?? 1;
+    const skip = (page - 1) * take;
+    const where = q.search ? { sponsor_name: { contains: q.search } } : {};
+    const [rows, total] = await Promise.all([
+      this.prisma.sponsorBanner.findMany({
+        where,
+        orderBy: [{ priority: 'desc' }, { id: 'desc' }],
+        skip,
+        take,
+      }),
+      this.prisma.sponsorBanner.count({ where }),
+    ]);
+    return this.paginate(rows.map((r) => this.mapSponsor(r)), total, page, take);
+  }
+
+  async createSponsor(dto: CreateSponsorDto) {
+    const start = new Date(dto.startDate);
+    const end = new Date(dto.endDate);
+    if (end <= start) {
+      throw new BadRequestException({
+        error: 'INVALID_DATE_RANGE',
+        message: 'endDate must be after startDate',
+      });
+    }
+    const row = await this.prisma.sponsorBanner.create({
+      data: {
+        sponsor_name: dto.sponsorName,
+        title: dto.title ?? null,
+        imageUrl: dto.imageUrl,
+        redirect_url: dto.redirectUrl ?? null,
+        redirect_type: dto.redirectType ?? 'url',
+        impression_limit: dto.impressionLimit ?? 0,
+        impression_period: dto.impressionPeriod ?? 'daily',
+        startDate: start,
+        endDate: end,
+        priority: dto.priority ?? 0,
+        is_active: dto.isActive ?? 1,
+      },
+    });
+    return this.mapSponsor(row);
+  }
+
+  async updateSponsor(id: number, dto: UpdateSponsorDto) {
+    const existing = await this.prisma.sponsorBanner.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException({ error: 'SPONSOR_NOT_FOUND', message: 'Sponsor not found' });
+    }
+    const data: Record<string, unknown> = {};
+    if (dto.sponsorName !== undefined) data['sponsor_name'] = dto.sponsorName;
+    if (dto.title !== undefined) data['title'] = dto.title;
+    if (dto.imageUrl !== undefined) data['imageUrl'] = dto.imageUrl;
+    if (dto.redirectUrl !== undefined) data['redirect_url'] = dto.redirectUrl;
+    if (dto.redirectType !== undefined) data['redirect_type'] = dto.redirectType;
+    if (dto.impressionLimit !== undefined) data['impression_limit'] = dto.impressionLimit;
+    if (dto.impressionPeriod !== undefined) data['impression_period'] = dto.impressionPeriod;
+    if (dto.priority !== undefined) data['priority'] = dto.priority;
+    if (dto.isActive !== undefined) data['is_active'] = dto.isActive;
+    if (dto.startDate !== undefined) data['startDate'] = new Date(dto.startDate);
+    if (dto.endDate !== undefined) data['endDate'] = new Date(dto.endDate);
+    const updated = await this.prisma.sponsorBanner.update({ where: { id }, data });
+    return this.mapSponsor(updated);
+  }
+
+  async deleteSponsor(id: number) {
+    const existing = await this.prisma.sponsorBanner.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException({ error: 'SPONSOR_NOT_FOUND', message: 'Sponsor not found' });
+    }
+    await this.prisma.sponsorBanner.delete({ where: { id } });
+    return { deleted: true, id };
+  }
+
+  // ─── Notifications history ────────────────────────────────────────────────
+
+  async listNotifications(q: ListPaginationDto) {
+    const take = Math.min(q.limit ?? 50, 200);
+    const page = q.page ?? 1;
+    const skip = (page - 1) * take;
+    const where = q.search ? { title: { contains: q.search } } : {};
+    const [rows, total] = await Promise.all([
+      this.prisma.tbl_notifications.findMany({
+        where,
+        orderBy: { id: 'desc' },
+        skip,
+        take,
+      }),
+      this.prisma.tbl_notifications.count({ where }),
+    ]);
+    const items = rows.map((n) => ({
+      id: n.id,
+      title: n.title,
+      message: n.message,
+      type: n.type,
+      typeId: n.type_id,
+      image: n.image,
+      audience: n.users,
+      userIds: n.user_id,
+      dateSent: n.date_sent.toISOString(),
+    }));
+    return this.paginate(items, total, page, take);
   }
 }

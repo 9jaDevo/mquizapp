@@ -1,8 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
+import { buttonVariants } from '@/components/ui/button';
 import { DataTable } from '@/components/data-table';
 import type { League } from '@/types/api';
 
@@ -38,6 +40,18 @@ export function LeaguesTable({ data, pageCount, pageIndex }: LeaguesTableProps) 
       accessorKey: 'participantCount',
       header: 'Participants',
       cell: ({ row }) => (row.getValue('participantCount') as number)?.toLocaleString() ?? '—',
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      cell: ({ row }) => (
+        <Link
+          href={`/leagues/${row.original.id}/edit`}
+          className={buttonVariants({ variant: 'outline', size: 'sm' })}
+        >
+          Edit
+        </Link>
+      ),
     },
   ];
 

@@ -1,4 +1,6 @@
+import Link from 'next/link';
 import { apiServer } from '@/lib/api-server';
+import { buttonVariants } from '@/components/ui/button';
 import type { PaginatedData, League } from '@/types/api';
 import { LeaguesTable } from './leagues-table';
 
@@ -23,9 +25,14 @@ export default async function LeaguesPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Leagues</h1>
-        <p className="text-muted-foreground">Monitor active leagues and seasons</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Leagues</h1>
+          <p className="text-muted-foreground">Monitor active leagues and seasons</p>
+        </div>
+        <Link href="/leagues/new" className={buttonVariants()}>
+          New League
+        </Link>
       </div>
       <LeaguesTable data={data.items} pageCount={data.totalPages} pageIndex={pageIndex} />
     </div>

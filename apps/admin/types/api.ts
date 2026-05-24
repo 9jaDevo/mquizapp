@@ -44,16 +44,20 @@ export interface User {
 
 export interface Question {
   id: number;
-  questionText: string;
-  options: string[];
-  correctAnswer: string;
-  explanation: string | null;
-  difficultyLevel: 'easy' | 'medium' | 'hard';
-  categoryId: number;
-  category?: Category;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  category: number;
+  subcategory: number;
+  languageId: number;
+  image: string;
+  question: string;
+  questionType: number;
+  optiona: string;
+  optionb: string;
+  optionc: string;
+  optiond: string;
+  optione?: string | null;
+  answer: string;
+  level: number;
+  note: string;
 }
 
 // ─── Category ────────────────────────────────────────────────────────────────
@@ -61,14 +65,21 @@ export interface Question {
 export interface Category {
   id: number;
   name: string;
-  description: string | null;
-  iconUrl: string | null;
-  colorHex: string | null;
-  sortOrder: number;
-  isActive: boolean;
+  slug?: string | null;
+  type?: number;
+  isPremium?: number;
+  coins?: number;
+  image?: string | null;
+  rowOrder?: number;
+  languageId?: number;
+  description?: string | null;
+  iconUrl?: string | null;
+  colorHex?: string | null;
+  sortOrder?: number;
+  isActive?: boolean;
   questionCount?: number;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 // ─── Contest ─────────────────────────────────────────────────────────────────
@@ -76,18 +87,24 @@ export interface Category {
 export interface Contest {
   id: number;
   title: string;
+  name?: string;
   description: string | null;
-  startTime: string;
+  image?: string | null;
+  entry?: number;
+  entryFee?: number;
+  prizePool?: number;
+  prizeStatus?: number;
+  languageId?: number;
+  startTime?: string;
   startDate: string;
-  endTime: string;
+  endTime?: string;
   endDate: string;
-  entryFee: number;
-  prizePool: number;
-  maxParticipants: number | null;
-  participantCount: number;
-  status: 'draft' | 'active' | 'ended' | 'cancelled';
-  createdAt: string;
-  updatedAt: string;
+  maxParticipants?: number | null;
+  participantCount?: number;
+  status: 'draft' | 'active' | 'ended' | 'cancelled' | string;
+  statusCode?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // ─── League ──────────────────────────────────────────────────────────────────
@@ -95,17 +112,25 @@ export interface Contest {
 export interface League {
   id: number;
   name: string;
-  tier: number;
-  season: number;
-  status: 'active' | 'ended' | 'upcoming';
-  minXp: number;
-  maxXp: number | null;
-  iconUrl: string | null;
-  colorHex: string | null;
-  memberCount: number;
-  participantCount: number;
-  createdAt: string;
-  updatedAt: string;
+  description?: string | null;
+  image?: string | null;
+  entry?: number;
+  languageId?: number;
+  prizeStatus?: number;
+  startDate?: string;
+  endDate?: string;
+  tier?: number;
+  season?: number;
+  status: 'active' | 'ended' | 'upcoming' | string;
+  statusCode?: number;
+  minXp?: number;
+  maxXp?: number | null;
+  iconUrl?: string | null;
+  colorHex?: string | null;
+  memberCount?: number;
+  participantCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // ─── Sponsor / Ad ────────────────────────────────────────────────────────────
@@ -113,24 +138,96 @@ export interface League {
 export interface Sponsor {
   id: number;
   name: string;
+  sponsorName?: string;
+  title?: string | null;
   logoUrl: string | null;
+  imageUrl?: string | null;
   websiteUrl: string | null;
+  redirectUrl?: string | null;
+  redirectType?: string | null;
   contactEmail: string | null;
+  impressionLimit?: number;
+  impressionPeriod?: string | null;
+  currentImpressions?: number;
+  startDate?: string;
+  endDate?: string;
+  priority?: number;
   isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 // ─── Stats ───────────────────────────────────────────────────────────────────
+
+export interface RecentFraudItem {
+  id: number;
+  userId: number | null;
+  detectionType: string;
+  severity: string;
+  reason: string | null;
+  createdAt: string | null;
+}
 
 export interface DashboardStats {
   totalUsers: number;
   totalQuestions: number;
   activeLeagues: number;
+  activeContests?: number;
   unresolvedFraud: number;
   successfulPaymentsToday: number;
   paymentsToday: number;
+  pendingAiQuestions?: number;
+  dau?: number;
+  mau?: number;
+  recentFraud?: RecentFraudItem[];
 }
+
+export interface TimeSeriesPoint {
+  date: string;
+  count: number;
+}
+
+export interface RevenueSeriesPoint {
+  date: string;
+  total: number;
+  count: number;
+}
+
+export interface CategoryStat {
+  categoryId: number;
+  name: string;
+  questionCount: number;
+}
+
+export interface CountryStat {
+  country: string;
+  count: number;
+}
+
+export interface BadgeStat {
+  key: string;
+  label: string;
+  earned: boolean;
+  counter: number;
+}
+
+export interface UserBadgesResponse {
+  userId: number;
+  badges: BadgeStat[];
+}
+
+export interface FraudFlag {
+  id: number;
+  userId: number | null;
+  reason: string | null;
+  detection_type?: string | null;
+  detectionType?: string | null;
+  severity?: string | null;
+  resolved?: number;
+  metadata?: string | null;
+  createdAt?: string | null;
+}
+
 
 // ─── Notification ────────────────────────────────────────────────────────────
 
@@ -139,4 +236,16 @@ export interface NotificationPayload {
   body: string;
   targetGroup: 'all' | 'active' | 'inactive';
   data?: Record<string, string>;
+}
+
+export interface NotificationHistoryItem {
+  id: number;
+  title: string;
+  message: string;
+  type: string;
+  typeId: number;
+  image: string;
+  audience: string;
+  userIds: string | null;
+  dateSent: string;
 }

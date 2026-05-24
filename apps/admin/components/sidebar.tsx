@@ -16,6 +16,7 @@ import {
   Megaphone,
   Settings,
   GraduationCap,
+  AlertTriangle,
 } from 'lucide-react';
 
 const navItems = [
@@ -29,6 +30,7 @@ const navItems = [
   { label: 'Notifications', href: '/notifications', icon: Bell },
   { label: 'Analytics', href: '/analytics', icon: BarChart2 },
   { label: 'Sponsors', href: '/sponsors', icon: Megaphone },
+  { label: 'Fraud Flags', href: '/fraud-flags', icon: AlertTriangle },
   { label: 'Schools', href: '/schools', icon: GraduationCap },
   { label: 'Settings', href: '/settings', icon: Settings },
 ];

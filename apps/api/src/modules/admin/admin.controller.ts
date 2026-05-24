@@ -28,6 +28,19 @@ import { CreateQuestionDto } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { ImportQuestionsDto } from './dto/import-questions.dto';
 import { RejectAiQuestionDto } from './dto/reject-ai-question.dto';
+import { CreateCategoryDto } from './dto/create-category.dto';
+import { UpdateCategoryDto } from './dto/update-category.dto';
+import { ReorderCategoriesDto } from './dto/reorder-categories.dto';
+import { CreateContestDto } from './dto/create-contest.dto';
+import { UpdateContestDto } from './dto/update-contest.dto';
+import { CreateLeagueDto } from './dto/create-league.dto';
+import { UpdateLeagueDto } from './dto/update-league.dto';
+import { CreateSponsorDto } from './dto/create-sponsor.dto';
+import { UpdateSponsorDto } from './dto/update-sponsor.dto';
+import { ListQuestionsQueryDto } from './dto/list-questions-query.dto';
+import { GenerateQuestionsDto } from './dto/generate-questions.dto';
+import { ApproveBatchDto } from './dto/approve-batch.dto';
+import { AnalyticsRangeDto } from './dto/analytics-range.dto';
 
 @ApiTags('admin')
 @ApiBearerAuth('firebase-token')
@@ -63,12 +76,30 @@ export class AdminController {
     return this.service.adjustUserCoins(id, body);
   }
 
+  @Get('users/:id/fraud-flags')
+  @ApiOperation({ summary: 'List fraud detection events for a single user' })
+  userFraudFlags(@Param('id', ParseIntPipe) id: number, @Query() q: ListPaginationDto) {
+    return this.service.listUserFraudFlags(id, q);
+  }
+
+  @Get('users/:id/badges')
+  @ApiOperation({ summary: 'List a user earned badges row (gamification status)' })
+  userBadges(@Param('id', ParseIntPipe) id: number) {
+    return this.service.getUserBadges(id);
+  }
+
   // ─── Questions ───────────────────────────────────────────────────────────
 
   @Get('questions')
-  @ApiOperation({ summary: 'List questions (paginated)' })
-  questions(@Query() q: ListPaginationDto) {
+  @ApiOperation({ summary: 'List questions (paginated) with category/difficulty/AI filters' })
+  questions(@Query() q: ListQuestionsQueryDto) {
     return this.service.listQuestions(q);
+  }
+
+  @Get('questions/:id')
+  @ApiOperation({ summary: 'Get a single question by id' })
+  getQuestion(@Param('id', ParseIntPipe) id: number) {
+    return this.service.getQuestion(id);
   }
 
   @Post('questions')
@@ -96,6 +127,20 @@ export class AdminController {
   @ApiOperation({ summary: 'Bulk import questions (max 500 per request)' })
   importQuestions(@Body() body: ImportQuestionsDto) {
     return this.service.importQuestions(body);
+  }
+
+  @Post('questions/generate')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({ summary: 'AI-generate quiz questions and save to pending queue' })
+  generateQuestions(@Body() body: GenerateQuestionsDto) {
+    return this.service.generateQuestions(body);
+  }
+
+  @Post('questions/approve-batch')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Approve a batch of pending AI questions by ID' })
+  approveBatch(@Body() body: ApproveBatchDto) {
+    return this.service.approveAiQuestionBatch(body.questionIds);
   }
 
   // ─── AI Questions ─────────────────────────────────────────────────────────
@@ -160,11 +205,189 @@ export class AdminController {
     return this.service.upsertSetting(type, body);
   }
 
+  // ─── Categories ───────────────────────────────────────────────────────────
+
+  @Get('categories')
+  @ApiOperation({ summary: 'List all categories' })
+  listCategories() {
+    return this.service.listAdminCategories();
+  }
+
+  @Post('categories')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Create a category' })
+  createCategory(@Body() body: CreateCategoryDto) {
+    return this.service.createCategory(body);
+  }
+
+  @Patch('categories/reorder')
+  @ApiOperation({ summary: 'Reorder categories in a single transaction' })
+  reorderCategories(@Body() body: ReorderCategoriesDto) {
+    return this.service.reorderCategories(body);
+  }
+
+  @Patch('categories/:id')
+  @ApiOperation({ summary: 'Update a category' })
+  updateCategory(@Param('id', ParseIntPipe) id: number, @Body() body: UpdateCategoryDto) {
+    return this.service.updateCategory(id, body);
+  }
+
+  @Delete('categories/:id')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Delete a category' })
+  deleteCategory(@Param('id', ParseIntPipe) id: number) {
+    return this.service.deleteCategory(id);
+  }
+
+  // ─── Contests ─────────────────────────────────────────────────────────────
+
+  @Get('contests')
+  @ApiOperation({ summary: 'List contests (paginated)' })
+  listContests(@Query() q: ListPaginationDto) {
+    return this.service.listContests(q);
+  }
+
+  @Get('contests/:id')
+  @ApiOperation({ summary: 'Get a contest' })
+  getContest(@Param('id', ParseIntPipe) id: number) {
+    return this.service.getContest(id);
+  }
+
+  @Post('contests')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Create a contest' })
+  createContest(@Body() body: CreateContestDto) {
+    return this.service.createContest(body);
+  }
+
+  @Put('contests/:id')
+  @ApiOperation({ summary: 'Update a contest' })
+  updateContest(@Param('id', ParseIntPipe) id: number, @Body() body: UpdateContestDto) {
+    return this.service.updateContest(id, body);
+  }
+
+  @Delete('contests/:id')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Delete a contest' })
+  deleteContest(@Param('id', ParseIntPipe) id: number) {
+    return this.service.deleteContest(id);
+  }
+
+  @Post('contests/:id/distribute')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Mark contest prizes as distributed' })
+  distributeContest(@Param('id', ParseIntPipe) id: number) {
+    return this.service.distributeContestPrizes(id);
+  }
+
+  // ─── Leagues ──────────────────────────────────────────────────────────────
+
+  @Get('leagues')
+  @ApiOperation({ summary: 'List leagues (paginated)' })
+  listLeagues(@Query() q: ListPaginationDto) {
+    return this.service.listLeagues(q);
+  }
+
+  @Get('leagues/:id')
+  @ApiOperation({ summary: 'Get a league' })
+  getLeague(@Param('id', ParseIntPipe) id: number) {
+    return this.service.getLeague(id);
+  }
+
+  @Post('leagues')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Create a league' })
+  createLeague(@Body() body: CreateLeagueDto) {
+    return this.service.createLeague(body);
+  }
+
+  @Put('leagues/:id')
+  @ApiOperation({ summary: 'Update a league' })
+  updateLeague(@Param('id', ParseIntPipe) id: number, @Body() body: UpdateLeagueDto) {
+    return this.service.updateLeague(id, body);
+  }
+
+  @Delete('leagues/:id')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Delete a league' })
+  deleteLeague(@Param('id', ParseIntPipe) id: number) {
+    return this.service.deleteLeague(id);
+  }
+
+  // ─── Sponsors ─────────────────────────────────────────────────────────────
+
+  @Get('sponsors')
+  @ApiOperation({ summary: 'List sponsor banners (paginated)' })
+  listSponsors(@Query() q: ListPaginationDto) {
+    return this.service.listSponsors(q);
+  }
+
+  @Post('sponsors')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Create a sponsor banner' })
+  createSponsor(@Body() body: CreateSponsorDto) {
+    return this.service.createSponsor(body);
+  }
+
+  @Patch('sponsors/:id')
+  @ApiOperation({ summary: 'Update a sponsor banner' })
+  updateSponsor(@Param('id', ParseIntPipe) id: number, @Body() body: UpdateSponsorDto) {
+    return this.service.updateSponsor(id, body);
+  }
+
+  @Delete('sponsors/:id')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Delete a sponsor banner' })
+  deleteSponsor(@Param('id', ParseIntPipe) id: number) {
+    return this.service.deleteSponsor(id);
+  }
+
+  // ─── Notifications history ────────────────────────────────────────────────
+
+  @Get('notifications')
+  @ApiOperation({ summary: 'List sent notifications (paginated)' })
+  listNotifications(@Query() q: ListPaginationDto) {
+    return this.service.listNotifications(q);
+  }
+
   // ─── Stats ────────────────────────────────────────────────────────────────
 
   @Get('stats/overview')
-  @ApiOperation({ summary: 'Dashboard overview statistics' })
+  @ApiOperation({ summary: 'Dashboard overview statistics + DAU/MAU + active contests + recent fraud feed' })
   stats() {
     return this.service.getOverviewStats();
+  }
+
+  // ─── Analytics (time-series / breakdowns) ─────────────────────────────────
+
+  @Get('analytics/user-growth')
+  @ApiOperation({ summary: 'New users per day for the last N days (default 30)' })
+  analyticsUserGrowth(@Query() q: AnalyticsRangeDto) {
+    return this.service.analyticsUserGrowth(q.days ?? 30);
+  }
+
+  @Get('analytics/revenue')
+  @ApiOperation({ summary: 'Revenue per day for the last N days (default 30)' })
+  analyticsRevenue(@Query() q: AnalyticsRangeDto) {
+    return this.service.analyticsRevenue(q.days ?? 30);
+  }
+
+  @Get('analytics/quiz-completions')
+  @ApiOperation({ summary: 'Quiz completions per day for the last N days (default 30)' })
+  analyticsCompletions(@Query() q: AnalyticsRangeDto) {
+    return this.service.analyticsQuizCompletions(q.days ?? 30);
+  }
+
+  @Get('analytics/top-categories')
+  @ApiOperation({ summary: 'Top 10 categories by question count' })
+  analyticsTopCategories() {
+    return this.service.analyticsTopCategories();
+  }
+
+  @Get('analytics/country-distribution')
+  @ApiOperation({ summary: 'Top 10 countries by registered user count' })
+  analyticsCountries() {
+    return this.service.analyticsCountryDistribution();
   }
 }

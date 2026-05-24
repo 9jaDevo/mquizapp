@@ -1,4 +1,6 @@
+import Link from 'next/link';
 import { apiServer } from '@/lib/api-server';
+import { buttonVariants } from '@/components/ui/button';
 import type { PaginatedData, Contest } from '@/types/api';
 import { ContestsTable } from './contests-table';
 
@@ -23,9 +25,14 @@ export default async function ContestsPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Contests</h1>
-        <p className="text-muted-foreground">Manage quiz contests and prize distribution</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Contests</h1>
+          <p className="text-muted-foreground">Manage quiz contests and prize distribution</p>
+        </div>
+        <Link href="/contests/new" className={buttonVariants()}>
+          New Contest
+        </Link>
       </div>
       <ContestsTable
         data={data.items}

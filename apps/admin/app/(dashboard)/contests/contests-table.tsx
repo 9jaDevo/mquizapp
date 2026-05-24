@@ -1,11 +1,12 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { DataTable } from '@/components/data-table';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { useApiClient } from '@/hooks/use-api-client';
@@ -69,15 +70,25 @@ export function ContestsTable({ data, pageCount, pageIndex }: ContestsTableProps
       header: 'Actions',
       cell: ({ row }) => {
         const contest = row.original;
-        return contest.status === 'ended' ? (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setDistributeTarget(contest)}
-          >
-            Distribute Prizes
-          </Button>
-        ) : null;
+        return (
+          <div className="flex gap-2">
+            <Link
+              href={`/contests/${contest.id}/edit`}
+              className={buttonVariants({ variant: 'outline', size: 'sm' })}
+            >
+              Edit
+            </Link>
+            {contest.status === 'ended' && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setDistributeTarget(contest)}
+              >
+                Distribute
+              </Button>
+            )}
+          </div>
+        );
       },
     },
   ];

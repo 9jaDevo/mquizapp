@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 
 export default function UnauthorizedPage() {
   return (
@@ -8,9 +7,12 @@ export default function UnauthorizedPage() {
       <p className="text-muted-foreground">
         Your account does not have admin privileges.
       </p>
-      <Button asChild variant="outline">
-        <Link href="/login">Back to Login</Link>
-      </Button>
+      <Link
+        href="/login"
+        className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-2.5 text-sm font-medium hover:bg-muted"
+      >
+        Back to Login
+      </Link>
     </div>
   );
 }

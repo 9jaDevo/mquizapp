@@ -1,6 +1,6 @@
 import { apiServer } from '@/lib/api-server';
 import type { Category } from '@/types/api';
-import { NewQuestionForm } from './new-question-form';
+import { QuestionForm } from '../question-form';
 
 async function getCategories(): Promise<Category[]> {
   return apiServer.get<Category[]>('/v2/categories', {
@@ -24,7 +24,7 @@ export default async function NewQuestionPage() {
         <h1 className="text-2xl font-bold">Add Question</h1>
         <p className="text-muted-foreground">Create a new quiz question</p>
       </div>
-      <NewQuestionForm categories={categories} />
+      <QuestionForm categories={categories} />
     </div>
   );
 }

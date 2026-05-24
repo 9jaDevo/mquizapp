@@ -3,10 +3,12 @@ import type { Category } from '@/types/api';
 import { CategoriesManager } from './categories-manager';
 
 async function getCategories(): Promise<Category[]> {
-  return apiServer.get<Category[]>('/v2/admin/categories', {
-    tags: ['categories'],
-    revalidate: 60,
-  });
+  const data = await apiServer.get<{ items: Category[] } | Category[]>(
+    '/v2/admin/categories',
+    { tags: ['categories'], revalidate: 60 },
+  );
+  if (Array.isArray(data)) return data;
+  return data.items ?? [];
 }
 
 export default async function CategoriesPage() {
