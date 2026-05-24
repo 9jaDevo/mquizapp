@@ -78,7 +78,9 @@ export interface Contest {
   title: string;
   description: string | null;
   startTime: string;
+  startDate: string;
   endTime: string;
+  endDate: string;
   entryFee: number;
   prizePool: number;
   maxParticipants: number | null;
@@ -94,11 +96,14 @@ export interface League {
   id: number;
   name: string;
   tier: number;
+  season: number;
+  status: 'active' | 'ended' | 'upcoming';
   minXp: number;
   maxXp: number | null;
   iconUrl: string | null;
   colorHex: string | null;
   memberCount: number;
+  participantCount: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -110,6 +115,7 @@ export interface Sponsor {
   name: string;
   logoUrl: string | null;
   websiteUrl: string | null;
+  contactEmail: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -123,6 +129,7 @@ export interface DashboardStats {
   activeLeagues: number;
   unresolvedFraud: number;
   successfulPaymentsToday: number;
+  paymentsToday: number;
 }
 
 // ─── Notification ────────────────────────────────────────────────────────────

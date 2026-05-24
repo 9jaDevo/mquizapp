@@ -73,9 +73,9 @@ export const authOptions: NextAuthOptions = {
           const isAdmin = decoded.admin === true;
           if (!isAdmin) return '/unauthorized';
           // Attach firebase token info to user object
-          (user as Record<string, unknown>).isAdmin = true;
-          (user as Record<string, unknown>).firebaseToken = account.id_token;
-          (user as Record<string, unknown>).firebaseTokenExpiry = (decoded.exp ?? 0) * 1000;
+          (user as unknown as Record<string, unknown>).isAdmin = true;
+          (user as unknown as Record<string, unknown>).firebaseToken = account.id_token;
+          (user as unknown as Record<string, unknown>).firebaseTokenExpiry = (decoded.exp ?? 0) * 1000;
         } catch {
           return false;
         }
