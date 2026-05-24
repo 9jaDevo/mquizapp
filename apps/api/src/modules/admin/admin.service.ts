@@ -27,6 +27,9 @@ import { UpdateLeagueDto } from './dto/update-league.dto';
 import { CreateSponsorDto } from './dto/create-sponsor.dto';
 import { UpdateSponsorDto } from './dto/update-sponsor.dto';
 import { ListQuestionsQueryDto } from './dto/list-questions-query.dto';
+import { ListUsersQueryDto } from './dto/list-users-query.dto';
+import { CreateSubcategoryDto } from './dto/create-subcategory.dto';
+import { UpdateSubcategoryDto } from './dto/update-subcategory.dto';
 import { GenerateQuestionsDto } from './dto/generate-questions.dto';
 import OpenAI from 'openai';
 
@@ -40,18 +43,19 @@ export class AdminService {
     private readonly redis: RedisService,
   ) {}
 
-  async listUsers(q: ListPaginationDto) {
+  async listUsers(q: ListUsersQueryDto) {
     const take = Math.min(q.limit ?? 50, 200);
     const skip = ((q.page ?? 1) - 1) * take;
-    const where = q.search
-      ? {
-          OR: [
-            { name: { contains: q.search } },
-            { email: { contains: q.search } },
-            { mobile: { contains: q.search } },
-          ],
-        }
-      : {};
+    const where: Record<string, unknown> = {};
+    if (q.search) {
+      where.OR = [
+        { name: { contains: q.search } },
+        { email: { contains: q.search } },
+        { mobile: { contains: q.search } },
+      ];
+    }
+    if (q.status !== undefined) where.status = q.status;
+    if (q.firebaseId) where.firebaseId = { contains: q.firebaseId };
     const [items, total] = await Promise.all([
       this.prisma.user.findMany({
         where,
@@ -73,7 +77,7 @@ export class AdminService {
       this.prisma.user.count({ where }),
     ]);
     return {
-      items,
+      items: items.map((u) => ({ ...u, isBanned: u.status === 1 })),
       pagination: { page: q.page ?? 1, limit: take, total, pages: Math.ceil(total / take) },
     };
   }
@@ -333,6 +337,110 @@ export class AdminService {
       }))
       .filter((b) => b.earned || b.counter > 0);
     return { userId, badges };
+  }
+
+  async getUserCoinHistory(userId: number, q: ListPaginationDto) {
+    const take = Math.min(q.limit ?? 20, 100);
+    const skip = ((q.page ?? 1) - 1) * take;
+    const [items, total] = await Promise.all([
+      this.prisma.tracker.findMany({
+        where: { userId },
+        orderBy: { id: 'desc' },
+        skip,
+        take,
+      }),
+      this.prisma.tracker.count({ where: { userId } }),
+    ]);
+    return this.paginate(
+      items.map((t) => ({
+        id: t.id,
+        points: Number(t.points),
+        type: t.type,
+        status: t.status,
+        date: t.date?.toISOString() ?? null,
+      })),
+      total,
+      q.page ?? 1,
+      take,
+    );
+  }
+
+  // ─── Subcategories ────────────────────────────────────────────────────────
+
+  private mapSubcategory(s: {
+    id: number; maincatId: number; subcategoryName: string; slug: string | null;
+    isPremium: number; status: number; coins: number; image: string | null;
+    rowOrder: number; languageId: number;
+  }) {
+    return {
+      id: s.id,
+      maincatId: s.maincatId,
+      name: s.subcategoryName,
+      slug: s.slug,
+      isPremium: s.isPremium,
+      status: s.status,
+      coins: s.coins,
+      image: s.image,
+      rowOrder: s.rowOrder,
+      languageId: s.languageId,
+    };
+  }
+
+  async listSubcategories(categoryId: number) {
+    const items = await this.prisma.subcategory.findMany({
+      where: { maincatId: categoryId },
+      orderBy: [{ rowOrder: 'asc' }, { id: 'asc' }],
+    });
+    return { items: items.map((s) => this.mapSubcategory(s)) };
+  }
+
+  async createSubcategory(categoryId: number, dto: CreateSubcategoryDto) {
+    const last = await this.prisma.subcategory.findFirst({
+      where: { maincatId: categoryId },
+      orderBy: { rowOrder: 'desc' },
+    });
+    const nextOrder = dto.rowOrder ?? (last ? last.rowOrder + 1 : 0);
+    const created = await this.prisma.subcategory.create({
+      data: {
+        maincatId: categoryId,
+        subcategoryName: dto.name,
+        slug: dto.slug ?? null,
+        isPremium: dto.isPremium ?? 0,
+        status: dto.status ?? 1,
+        coins: dto.coins ?? 0,
+        image: dto.image ?? null,
+        rowOrder: nextOrder,
+        languageId: dto.languageId ?? 0,
+      },
+    });
+    return this.mapSubcategory(created);
+  }
+
+  async updateSubcategory(id: number, dto: UpdateSubcategoryDto) {
+    const existing = await this.prisma.subcategory.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException({ error: 'SUBCATEGORY_NOT_FOUND', message: 'Subcategory not found' });
+    }
+    const data: Record<string, unknown> = {};
+    if (dto.name !== undefined) data['subcategoryName'] = dto.name;
+    if (dto.slug !== undefined) data['slug'] = dto.slug;
+    if (dto.isPremium !== undefined) data['isPremium'] = dto.isPremium;
+    if (dto.status !== undefined) data['status'] = dto.status;
+    if (dto.coins !== undefined) data['coins'] = dto.coins;
+    if (dto.image !== undefined) data['image'] = dto.image;
+    if (dto.rowOrder !== undefined) data['rowOrder'] = dto.rowOrder;
+    if (dto.languageId !== undefined) data['languageId'] = dto.languageId;
+    const updated = await this.prisma.subcategory.update({ where: { id }, data });
+    return this.mapSubcategory(updated);
+  }
+
+  async deleteSubcategory(id: number) {
+    const existing = await this.prisma.subcategory.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException({ error: 'SUBCATEGORY_NOT_FOUND', message: 'Subcategory not found' });
+    }
+    await this.prisma.subcategory.delete({ where: { id } });
+    return { deleted: true, id };
   }
 
   async createQuestion(dto: CreateQuestionDto) {

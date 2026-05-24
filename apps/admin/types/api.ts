@@ -249,3 +249,36 @@ export interface NotificationHistoryItem {
   userIds: string | null;
   dateSent: string;
 }
+
+// ─── Coin History ─────────────────────────────────────────────────────────────
+
+export interface CoinHistoryItem {
+  id: number;
+  points: number;
+  type: string;
+  status: number;
+  date: string | null;
+}
+
+// ─── Subcategory ──────────────────────────────────────────────────────────────
+
+export interface Subcategory {
+  id: number;
+  maincatId: number;
+  name: string;
+  slug?: string | null;
+  isPremium?: number;
+  status?: number;
+  coins?: number;
+  image?: string | null;
+  rowOrder?: number;
+  languageId?: number;
+}
+
+// ─── Settings ────────────────────────────────────────────────────────────────
+
+export interface SettingRow {
+  id: number;
+  type: string;
+  message: string;
+}

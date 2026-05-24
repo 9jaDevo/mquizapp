@@ -2,9 +2,25 @@ import { apiServer } from '@/lib/api-server';
 import type { PaginatedData, User } from '@/types/api';
 import { UsersTable } from './users-table';
 
-async function getUsers(page = 1, limit = 20): Promise<PaginatedData<User>> {
+interface UsersQuery {
+  page?: string;
+  status?: string;
+  firebaseId?: string;
+}
+
+async function getUsers(
+  page = 1,
+  limit = 20,
+  status?: string,
+  firebaseId?: string,
+): Promise<PaginatedData<User>> {
+  const sp = new URLSearchParams();
+  sp.set('page', String(page));
+  sp.set('limit', String(limit));
+  if (status !== undefined && status !== '') sp.set('status', status);
+  if (firebaseId) sp.set('firebaseId', firebaseId);
   return apiServer.get<PaginatedData<User>>(
-    `/v2/admin/users?page=${page}&limit=${limit}`,
+    `/v2/admin/users?${sp.toString()}`,
     { tags: ['users'], revalidate: 60 },
   );
 }
@@ -12,7 +28,7 @@ async function getUsers(page = 1, limit = 20): Promise<PaginatedData<User>> {
 export default async function UsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<UsersQuery>;
 }) {
   const params = await searchParams;
   const page = parseInt(params.page ?? '1', 10);
@@ -21,7 +37,7 @@ export default async function UsersPage({
   let error: string | null = null;
 
   try {
-    data = await getUsers(page);
+    data = await getUsers(page, 20, params.status, params.firebaseId);
   } catch (e) {
     error = e instanceof Error ? e.message : 'Failed to load users';
   }
@@ -43,6 +59,8 @@ export default async function UsersPage({
         users={data?.items ?? []}
         pageCount={data?.totalPages ?? 1}
         pageIndex={page - 1}
+        initialStatus={params.status ?? ''}
+        initialFirebaseId={params.firebaseId ?? ''}
       />
     </div>
   );

@@ -26,6 +26,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog';
 import { useApiClient } from '@/hooks/use-api-client';
 import type {
   BadgeStat,
+  CoinHistoryItem,
   FraudFlag,
   PaginatedData,
   User,
@@ -51,6 +52,8 @@ export function UserDetailPanel({ user }: UserDetailPanelProps) {
   const [fraudLoading, setFraudLoading] = React.useState(false);
   const [badges, setBadges] = React.useState<BadgeStat[] | null>(null);
   const [badgesLoading, setBadgesLoading] = React.useState(false);
+  const [coins_history, setCoinsHistory] = React.useState<CoinHistoryItem[] | null>(null);
+  const [coinsHistoryLoading, setCoinsHistoryLoading] = React.useState(false);
 
   const safeName = DOMPurify.sanitize(user.name);
   const safeEmail = user.email ? DOMPurify.sanitize(user.email) : null;
@@ -133,6 +136,24 @@ export function UserDetailPanel({ user }: UserDetailPanelProps) {
     }
   }
 
+  async function loadCoinHistory() {
+    if (coins_history !== null || coinsHistoryLoading) return;
+    setCoinsHistoryLoading(true);
+    try {
+      const res = await api
+        .get<PaginatedData<CoinHistoryItem>>(
+          `/v2/admin/users/${user.id}/coin-history?limit=50`,
+        )
+        .then((r) => r.data as PaginatedData<CoinHistoryItem>);
+      setCoinsHistory(res.items ?? []);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to load coin history');
+      setCoinsHistory([]);
+    } finally {
+      setCoinsHistoryLoading(false);
+    }
+  }
+
   return (
     <>
       <Tabs defaultValue="profile" className="w-full">
@@ -140,6 +161,7 @@ export function UserDetailPanel({ user }: UserDetailPanelProps) {
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="fraud" onClick={loadFraud}>Fraud Flags</TabsTrigger>
           <TabsTrigger value="badges" onClick={loadBadges}>Badges</TabsTrigger>
+          <TabsTrigger value="coins" onClick={loadCoinHistory}>Coin History</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile">
@@ -290,6 +312,54 @@ export function UserDetailPanel({ user }: UserDetailPanelProps) {
                       {b.earned && <Badge>Earned</Badge>}
                     </div>
                   ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="coins">
+          <Card>
+            <CardHeader>
+              <CardTitle>Coin Transaction History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {coinsHistoryLoading ? (
+                <p className="text-sm text-muted-foreground py-8 text-center">Loading…</p>
+              ) : !coins_history || coins_history.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-8 text-center">
+                  No coin transactions found.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-muted-foreground">
+                        <th className="py-2 pr-4 text-left font-medium">Date</th>
+                        <th className="py-2 pr-4 text-left font-medium">Type</th>
+                        <th className="py-2 text-right font-medium">Points</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {coins_history.map((t) => (
+                        <tr key={t.id}>
+                          <td className="py-2 pr-4 text-muted-foreground">
+                            {t.date ? new Date(t.date).toLocaleString() : '—'}
+                          </td>
+                          <td className="py-2 pr-4">{t.type}</td>
+                          <td className="py-2 text-right">
+                            <span
+                              className={
+                                t.points >= 0 ? 'text-green-600 font-medium' : 'text-red-600 font-medium'
+                              }
+                            >
+                              {t.points >= 0 ? '+' : ''}{t.points.toLocaleString()}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </CardContent>

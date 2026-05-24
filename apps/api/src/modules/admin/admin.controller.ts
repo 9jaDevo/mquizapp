@@ -41,6 +41,9 @@ import { ListQuestionsQueryDto } from './dto/list-questions-query.dto';
 import { GenerateQuestionsDto } from './dto/generate-questions.dto';
 import { ApproveBatchDto } from './dto/approve-batch.dto';
 import { AnalyticsRangeDto } from './dto/analytics-range.dto';
+import { ListUsersQueryDto } from './dto/list-users-query.dto';
+import { CreateSubcategoryDto } from './dto/create-subcategory.dto';
+import { UpdateSubcategoryDto } from './dto/update-subcategory.dto';
 
 @ApiTags('admin')
 @ApiBearerAuth('firebase-token')
@@ -54,7 +57,7 @@ export class AdminController {
 
   @Get('users')
   @ApiOperation({ summary: 'List users (paginated)' })
-  users(@Query() q: ListPaginationDto) {
+  users(@Query() q: ListUsersQueryDto) {
     return this.service.listUsers(q);
   }
 
@@ -86,6 +89,12 @@ export class AdminController {
   @ApiOperation({ summary: 'List a user earned badges row (gamification status)' })
   userBadges(@Param('id', ParseIntPipe) id: number) {
     return this.service.getUserBadges(id);
+  }
+
+  @Get('users/:id/coin-history')
+  @ApiOperation({ summary: 'Coin transaction history for a user' })
+  userCoinHistory(@Param('id', ParseIntPipe) id: number, @Query() q: ListPaginationDto) {
+    return this.service.getUserCoinHistory(id, q);
   }
 
   // ─── Questions ───────────────────────────────────────────────────────────
@@ -237,6 +246,39 @@ export class AdminController {
   @ApiOperation({ summary: 'Delete a category' })
   deleteCategory(@Param('id', ParseIntPipe) id: number) {
     return this.service.deleteCategory(id);
+  }
+
+  // ─── Subcategories ────────────────────────────────────────────────────────
+
+  @Get('categories/:id/subcategories')
+  @ApiOperation({ summary: 'List subcategories for a category' })
+  listSubcategories(@Param('id', ParseIntPipe) id: number) {
+    return this.service.listSubcategories(id);
+  }
+
+  @Post('categories/:id/subcategories')
+  @ApiOperation({ summary: 'Create a subcategory under a category' })
+  createSubcategory(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: CreateSubcategoryDto,
+  ) {
+    return this.service.createSubcategory(id, body);
+  }
+
+  @Patch('categories/subcategories/:subId')
+  @ApiOperation({ summary: 'Update a subcategory' })
+  updateSubcategory(
+    @Param('subId', ParseIntPipe) subId: number,
+    @Body() body: UpdateSubcategoryDto,
+  ) {
+    return this.service.updateSubcategory(subId, body);
+  }
+
+  @Delete('categories/subcategories/:subId')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Delete a subcategory' })
+  deleteSubcategory(@Param('subId', ParseIntPipe) subId: number) {
+    return this.service.deleteSubcategory(subId);
   }
 
   // ─── Contests ─────────────────────────────────────────────────────────────
