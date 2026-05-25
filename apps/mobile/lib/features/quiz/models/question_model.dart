@@ -12,6 +12,7 @@ class QuizQuestion extends Equatable {
     this.subcategoryId,
     this.languageId,
     this.image,
+    this.correctAnswer,
   });
 
   factory QuizQuestion.fromJson(Map<String, dynamic> j) {
@@ -36,8 +37,22 @@ class QuizQuestion extends Equatable {
       subcategoryId: parseInt(j['subcategoryId']),
       languageId: parseInt(j['languageId']),
       image: parseString(j['image']),
+      correctAnswer: parseString(j['answer'] ?? j['correctAnswer']),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'categoryId': categoryId,
+        'text': text,
+        'type': type,
+        'options': options,
+        'level': level,
+        if (subcategoryId != null) 'subcategoryId': subcategoryId,
+        if (languageId != null) 'languageId': languageId,
+        if (image != null) 'image': image,
+        if (correctAnswer != null) 'answer': correctAnswer,
+      };
 
   final int id;
   final int categoryId;
@@ -48,6 +63,9 @@ class QuizQuestion extends Equatable {
   final int? subcategoryId;
   final int? languageId;
   final String? image;
+  /// Correct option key (e.g. 'a', 'b'). Populated when the API returns it.
+  /// Used for real-time client-side validation in battle mode.
+  final String? correctAnswer;
 
   List<MapEntry<String, String>> get orderedOptions {
     const order = ['a', 'b', 'c', 'd', 'e'];

@@ -4,6 +4,8 @@ import 'package:mquiz/features/auth/auth_repository.dart';
 import 'package:mquiz/features/auth/cubit/auth_cubit.dart';
 import 'package:mquiz/features/auth/data/auth_local_data_source.dart';
 import 'package:mquiz/features/auth/data/auth_remote_data_source.dart';
+import 'package:mquiz/features/battle/cubit/battle_cubit.dart';
+import 'package:mquiz/features/battle/data/battle_repository.dart';
 import 'package:mquiz/features/contests/cubit/contest_cubit.dart';
 import 'package:mquiz/features/contests/data/contest_repository.dart';
 import 'package:mquiz/features/home/cubit/home_cubit.dart';
@@ -64,6 +66,11 @@ class AppProviders extends StatelessWidget {
         RepositoryProvider<ProgressRepository>(
           create: (_) => ProgressRepository(),
         ),
+        RepositoryProvider<BattleRepository>(
+          create: (ctx) => BattleRepository(
+            quizRepo: ctx.read<QuizRepository>(),
+          ),
+        ),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -113,6 +120,12 @@ class AppProviders extends StatelessWidget {
           ),
           BlocProvider<ProgressCubit>(
             create: (ctx) => ProgressCubit(ctx.read<ProgressRepository>()),
+          ),
+          BlocProvider<BattleCubit>(
+            create: (ctx) => BattleCubit(
+              battleRepo: ctx.read<BattleRepository>(),
+              quizRepo: ctx.read<QuizRepository>(),
+            ),
           ),
         ],
         child: child,

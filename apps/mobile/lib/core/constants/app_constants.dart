@@ -68,6 +68,12 @@ abstract final class AppConstants {
   static const String routeCoinStore = '/store';
   static const String routeBoosters = '/boosters';
   static const String routeProgressMap = '/progress';
+  static const String routeLeagueQuiz = '/leagues/:leagueId/play';
+  static const String routeContestPlay = '/contests/:contestId/play';
+  static const String routeSessionResult = '/quiz/session-result';
+  static const String routeBattle = '/battle';
+  static const String routeBattleLive = '/battle/live';
+  static const String routeBattleResult = '/battle/result';
 
   // ── Extra route params ─────────────────────────────────────────────────────
   static const String paramCategoryId = 'categoryId';

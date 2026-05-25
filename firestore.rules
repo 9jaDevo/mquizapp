@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Battle Rooms ─────────────────────────────────────────────────────────
+    // Only authenticated users may interact with battle rooms.
+    match /battleRoom/{roomId} {
+
+      // Any authenticated user may read a room (to watch live progress)
+      allow read: if request.auth != null;
+
+      // Only the room creator (user1) may create the document
+      allow create: if request.auth != null
+        && request.resource.data.user1.uid == request.auth.uid;
+
+      // Permitted updates:
+      //   - user1 updating their own fields
+      //   - user2 (existing or joining) updating their own fields
+      //   - a new user2 joining an open (user2 == null) room
+      allow update: if request.auth != null
+        && (
+          // user1 is allowed to update their progress / status
+          request.auth.uid == resource.data.user1.uid
+          // existing user2 updating their own progress
+          || (resource.data.user2 != null
+              && request.auth.uid == resource.data.user2.uid)
+          // new user2 joining: room is still open and they set their own uid
+          || (resource.data.user2 == null
+              && request.resource.data.user2.uid == request.auth.uid)
+        );
+
+      // Deletion is not permitted through the client
+      allow delete: if false;
+    }
+
+    // ── Default: deny everything else ────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

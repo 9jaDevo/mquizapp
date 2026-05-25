@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:mquiz/core/constants/app_constants.dart';
 import 'package:mquiz/core/theme/app_colors.dart';
 import 'package:mquiz/core/widgets/common_widgets.dart';
 import 'package:mquiz/features/auth/cubit/auth_cubit.dart';
@@ -97,17 +99,13 @@ class _DetailBody extends StatelessWidget {
           )
         else
           OutlinedButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content:
-                      Text('Daily league quiz launches with Sprint 7.1.'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
+            onPressed: () => context.push(
+              AppConstants.routeLeagueQuiz.replaceFirst(
+                  ':leagueId', '${league.id}'),
+              extra: league.name,
+            ),
             icon: const Icon(Icons.play_arrow_rounded),
-            label: const Text('Play today\'s questions'),
+            label: const Text("Play today's questions"),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(48),
             ),

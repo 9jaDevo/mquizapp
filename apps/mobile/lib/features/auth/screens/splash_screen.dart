@@ -13,9 +13,15 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  double _opacity = 0;
+
   @override
   void initState() {
     super.initState();
+    // Fade-in logo after a short frame delay
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) setState(() => _opacity = 1);
+    });
     context.read<AuthCubit>().checkAuth();
   }
 
@@ -33,24 +39,25 @@ class _SplashScreenState extends State<SplashScreen> {
       },
       child: Scaffold(
         backgroundColor: AppColors.primary,
-        body: const Center(
+        body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // TODO: replace with original mQuiz logo asset
-              FlutterLogo(size: 80),
-              SizedBox(height: 24),
-              Text(
-                'mQuiz',
-                style: TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                  letterSpacing: -0.5,
+              AnimatedOpacity(
+                opacity: _opacity,
+                duration: const Duration(milliseconds: 800),
+                child: Image.asset(
+                  AppConstants.logoImage,
+                  width: 160,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.quiz_rounded,
+                    size: 80,
+                    color: Colors.white,
+                  ),
                 ),
               ),
-              SizedBox(height: 48),
-              CircularProgressIndicator(
+              const SizedBox(height: 48),
+              const CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
                 strokeWidth: 2,
               ),
