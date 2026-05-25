@@ -8,27 +8,27 @@ import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 export function LoginForm() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') ?? '/dashboard';
 
-  async function handleEmailLogin(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim() || !password) return;
+    if (!username.trim() || !password) return;
     setIsLoading(true);
     setError(null);
     try {
-      const result = await signIn('email-password', {
-        email,
+      const result = await signIn('admin-db', {
+        username,
         password,
         callbackUrl,
         redirect: false,
       });
       if (result?.error) {
-        setError('Invalid credentials or account does not have admin access.');
+        setError('Invalid username or password.');
       } else if (result?.url) {
         window.location.href = result.url;
       }
@@ -58,17 +58,17 @@ export function LoginForm() {
         </div>
       )}
 
-      <form onSubmit={handleEmailLogin} className="space-y-3">
+      <form onSubmit={handleLogin} className="space-y-3">
         <div className="space-y-1">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="username">Username</Label>
           <Input
-            id="email"
-            type="email"
-            placeholder="admin@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            id="username"
+            type="text"
+            placeholder="admin"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             required
-            autoComplete="email"
+            autoComplete="username"
             disabled={isLoading}
           />
         </div>
@@ -85,7 +85,7 @@ export function LoginForm() {
             disabled={isLoading}
           />
         </div>
-        <Button type="submit" className="w-full" disabled={isLoading || !email || !password}>
+        <Button type="submit" className="w-full" disabled={isLoading || !username || !password}>
           {isLoading ? 'Signing in…' : 'Sign in'}
         </Button>
       </form>

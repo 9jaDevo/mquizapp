@@ -31,6 +31,8 @@ import { ListUsersQueryDto } from './dto/list-users-query.dto';
 import { CreateSubcategoryDto } from './dto/create-subcategory.dto';
 import { UpdateSubcategoryDto } from './dto/update-subcategory.dto';
 import { GenerateQuestionsDto } from './dto/generate-questions.dto';
+import { AdminLoginDto } from './dto/admin-login.dto';
+import * as bcrypt from 'bcryptjs';
 import OpenAI from 'openai';
 
 @Injectable()
@@ -1423,5 +1425,43 @@ export class AdminService {
       dateSent: n.date_sent.toISOString(),
     }));
     return this.paginate(items, total, page, take);
+  }
+
+  // ─── Admin Auth (tbl_authenticate) ──────────────────────────────────────
+
+  /**
+   * Verify admin credentials against tbl_authenticate.
+   * Handles PHP bcrypt ($2y$) hashes by normalising to $2b$ before comparison.
+   * Returns null (never throws) so the controller can issue a generic 401.
+   */
+  async verifyAdminCredentials(dto: AdminLoginDto): Promise<{
+    id: number;
+    username: string;
+    role: string;
+    permissions: string;
+  } | null> {
+    try {
+      const admin = await this.prisma.tbl_authenticate.findUnique({
+        where: { auth_username: dto.username },
+      });
+
+      // Reject if not found or account is inactive (status !== 1)
+      if (!admin || admin.status !== 1) return null;
+
+      // PHP uses $2y$ prefix; bcryptjs expects $2b$ — they are algorithmically identical
+      const hash = admin.auth_pass.replace(/^\$2y\$/, '$2b$');
+      const valid = await bcrypt.compare(dto.password, hash);
+      if (!valid) return null;
+
+      return {
+        id: admin.auth_id,
+        username: admin.auth_username,
+        role: admin.role,
+        permissions: admin.permissions,
+      };
+    } catch (err) {
+      this.logger.error('verifyAdminCredentials error', err);
+      return null;
+    }
   }
 }
