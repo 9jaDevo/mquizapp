@@ -3,11 +3,17 @@ import 'dart:io';
 
 import 'package:flutterquiz/core/constants/api_exception.dart';
 import 'package:flutterquiz/core/constants/constants.dart';
+import 'package:flutterquiz/core/network/api_config.dart';
+import 'package:flutterquiz/core/network/base_repository.dart';
+import 'package:flutterquiz/core/network/nestjs_api.dart';
 import 'package:flutterquiz/utils/api_utils.dart';
 import 'package:http/http.dart' as http;
 
 final class StatisticRemoteDataSource {
   Future<Map<String, dynamic>> getStatistic() async {
+    if (ApiMigration.stats) {
+      return runNestCall(() => NestJsApi.instance.getMyStats());
+    }
     try {
       //body of post request
       final response = await http.post(

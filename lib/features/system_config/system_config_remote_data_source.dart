@@ -3,11 +3,17 @@ import 'dart:io';
 
 import 'package:flutterquiz/core/constants/api_exception.dart';
 import 'package:flutterquiz/core/constants/constants.dart';
+import 'package:flutterquiz/core/network/api_config.dart';
+import 'package:flutterquiz/core/network/base_repository.dart';
+import 'package:flutterquiz/core/network/nestjs_api.dart';
 import 'package:flutterquiz/utils/api_utils.dart';
 import 'package:http/http.dart' as http;
 
 final class SystemConfigRemoteDataSource {
   Future<Map<String, dynamic>> getSystemConfig() async {
+    if (ApiMigration.config) {
+      return runNestCall(() => NestJsApi.instance.getSystemConfig());
+    }
     try {
       final response = await http.post(Uri.parse(getSystemConfigUrl));
       final responseJson = jsonDecode(response.body) as Map<String, dynamic>;

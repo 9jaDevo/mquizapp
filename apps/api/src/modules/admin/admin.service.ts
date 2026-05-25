@@ -937,7 +937,8 @@ export class AdminService {
       image: c.image,
       rowOrder: c.rowOrder,
       languageId: c.languageId,
-      isActive: true,
+      status: c.status,
+      isActive: c.status === 1,
       sortOrder: c.rowOrder,
       iconUrl: c.image,
       description: null,
@@ -961,6 +962,7 @@ export class AdminService {
         image: dto.image ?? null,
         languageId: dto.languageId ?? 0,
         rowOrder: nextOrder,
+        status: dto.status ?? 1,
       },
     });
     return {
@@ -973,6 +975,7 @@ export class AdminService {
       image: created.image,
       rowOrder: created.rowOrder,
       languageId: created.languageId,
+      status: created.status,
     };
   }
 
@@ -990,7 +993,10 @@ export class AdminService {
     if (dto.image !== undefined) data['image'] = dto.image;
     if (dto.languageId !== undefined) data['languageId'] = dto.languageId;
     if (dto.rowOrder !== undefined) data['rowOrder'] = dto.rowOrder;
+    if (dto.status !== undefined) data['status'] = dto.status;
     const updated = await this.prisma.category.update({ where: { id }, data });
+    // Invalidate public category cache so status change is reflected immediately
+    await this.redis.del(`categories:lang:${updated.languageId}`);
     return {
       id: updated.id,
       name: updated.categoryName,
@@ -1001,6 +1007,7 @@ export class AdminService {
       image: updated.image,
       rowOrder: updated.rowOrder,
       languageId: updated.languageId,
+      status: updated.status,
     };
   }
 

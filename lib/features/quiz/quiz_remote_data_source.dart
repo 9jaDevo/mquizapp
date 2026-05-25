@@ -4,6 +4,9 @@ import 'dart:io';
 
 import 'package:flutterquiz/core/constants/api_exception.dart';
 import 'package:flutterquiz/core/constants/constants.dart';
+import 'package:flutterquiz/core/network/api_config.dart';
+import 'package:flutterquiz/core/network/base_repository.dart';
+import 'package:flutterquiz/core/network/nestjs_api.dart';
 import 'package:flutterquiz/features/quiz/models/quiz_type.dart';
 import 'package:flutterquiz/utils/api_utils.dart';
 import 'package:http/http.dart' as http;
@@ -322,6 +325,14 @@ final class QuizRemoteDataSource {
     required String type,
     String? subType,
   }) async {
+    if (ApiMigration.categories) {
+      return runNestCall(
+        () => NestJsApi.instance.getCategories(
+          languageId: languageId.isEmpty ? null : languageId,
+          type: type,
+        ),
+      );
+    }
     try {
       //body of post request
       final body = <String, String>{
@@ -407,6 +418,9 @@ final class QuizRemoteDataSource {
   }
 
   Future<List<Map<String, dynamic>>> getSubCategory(String category) async {
+    if (ApiMigration.categories) {
+      return runNestCall(() => NestJsApi.instance.getSubcategories(category));
+    }
     try {
       //body of post request
       final body = <String, String>{categoryKey: category};

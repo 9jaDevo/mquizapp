@@ -19,7 +19,7 @@ export class CategoriesService {
     if (cached) return { categories: cached, cached: true };
 
     const categories = await this.prisma.category.findMany({
-      where: { languageId },
+      where: { languageId, status: 1 },
       orderBy: [{ rowOrder: 'asc' }, { id: 'asc' }],
       select: {
         id: true,

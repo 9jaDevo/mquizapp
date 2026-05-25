@@ -25,6 +25,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { LeagueModule } from './modules/league/league.module';
 import { ContestModule } from './modules/contest/contest.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { BookmarksModule } from './modules/bookmarks/bookmarks.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { AdminModule } from './modules/admin/admin.module';
     LeagueModule,
     ContestModule,
     AdminModule,
+    BookmarksModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

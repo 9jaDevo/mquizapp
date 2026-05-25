@@ -62,4 +62,11 @@ export class CreateCategoryDto {
   @IsInt()
   @Min(0)
   rowOrder?: number;
+
+  @ApiPropertyOptional({ default: 1, description: '1 = active, 0 = inactive' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @IsIn([0, 1])
+  status?: number;
 }

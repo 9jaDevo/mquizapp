@@ -1,7 +1,9 @@
 # Phase 6 — Schools, AI & Government Features Checklist
 
-> **Target:** Months 5–9 · Requires Phase 1–3 complete
+> **Target:** Months 5–9 · Requires Phase 5 (`apps/mobile/`) shipped to both stores first
 > **Status key:** ⬜ Not started · 🔄 In progress · ✅ Complete · ❌ Blocked
+>
+> **Blocker:** Do not start Phase 6 until the new `apps/mobile/` app has been live on both Play Store and App Store for at least 2 weeks with stable crash-free rate.
 
 ---
 

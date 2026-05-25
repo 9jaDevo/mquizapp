@@ -7,6 +7,20 @@
 
 ---
 
+## ⚠️ Strategic Update — May 2026
+
+**Phase 4 Flutter work (UI in `lib/`) is CANCELLED.**
+
+All new features originally planned here (Lives, Boosters, Progress Map, Shareable Score Cards, Phone OTP) will be built **natively in `apps/mobile/`** as part of Phase 5, which is now the primary delivery target.
+
+**What remains valid from Phase 4:**
+- The **NestJS API endpoints** (Lives, Boosters, Progress, Payments) still need to be built in `apps/api/` — the new app will call them. See Phase 5 checklist for the full list.
+- Any `apps/api/` items marked ✅ below are still done and reusable.
+
+**Do not implement any Flutter UI items in `lib/` from this checklist.**
+
+---
+
 ## 4.1 Lives System
 
 | Task | API | UI | Test | Prod | Notes |
