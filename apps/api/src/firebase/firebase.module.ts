@@ -2,8 +2,9 @@ import { Global, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
 import { FirebaseService } from './firebase.service';
+import { FIREBASE_APP } from './firebase.constants';
 
-export const FIREBASE_APP = Symbol('FIREBASE_APP');
+export { FIREBASE_APP } from './firebase.constants';
 
 @Global()
 @Module({
