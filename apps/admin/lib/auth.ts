@@ -25,6 +25,67 @@ function getFirebaseAdmin() {
 
 export const authOptions: NextAuthOptions = {
   providers: [
+    // Primary: email + password (Firebase REST auth → admin claim check)
+    CredentialsProvider({
+      id: 'email-password',
+      name: 'Email and Password',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) return null;
+
+        const apiKey = process.env.FIREBASE_API_KEY;
+        if (!apiKey) {
+          console.error('FIREBASE_API_KEY not set');
+          return null;
+        }
+
+        // Step 1: Sign in via Firebase REST API (validates email+password)
+        let idToken: string;
+        try {
+          const res = await fetch(
+            `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                email: credentials.email,
+                password: credentials.password,
+                returnSecureToken: true,
+              }),
+            },
+          );
+          if (!res.ok) return null;
+          const data = await res.json() as { idToken?: string };
+          if (!data.idToken) return null;
+          idToken = data.idToken;
+        } catch {
+          return null;
+        }
+
+        // Step 2: Verify ID token and check admin custom claim
+        const auth = getFirebaseAdmin();
+        if (!auth) return null;
+        try {
+          const decoded = await auth.verifyIdToken(idToken);
+          if (!decoded.admin) return null;
+          return {
+            id: decoded.uid,
+            name: decoded.name ?? credentials.email,
+            email: decoded.email ?? null,
+            image: decoded.picture ?? null,
+            isAdmin: true,
+            firebaseToken: idToken,
+            firebaseTokenExpiry: (decoded.exp ?? 0) * 1000,
+          };
+        } catch {
+          return null;
+        }
+      },
+    }),
+
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID ?? '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',

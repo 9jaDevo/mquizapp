@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { LoginForm } from './login-form';
 
 export default function LoginPage() {
@@ -7,10 +8,12 @@ export default function LoginPage() {
         <div className="text-center">
           <h1 className="text-2xl font-bold">mQuiz Admin</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Sign in with your admin Google account
+            Sign in with your admin credentials
           </p>
         </div>
-        <LoginForm />
+        <Suspense>
+          <LoginForm />
+        </Suspense>
       </div>
     </div>
   );
