@@ -25,72 +25,64 @@ function getFirebaseAdmin() {
 
 export const authOptions: NextAuthOptions = {
   providers: [
-    // Primary: email + password (Firebase REST auth → admin claim check)
+    // ── Primary: username + password against tbl_authenticate ───────────────
     CredentialsProvider({
-      id: 'email-password',
-      name: 'Email and Password',
+      id: 'admin-db',
+      name: 'Admin Credentials',
       credentials: {
-        email: { label: 'Email', type: 'email' },
+        username: { label: 'Username', type: 'text' },
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.username || !credentials?.password) return null;
 
-        const apiKey = process.env.FIREBASE_API_KEY;
-        if (!apiKey) {
-          console.error('FIREBASE_API_KEY not set');
+        const apiUrl = process.env.API_URL;
+        if (!apiUrl) {
+          console.error('API_URL not configured');
           return null;
         }
 
-        // Step 1: Sign in via Firebase REST API (validates email+password)
-        let idToken: string;
         try {
-          const res = await fetch(
-            `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                email: credentials.email,
-                password: credentials.password,
-                returnSecureToken: true,
-              }),
-            },
-          );
+          const res = await fetch(`${apiUrl}/v2/admin/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              username: credentials.username,
+              password: credentials.password,
+            }),
+          });
+
           if (!res.ok) return null;
-          const data = await res.json() as { idToken?: string };
-          if (!data.idToken) return null;
-          idToken = data.idToken;
-        } catch {
-          return null;
-        }
-
-        // Step 2: Verify ID token and check admin custom claim
-        const auth = getFirebaseAdmin();
-        if (!auth) return null;
-        try {
-          const decoded = await auth.verifyIdToken(idToken);
-          if (!decoded.admin) return null;
-          return {
-            id: decoded.uid,
-            name: decoded.name ?? credentials.email,
-            email: decoded.email ?? null,
-            image: decoded.picture ?? null,
-            isAdmin: true,
-            firebaseToken: idToken,
-            firebaseTokenExpiry: (decoded.exp ?? 0) * 1000,
+          const body = await res.json() as {
+            success?: boolean;
+            data?: { id: number; username: string; role: string; permissions: string };
           };
-        } catch {
+          if (!body.success || !body.data) return null;
+
+          const { id, username, role, permissions } = body.data;
+          return {
+            id: String(id),
+            name: username,
+            email: null,
+            image: null,
+            isAdmin: true,
+            role,
+            permissions,
+          };
+        } catch (err) {
+          console.error('admin-db authorize error', err);
           return null;
         }
       },
     }),
 
+    // ── Secondary: Google OAuth (requires admin Firebase custom claim) ───────
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID ?? '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
     }),
-    // Firebase token login for direct token injection (dev/testing)
+
+    // ── Dev/testing: raw Firebase ID token injection ──────────────────────
     CredentialsProvider({
       id: 'firebase-token',
       name: 'Firebase Token',
@@ -104,8 +96,7 @@ export const authOptions: NextAuthOptions = {
 
         try {
           const decoded = await auth.verifyIdToken(credentials.idToken);
-          const isAdmin = decoded.admin === true;
-          if (!isAdmin) return null;
+          if (!decoded.admin) return null;
 
           return {
             id: decoded.uid,
@@ -113,6 +104,7 @@ export const authOptions: NextAuthOptions = {
             email: decoded.email ?? null,
             image: decoded.picture ?? null,
             isAdmin: true,
+            role: 'admin',
             firebaseToken: credentials.idToken,
             firebaseTokenExpiry: (decoded.exp ?? 0) * 1000,
           };
@@ -125,16 +117,15 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     async signIn({ user, account }) {
-      // For Google OAuth, verify the user has admin custom claim via Firebase
+      // For Google OAuth, verify the admin Firebase custom claim
       if (account?.provider === 'google' && account.id_token) {
         const auth = getFirebaseAdmin();
         if (!auth) return false;
         try {
           const decoded = await auth.verifyIdToken(account.id_token);
-          const isAdmin = decoded.admin === true;
-          if (!isAdmin) return '/unauthorized';
-          // Attach firebase token info to user object
+          if (!decoded.admin) return '/unauthorized';
           (user as unknown as Record<string, unknown>).isAdmin = true;
+          (user as unknown as Record<string, unknown>).role = 'admin';
           (user as unknown as Record<string, unknown>).firebaseToken = account.id_token;
           (user as unknown as Record<string, unknown>).firebaseTokenExpiry = (decoded.exp ?? 0) * 1000;
         } catch {
@@ -145,10 +136,11 @@ export const authOptions: NextAuthOptions = {
     },
 
     async jwt({ token, user }) {
-      // On first sign-in, copy user fields to token
       if (user) {
         token.userId = user.id;
         token.isAdmin = (user as { isAdmin?: boolean }).isAdmin ?? false;
+        token.role = (user as { role?: string }).role ?? 'admin';
+        token.permissions = (user as { permissions?: string }).permissions ?? '';
         token.firebaseToken = (user as { firebaseToken?: string }).firebaseToken ?? '';
         token.firebaseTokenExpiry = (user as { firebaseTokenExpiry?: number }).firebaseTokenExpiry ?? 0;
       }
@@ -158,6 +150,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       session.user.id = token.userId;
       session.user.isAdmin = token.isAdmin;
+      session.user.role = token.role;
       session.firebaseToken = token.firebaseToken;
       session.firebaseTokenExpiry = token.firebaseTokenExpiry;
       return session;
