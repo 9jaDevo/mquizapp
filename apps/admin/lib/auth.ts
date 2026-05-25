@@ -55,11 +55,36 @@ export const authOptions: NextAuthOptions = {
           if (!res.ok) return null;
           const body = await res.json() as {
             success?: boolean;
-            data?: { id: number; username: string; role: string; permissions: string };
+            data?: { id: number; username: string; role: string; permissions: string; firebaseCustomToken: string };
           };
           if (!body.success || !body.data) return null;
 
-          const { id, username, role, permissions } = body.data;
+          const { id, username, role, permissions, firebaseCustomToken } = body.data;
+
+          // Exchange Firebase custom token → ID token so the admin panel can
+          // call FirebaseAuthGuard-protected NestJS endpoints.
+          const apiKey = process.env.FIREBASE_API_KEY;
+          if (!apiKey) {
+            console.error('FIREBASE_API_KEY not configured');
+            return null;
+          }
+          const exchangeRes = await fetch(
+            `https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${apiKey}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token: firebaseCustomToken, returnSecureToken: true }),
+            },
+          );
+          if (!exchangeRes.ok) {
+            console.error('Firebase custom token exchange failed', await exchangeRes.text());
+            return null;
+          }
+          const { idToken, expiresIn } = await exchangeRes.json() as {
+            idToken: string;
+            expiresIn: string;
+          };
+
           return {
             id: String(id),
             name: username,
@@ -68,6 +93,8 @@ export const authOptions: NextAuthOptions = {
             isAdmin: true,
             role,
             permissions,
+            firebaseToken: idToken,
+            firebaseTokenExpiry: Date.now() + (parseInt(expiresIn, 10) - 60) * 1000,
           };
         } catch (err) {
           console.error('admin-db authorize error', err);

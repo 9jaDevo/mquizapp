@@ -1439,6 +1439,7 @@ export class AdminService {
     username: string;
     role: string;
     permissions: string;
+    firebaseCustomToken: string;
   } | null> {
     try {
       const admin = await this.prisma.tbl_authenticate.findUnique({
@@ -1453,11 +1454,20 @@ export class AdminService {
       const valid = await bcrypt.compare(dto.password, hash);
       if (!valid) return null;
 
+      // Create a Firebase custom token so the admin panel can authenticate
+      // against FirebaseAuthGuard-protected NestJS endpoints.
+      // UID format: admin_<auth_id> — distinct from end-user UIDs.
+      const uid = `admin_${admin.auth_id}`;
+      const firebaseCustomToken = await this.firebase
+        .auth()
+        .createCustomToken(uid, { admin: true, role: admin.role });
+
       return {
         id: admin.auth_id,
         username: admin.auth_username,
         role: admin.role,
         permissions: admin.permissions,
+        firebaseCustomToken,
       };
     } catch (err) {
       this.logger.error('verifyAdminCredentials error', err);
