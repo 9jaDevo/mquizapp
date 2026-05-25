@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:mquiz/core/theme/app_colors.dart';
 import 'package:mquiz/core/widgets/common_widgets.dart';
@@ -156,15 +157,10 @@ class _ContestCard extends StatelessWidget {
             width: double.infinity,
             child: FilledButton.icon(
               onPressed: live
-                  ? () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                              'Contest play screen launches in next pass.'),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    }
+                  ? () => context.push(
+                        '/contests/${contest.id}',
+                        extra: contest,
+                      )
                   : null,
               icon: const Icon(Icons.play_arrow_rounded),
               label: Text(contest.isParticipated ? 'Resume' : 'Play'),

@@ -20,6 +20,14 @@ import 'package:mquiz/features/progress/screens/progress_map_screen.dart';
 import 'package:mquiz/features/quiz/screens/quiz_result_screen.dart';
 import 'package:mquiz/features/quiz/screens/quiz_screen.dart';
 import 'package:mquiz/features/quiz/screens/subcategories_screen.dart';
+import 'package:mquiz/features/battle/screens/battle_result_screen.dart';
+import 'package:mquiz/features/battle/screens/find_opponent_screen.dart';
+import 'package:mquiz/features/battle/screens/live_battle_screen.dart';
+import 'package:mquiz/features/contests/screens/contest_detail_screen.dart';
+import 'package:mquiz/features/contests/screens/contest_quiz_screen.dart';
+import 'package:mquiz/features/contests/models/contest_model.dart';
+import 'package:mquiz/features/leagues/screens/league_quiz_screen.dart';
+import 'package:mquiz/features/quiz/screens/session_result_screen.dart';
 import 'package:mquiz/features/store/screens/coin_store_screen.dart';
 
 class AppRouter {
@@ -89,6 +97,49 @@ class AppRouter {
                 int.tryParse(state.pathParameters['leagueId'] ?? '0') ?? 0;
             return LeagueDetailScreen(leagueId: id);
           },
+        ),
+        GoRoute(
+          path: AppConstants.routeLeagueQuiz,
+          builder: (ctx, state) {
+            final id =
+                int.tryParse(state.pathParameters['leagueId'] ?? '0') ?? 0;
+            final name = state.extra is String ? state.extra as String : null;
+            return LeagueQuizScreen(leagueId: id, leagueName: name);
+          },
+        ),
+        GoRoute(
+          path: AppConstants.routeContestDetail,
+          builder: (ctx, state) {
+            final contest = state.extra as Contest;
+            return ContestDetailScreen(contest: contest);
+          },
+        ),
+        GoRoute(
+          path: AppConstants.routeContestPlay,
+          builder: (ctx, state) {
+            final id =
+                int.tryParse(state.pathParameters['contestId'] ?? '0') ?? 0;
+            final name = state.extra is Contest
+                ? (state.extra as Contest).name
+                : null;
+            return ContestQuizScreen(contestId: id, contestName: name);
+          },
+        ),
+        GoRoute(
+          path: AppConstants.routeSessionResult,
+          builder: (ctx, _) => const SessionResultScreen(),
+        ),
+        GoRoute(
+          path: AppConstants.routeBattle,
+          builder: (ctx, _) => const FindOpponentScreen(),
+        ),
+        GoRoute(
+          path: AppConstants.routeBattleLive,
+          builder: (ctx, _) => const LiveBattleScreen(),
+        ),
+        GoRoute(
+          path: AppConstants.routeBattleResult,
+          builder: (ctx, _) => const BattleResultScreen(),
         ),
         // ── Authenticated shell with bottom nav ─────────────────────────────
         ShellRoute(
