@@ -16,9 +16,17 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' https://accounts.google.com https://apis.google.com 'nonce-PLACEHOLDER'",
+      // 'unsafe-inline' required for Next.js App Router hydration scripts
+      "script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com",
       "frame-src https://accounts.google.com",
-      "connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com",
+      [
+        "connect-src 'self'",
+        'https://identitytoolkit.googleapis.com',
+        'https://securetoken.googleapis.com',
+        'https://www.googleapis.com',
+        // Allow configured API (set NEXT_PUBLIC_API_URL in env)
+        process.env.NEXT_PUBLIC_API_URL ?? '',
+      ].filter(Boolean).join(' '),
       "img-src 'self' data: https:",
       "style-src 'self' 'unsafe-inline'",
     ].join('; '),
