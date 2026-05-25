@@ -4,11 +4,17 @@ import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutterquiz/core/constants/api_exception.dart';
 import 'package:flutterquiz/core/constants/constants.dart';
+import 'package:flutterquiz/core/network/api_config.dart';
+import 'package:flutterquiz/core/network/base_repository.dart';
+import 'package:flutterquiz/core/network/nestjs_api.dart';
 import 'package:flutterquiz/utils/api_utils.dart';
 import 'package:http/http.dart' as http;
 
 final class ProfileManagementRemoteDataSource {
   Future<Map<String, dynamic>> getUserDetailsById() async {
+    if (ApiMigration.profile) {
+      return runNestCall(() => NestJsApi.instance.getMe());
+    }
     try {
       final response = await http.post(
         Uri.parse(getUserDetailsByIdUrl),

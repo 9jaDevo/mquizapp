@@ -3,6 +3,9 @@ import 'dart:io';
 
 import 'package:flutterquiz/core/constants/api_exception.dart';
 import 'package:flutterquiz/core/constants/constants.dart';
+import 'package:flutterquiz/core/network/api_config.dart';
+import 'package:flutterquiz/core/network/base_repository.dart';
+import 'package:flutterquiz/core/network/nestjs_api.dart';
 import 'package:flutterquiz/utils/api_utils.dart';
 import 'package:http/http.dart' as http;
 
@@ -13,6 +16,15 @@ final class CoinHistoryRemoteDataSource {
     required String limit,
     required String offset,
   }) async {
+    if (ApiMigration.coins) {
+      return runNestCall(() async {
+        final lim = int.tryParse(limit) ?? 20;
+        final off = int.tryParse(offset) ?? 0;
+        final page = lim > 0 ? (off ~/ lim) + 1 : 1;
+        final data = await NestJsApi.instance.getCoinHistory(page: page, limit: lim);
+        return (total: data.length, data: data);
+      });
+    }
     try {
       final body = <String, String>{
         if (limit.isNotEmpty) limitKey: limit,

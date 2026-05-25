@@ -52,8 +52,10 @@ model Category {
   coins        Int     @default(0)
   image        String? @db.Text
   rowOrder     Int     @map("row_order")
+  status       Int     @default(1) @db.TinyInt
 
   @@index([languageId], map: "language_id")
+  @@index([status], map: "idx_category_status")
   @@map("tbl_category")
 }
 
@@ -72,6 +74,18 @@ model Subcategory {
   @@index([languageId], map: "language_id")
   @@index([maincatId], map: "maincat_id")
   @@map("tbl_subcategory")
+}
+
+model UserBookmark {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  userId     Int      @map("user_id") @db.UnsignedInt
+  questionId Int      @map("question_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, questionId], map: "uq_user_question")
+  @@index([userId], map: "idx_bookmarks_user_id")
+  @@index([questionId], map: "idx_bookmarks_question_id")
+  @@map("tbl_user_bookmarks")
 }
 
 model Question {

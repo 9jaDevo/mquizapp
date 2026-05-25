@@ -1,0 +1,79 @@
+{
+  "project_info": {
+    "project_number": "850520168460",
+    "project_id": "mquiz-a8251",
+    "storage_bucket": "mquiz-a8251.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:850520168460:android:155ab1d936b04fa91af629",
+        "android_client_info": {
+          "package_name": "com.togafrica.mquiz"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "850520168460-07jmi9uuts52i9f8mau0vd3tk2ui2h4h.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.togafrica.mquiz",
+            "certificate_hash": "d1b1d9f36b04771f43e5b667fbbf8f1e37530a7d"
+          }
+        },
+        {
+          "client_id": "850520168460-45lb22k9v1uuetv80h4ej300t2obdrjr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.togafrica.mquiz",
+            "certificate_hash": "22fd05d5e0b09a3bdf7f1ff309500f2b4d85dd98"
+          }
+        },
+        {
+          "client_id": "850520168460-6knk95e3735kctih2kgu2v2vqcg93qo6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.togafrica.mquiz",
+            "certificate_hash": "6ea0dc3c7bcb93fb1d684d24b529cd9e910ade59"
+          }
+        },
+        {
+          "client_id": "850520168460-v224h9h2pivd0l0tefj8samm7l77kf5k.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.togafrica.mquiz",
+            "certificate_hash": "f16c5e482ce01f4d0b1d1f0989caeb94ac277b5e"
+          }
+        },
+        {
+          "client_id": "850520168460-ohns6f0rcjf98dj9457b92rp1iec73ii.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAus80m4g5Fg_3GQ0rbqljwtbGIiwCpwv4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "850520168460-ohns6f0rcjf98dj9457b92rp1iec73ii.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "850520168460-qiq3sj00u2o6ck4h4ebvmb0aqvfko5kl.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.togafrica.mquiz"
+              }
+            }
+          ]
+        }
+      },
+      "admob_app_id": "ca-app-pub-6905634678868103~2960521786"
+    }
+  ],
+  "configuration_version": "1"
+}

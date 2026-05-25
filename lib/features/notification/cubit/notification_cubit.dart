@@ -6,6 +6,9 @@ import 'package:flutterquiz/core/constants/api_body_parameter_labels.dart';
 import 'package:flutterquiz/core/constants/api_endpoints_constants.dart';
 import 'package:flutterquiz/core/constants/api_exception.dart';
 import 'package:flutterquiz/core/constants/error_message_keys.dart';
+import 'package:flutterquiz/core/network/api_config.dart';
+import 'package:flutterquiz/core/network/base_repository.dart';
+import 'package:flutterquiz/core/network/nestjs_api.dart';
 import 'package:flutterquiz/utils/api_utils.dart';
 import 'package:http/http.dart' as http;
 
@@ -46,6 +49,18 @@ final class NotificationCubit extends Cubit<NotificationState> {
     String limit = '20',
     String offset = '',
   }) async {
+    if (ApiMigration.notifications) {
+      final page = offset.isEmpty
+          ? 1
+          : ((int.tryParse(offset) ?? 0) ~/ (int.tryParse(limit) ?? 20)) + 1;
+      final list = await runNestCall(
+        () => NestJsApi.instance.getNotifications(
+          page: page,
+          limit: int.tryParse(limit) ?? 20,
+        ),
+      );
+      return (data: list, total: list.length);
+    }
     try {
       final body = <String, String>{limitKey: limit, offsetKey: offset};
 

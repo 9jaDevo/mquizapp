@@ -3,6 +3,9 @@ import 'dart:io';
 
 import 'package:flutterquiz/core/constants/api_exception.dart';
 import 'package:flutterquiz/core/constants/constants.dart';
+import 'package:flutterquiz/core/network/api_config.dart';
+import 'package:flutterquiz/core/network/base_repository.dart';
+import 'package:flutterquiz/core/network/nestjs_api.dart';
 import 'package:flutterquiz/utils/api_utils.dart';
 import 'package:http/http.dart' as http;
 
@@ -15,6 +18,9 @@ final class MonetizationRemoteDataSource {
   /// Check daily login streak and award coins
   /// Returns: {streak_count, coins_earned, bonus_unlocked, max_streak}
   Future<Map<String, dynamic>> checkDailyStreak() async {
+    if (ApiMigration.streak) {
+      return runNestCall(() => NestJsApi.instance.claimDailyStreak());
+    }
     try {
       final response = await http.post(
         Uri.parse(checkDailyStreakUrl),
@@ -145,6 +151,14 @@ final class MonetizationRemoteDataSource {
   /// Returns: {banner_id, sponsor_name, title, image_url, redirect_url, impression_limit}
   /// No auth required - can be called before login
   Future<Map<String, dynamic>?> getSponsorBanner() async {
+    if (ApiMigration.ads) {
+      try {
+        final banners = await NestJsApi.instance.getActiveBanners();
+        return banners.isEmpty ? null : banners.first;
+      } catch (_) {
+        return null;
+      }
+    }
     try {
       final response = await http.post(
         Uri.parse(getSponsorBannerUrl),
@@ -169,6 +183,13 @@ final class MonetizationRemoteDataSource {
   /// Get multiple active sponsor banners for rotation display
   /// Returns: [ {banner...}, ... ]
   Future<List<Map<String, dynamic>>> getSponsorBanners() async {
+    if (ApiMigration.ads) {
+      try {
+        return await NestJsApi.instance.getActiveBanners();
+      } catch (_) {
+        return <Map<String, dynamic>>[];
+      }
+    }
     try {
       final response = await http.post(
         Uri.parse(getSponsorBannersUrl),

@@ -4,11 +4,17 @@ import 'dart:io';
 
 import 'package:flutterquiz/core/constants/api_exception.dart';
 import 'package:flutterquiz/core/constants/constants.dart';
+import 'package:flutterquiz/core/network/api_config.dart';
+import 'package:flutterquiz/core/network/base_repository.dart';
+import 'package:flutterquiz/core/network/nestjs_api.dart';
 import 'package:flutterquiz/utils/api_utils.dart';
 import 'package:http/http.dart' as http;
 
 final class BookmarkRemoteDataSource {
   Future<List<Map<String, dynamic>>> getBookmark(String type) async {
+    if (ApiMigration.bookmarks && type == '1') {
+      return runNestCall(() => NestJsApi.instance.listBookmarks());
+    }
     try {
       //type is 1 - Quiz zone 3- Guess the word 4 - Audio question
       final body = <String, String>{typeKey: type};
@@ -41,6 +47,16 @@ final class BookmarkRemoteDataSource {
     String status,
     String type,
   ) async {
+    if (ApiMigration.bookmarks && type == '1') {
+      final qid = int.tryParse(questionId);
+      if (qid == null) throw const ApiException(errorCodeDefaultMessage);
+      if (status == '1') {
+        await runNestCall(() => NestJsApi.instance.addBookmark(qid));
+      } else {
+        await runNestCall(() => NestJsApi.instance.removeBookmark(qid));
+      }
+      return;
+    }
     try {
       final body = {
         statusKey: status,
