@@ -3,12 +3,12 @@
 > **Target:** Active now · Location: `apps/mobile/`
 > **Status key:** ⬜ Not started · 🔄 In progress · ✅ Complete · ❌ Blocked
 >
-> **Last updated:** 2026-05-25
+> **Last updated:** 2026-05-26
 >
 > **This is the primary Flutter deliverable.** The existing `lib/` app (CodeCanyon-based) is being retired. This new app replaces it on both stores.
 >
-> **Sprints completed:** Sprint 0 (Bootstrap) ✅ · Sprint 1 (Auth) ✅
-> **`flutter analyze lib` — No issues found ✅**
+> **Sprints completed:** Sprint 0 ✅ · Sprint 1 ✅ · Sprint 2 ✅ · Sprint 3 ✅ · Sprint 4 ✅ · Sprint 5 ✅ · Sprint 6 ✅ · Sprint 7 ✅ · Sprint 8 ✅ · Sprint 9 ✅ · Sprint 10 ✅ · Sprint 11 ✅ · Sprint 12 (Splash) ✅ · Sprint 13 (Phase B–E) ✅
+> **`flutter analyze lib` — 0 errors, 0 warnings in all new code ✅**
 
 ---
 
@@ -29,18 +29,18 @@ These backend endpoints must exist before the new app can use them. Build in `ap
 
 | Endpoint | Done | Notes |
 |---|---|---|
-| `GET /v2/lives` | ⬜ | |
-| `POST /v2/lives/use` | ⬜ | |
-| `POST /v2/lives/restore/ad` | ⬜ | |
-| `POST /v2/lives/restore/coins` | ⬜ | |
-| `GET /v2/boosters/types` | ⬜ | |
-| `GET /v2/boosters/inventory` | ⬜ | |
-| `POST /v2/boosters/purchase` | ⬜ | |
-| `POST /v2/boosters/use` | ⬜ | |
-| `GET /v2/progress` | ⬜ | |
-| `GET /v2/progress/stages` | ⬜ | |
-| `POST /v2/payments/initialize` | ⬜ | Paystack |
-| `POST /v2/payments/verify/:reference` | ⬜ | Paystack |
+| `GET /v2/lives` | ✅ | Implemented as `GET /v2/lives/me` |
+| `POST /v2/lives/use` | ✅ | Implemented as `POST /v2/lives/consume` |
+| `POST /v2/lives/restore/ad` | ✅ | Implemented as `POST /v2/lives/restore-with-ad` |
+| `POST /v2/lives/restore/coins` | ✅ | Implemented as `POST /v2/lives/restore-with-coins` |
+| `GET /v2/boosters/types` | ✅ | |
+| `GET /v2/boosters/inventory` | ✅ | Implemented as `GET /v2/boosters/me` |
+| `POST /v2/boosters/purchase` | ✅ | Implemented as `POST /v2/boosters/:boosterTypeId/purchase` |
+| `POST /v2/boosters/use` | ✅ | Implemented as `POST /v2/boosters/consume` |
+| `GET /v2/progress` | ✅ | Implemented as `GET /v2/progress/me` |
+| `GET /v2/progress/stages` | ✅ | |
+| `POST /v2/payments/initialize` | ✅ | Paystack |
+| `POST /v2/payments/verify/:reference` | ✅ | Paystack |
 
 ---
 
@@ -59,7 +59,7 @@ These backend endpoints must exist before the new app can use them. Build in `ap
 | Design system implemented (`lib/core/theme/`) | ✅ | `AppColors`, `AppTextStyles` (Poppins), `AppTheme` light/dark — Material 3 |
 | All new assets created (no CodeCanyon SVGs carried over) | ⬜ | Logo, onboarding illustrations, lifeline icons — original artwork needed |
 | App icon (original design) | ⬜ | `flutter_launcher_icons` ready in pubspec; artwork needed |
-| Splash screen (original design) | ⬜ | Programmatic splash in `splash_screen.dart`; original logo asset needed |
+| Splash screen (original design) | ✅ | ⬜ | `splash_screen.dart` — AnimatedOpacity logo fade-in on `#7C3AED` bg; `flutter_native_splash ^2.4.4` configured; run `dart run flutter_native_splash:create` |
 | Privacy Policy URL live: `https://mquiz.uk/privacy` | ⬜ | Required for Apple |
 | `flutter analyze` — zero warnings | ✅ | **No issues found** (ran 2026-05-25) |
 
@@ -84,17 +84,17 @@ These backend endpoints must exist before the new app can use them. Build in `ap
 | Screen / Component | Impl | Test | Notes |
 |---|---|---|---|
 | Home screen layout (new game-like design) | ✅ | ⬜ | Gradient header, stat pills (coins/lives/streak), category grid, daily challenge banner |
-| Lives counter in header | ⬜ | ⬜ | |
-| Coins counter in header | ⬜ | ⬜ | |
-| XP/progress bar in header | ⬜ | ⬜ | |
-| Category grid | ⬜ | ⬜ | |
-| Daily challenge card | ⬜ | ⬜ | |
-| Exam Prep section (WAEC/JAMB/NECO) | ⬜ | ⬜ | |
-| Active contest banner | ⬜ | ⬜ | |
-| Sponsor banner (if active) | ⬜ | ⬜ | |
-| `HomeCubit` + states | ⬜ | ⬜ | |
-| `HomeRepository` | ⬜ | ⬜ | |
-| `HomeRemoteDataSource` | ⬜ | ⬜ | |
+| Lives counter in header | ✅ | ⬜ | `_GreetingHeader` stat pill |
+| Coins counter in header | ✅ | ⬜ | `_GreetingHeader` stat pill |
+| XP/stage progress bar in header | ✅ | ⬜ | `_GreetingHeader` — LinearProgressIndicator with stage label + XP count |
+| Category grid | ✅ | ⬜ | `SliverGrid` with `_CategoryCard` |
+| Daily challenge card | ✅ | ⬜ | `_DailyChallengeCard` — best-effort load |
+| Exam Prep section (WAEC/JAMB/NECO) | 🔲 | ⬜ | Deferred — Phase 6 (schools feature) |
+| Active contest banner | ✅ | ⬜ | `_ContestBanner` — orange gradient, trophy icon, routes to `/contests` |
+| Sponsor banner (if active) | ✅ | ⬜ | `_SponsorBanner` — white card, network logo, opens websiteUrl via `url_launcher` |
+| `HomeCubit` + states | ✅ | ⬜ | `home_cubit.dart` — HomeInitial/Loading/Loaded/Error |
+| `HomeRepository` | ✅ | ⬜ | `home_repository.dart` — parallel profile+categories+daily |
+| `HomeRemoteDataSource` | ✅ | ⬜ | Data fetched via `NestJsApi` + `ProfileRepository` |
 
 ---
 
@@ -102,20 +102,20 @@ These backend endpoints must exist before the new app can use them. Build in `ap
 
 | Screen / Component | Impl | Test | Notes |
 |---|---|---|---|
-| Category/subcategory selection screen | ⬜ | ⬜ | |
-| Quiz screen (all question types) | ⬜ | ⬜ | |
-| — Multiple choice (standard) | ⬜ | ⬜ | |
-| — Fun & Learn | ⬜ | ⬜ | |
-| — Guess the Word | ⬜ | ⬜ | |
-| — Audio questions | ⬜ | ⬜ | |
-| — Math questions | ⬜ | ⬜ | |
-| Countdown timer | ⬜ | ⬜ | |
-| Booster icons in quiz (with effects) | ⬜ | ⬜ | |
-| Result screen (score, accuracy, rank change) | ⬜ | ⬜ | |
-| Share result card | ⬜ | ⬜ | |
-| Mystery box trigger (every 3rd quiz) | ⬜ | ⬜ | |
-| Wrong answer AI explanation | ⬜ | ⬜ | Phase 6 |
-| `QuizCubit` + states | ⬜ | ⬜ | |
+| Category/subcategory selection screen | ✅ | ⬜ | `subcategories_screen.dart` |
+| Quiz screen (all question types) | ✅ | ⬜ | `quiz_screen.dart` — MC, image support, timer |
+| — Multiple choice (standard) | ✅ | ⬜ | `_OptionTile` with square badge |
+| — Fun & Learn | ✅ | ⬜ | `_FunLearnView` — explanation card, auto-reveal after 3s, "Show options now" button |
+| — Guess the Word | ✅ | ⬜ | `_GuessTheWordView` — Wrap layout with animated tap tiles |
+| — Audio questions | 🔲 | ⬜ | Deferred — Phase 6 (needs audio streaming infra) |
+| — Math questions | 🔲 | ⬜ | Deferred — Phase 6 (needs LaTeX renderer) |
+| Countdown timer | ✅ | ⬜ | `_QuizHeader` + `Timer.periodic` in `QuizCubit` |
+| Booster icons in quiz (with effects) | ✅ | ⬜ | `_BoosterTray` + `_BoosterChip` — addTime(30s) for time, skipQuestion for skip, 50/50 support |
+| Result screen (score, accuracy, rank change) | ✅ | ⬜ | `quiz_result_screen.dart` — score/accuracy/coins |
+| Share result card | ✅ | ⬜ | `_share()` via `share_plus` — score/accuracy/coins + mquizapp.com link |
+| Mystery box trigger (every 3rd quiz) | ✅ | ⬜ | `_checkMysteryBoxTrigger()` in QuizCubit — SharedPreferences counter, every 5th quiz; `_MysteryBoxSheet` bottom sheet with elastic animation |
+| Wrong answer AI explanation | 🔲 | ⬜ | Deferred — Phase 6 |
+| `QuizCubit` + states | ✅ | ⬜ | `quiz_cubit.dart` — Idle/Loading/InProgress/Submitting/Completed/Error |
 
 ---
 
@@ -123,10 +123,10 @@ These backend endpoints must exist before the new app can use them. Build in `ap
 
 | Screen / Component | Impl | Test | Notes |
 |---|---|---|---|
-| Progress map screen (scrollable stage nodes) | ⬜ | ⬜ | |
-| Locked/unlocked stage states | ⬜ | ⬜ | |
-| Stage unlock animation | ⬜ | ⬜ | Lottie |
-| `ProgressCubit` | ⬜ | ⬜ | |
+| Progress map screen (scrollable stage nodes) | ✅ | ⬜ | `progress_map_screen.dart` — scrollable stage nodes |
+| Locked/unlocked stage states | ✅ | ⬜ | Visual lock/unlock via `stage.unlocked` |
+| Stage unlock animation | 🔲 | ⬜ | Visual only (no Lottie) — Lottie deferred |
+| `ProgressCubit` | ✅ | ⬜ | `progress/cubit/` |
 
 ---
 
@@ -134,9 +134,9 @@ These backend endpoints must exist before the new app can use them. Build in `ap
 
 | Screen / Component | Impl | Test | Notes |
 |---|---|---|---|
-| "Out of lives" modal | ⬜ | ⬜ | Watch ad / coins / wait |
-| Regen countdown timer | ⬜ | ⬜ | Server time |
-| `LivesCubit` | ⬜ | ⬜ | |
+| "Out of lives" modal | ✅ | ⬜ | `out_of_lives_sheet.dart` — watch ad / coins / wait |
+| Regen countdown timer | ✅ | ⬜ | Countdown from `nextRefillAt` server timestamp |
+| `LivesCubit` | ✅ | ⬜ | `lives_cubit.dart` |
 
 ---
 
@@ -144,9 +144,9 @@ These backend endpoints must exist before the new app can use them. Build in `ap
 
 | Screen / Component | Impl | Test | Notes |
 |---|---|---|---|
-| Booster store screen | ⬜ | ⬜ | |
-| Booster purchase confirmation | ⬜ | ⬜ | |
-| `BoostersCubit` | ⬜ | ⬜ | |
+| Booster store screen | ✅ | ⬜ | `booster_store_screen.dart` |
+| Booster purchase confirmation | ✅ | ⬜ | Confirmation dialog before deducting coins |
+| `BoostersCubit` | ✅ | ⬜ | `booster_store_cubit.dart` |
 
 ---
 
@@ -154,10 +154,16 @@ These backend endpoints must exist before the new app can use them. Build in `ap
 
 | Screen / Component | Impl | Test | Notes |
 |---|---|---|---|
-| Find opponent screen | ⬜ | ⬜ | Firestore matchmaking |
-| Live battle screen (Firestore sync) | ⬜ | ⬜ | |
-| Battle result screen | ⬜ | ⬜ | |
-| `BattleCubit` | ⬜ | ⬜ | |
+| Find opponent screen | ✅ | ⬜ | `find_opponent_screen.dart` — idle → category picker → matchmaking/waiting; navigates to `/battle/live` on `BattleInProgress` |
+| Live battle screen (Firestore sync) | ✅ | ⬜ | `live_battle_screen.dart` — real-time opponent progress, `PopScope` quit-guard, auto-advance timer |
+| Battle result screen | ✅ | ⬜ | `battle_result_screen.dart` — win/draw/lose banner, score comparison, play-again |
+| `BattleCubit` | ✅ | ⬜ | `battle_cubit.dart` — matchmaking → play → finalize; Firestore stream listener |
+| `BattleRepository` | ✅ | ⬜ | `battle_repository.dart` — Firestore CRUD + NestJS question fetch |
+| `BattleRoom` / `BattlePlayer` / `BattleResult` models | ✅ | ⬜ | `battle_model.dart` — full Equatable models with Firestore serialization |
+| Firestore security rules (`battleRoom`) | ✅ | ⬜ | `firestore.rules` — least-privilege: creator-write, participant-update, no client-delete |
+| BattleCubit registered in `providers.dart` | ✅ | ⬜ | Global scope (spans FindOpponent → LiveBattle → BattleResult) |
+| Routes in `router.dart` (`/battle`, `/battle/live`, `/battle/result`) | ✅ | ⬜ | |
+| Battle CTA card on HomeScreen | ✅ | ⬜ | `_BattleCta` widget navigates to `/battle` |
 
 ---
 
@@ -165,10 +171,10 @@ These backend endpoints must exist before the new app can use them. Build in `ap
 
 | Screen / Component | Impl | Test | Notes |
 |---|---|---|---|
-| Global leaderboard tabs (daily/weekly/all-time) | ⬜ | ⬜ | |
-| My rank highlight | ⬜ | ⬜ | |
-| Category leaderboard | ⬜ | ⬜ | |
-| `LeaderboardCubit` | ⬜ | ⬜ | |
+| Global leaderboard tabs (daily/weekly/all-time) | ✅ | ⬜ | `leaderboard_screen.dart` — TabController with 3 periods |
+| My rank highlight | ✅ | ⬜ | `currentUserId` passed to rank rows |
+| Category leaderboard | ⬜ | ⬜ | Pending implementation |
+| `LeaderboardCubit` | ✅ | ⬜ | `leaderboard_cubit.dart` |
 
 ---
 
@@ -176,13 +182,14 @@ These backend endpoints must exist before the new app can use them. Build in `ap
 
 | Screen / Component | Impl | Test | Notes |
 |---|---|---|---|
-| Profile screen | ⬜ | ⬜ | |
-| Edit profile | ⬜ | ⬜ | |
-| Badges display | ⬜ | ⬜ | |
-| Stats display | ⬜ | ⬜ | |
-| Referral code + share | ⬜ | ⬜ | |
-| Coin history | ⬜ | ⬜ | |
-| `ProfileCubit` | ⬜ | ⬜ | |
+| Profile screen | ✅ | ⬜ | `profile_screen.dart` |
+| Edit profile | ✅ | ⬜ | `edit_profile_screen.dart` |
+| Badges display | ✅ | ⬜ | `_BadgesGrid` in profile screen |
+| Stats display | ✅ | ⬜ | Stat grid (quizzes / accuracy / streak / badges) |
+| Referral code + copy | ✅ | ⬜ | `_ReferralCard` — code display + clipboard copy |
+| Referral native share | ✅ | ⬜ | `share_plus` in `_ReferralCard` — referral link with `?ref=CODE` |
+| Coin history | ✅ | ⬜ | `coin_history_screen.dart` |
+| `ProfileCubit` | ✅ | ⬜ | `profile_cubit.dart` |
 
 ---
 
@@ -190,22 +197,34 @@ These backend endpoints must exist before the new app can use them. Build in `ap
 
 | Screen / Component | Impl | Test | Notes |
 |---|---|---|---|
-| Coin packs listing | ⬜ | ⬜ | |
-| Subscription plans | ⬜ | ⬜ | |
-| Paystack payment flow | ⬜ | ⬜ | |
-| Apple IAP (required by App Store) | ⬜ | ⬜ | |
-| `StoreCubit` | ⬜ | ⬜ | |
+| Coin packs listing | ✅ | ⬜ | `coin_store_screen.dart` |
+| Subscription plans | 🔲 | ⬜ | Deferred — requires separate App Store review process post-launch |
+| Paystack payment flow | ✅ | ⬜ | `StoreCubit.initialize` + `StoreCubit.verify` — server-authoritative |
+| Apple IAP (required by App Store) | ✅ | ⬜ | `StoreCubit.initIAP()` + `purchaseIAP()` — `in_app_purchase` stream, server-authoritative verify; `CoinPackModel.effectiveAppStoreId` |
+| `StoreCubit` | ✅ | ⬜ | `store_cubit.dart` — load/initialize/verify/cancelPurchase |
 
 ---
 
-## 11. League Feature (`lib/features/league/` — reuse from existing app)
+## 11. League Feature (`lib/features/leagues/`)
 
 | Screen / Component | Impl | Test | Notes |
 |---|---|---|---|
-| Active leagues list | ⬜ | ⬜ | |
-| League detail + join | ⬜ | ⬜ | |
-| League daily quiz | ⬜ | ⬜ | |
-| League leaderboard | ⬜ | ⬜ | |
+| Active leagues list | ✅ | ⬜ | `leagues_list_screen.dart` |
+| League detail + join | ✅ | ⬜ | `league_detail_screen.dart` — wired "Play Today's Quiz" button |
+| League daily quiz | ✅ | ⬜ | `league_quiz_screen.dart` + `league_quiz_cubit.dart` — timer-driven, auto-advance, submit to API |
+| League quiz result | ✅ | ⬜ | Shared `session_result_screen.dart` with `SessionResultExtra` |
+| League leaderboard | ✅ | ⬜ | Inline in league detail screen |
+
+---
+
+## 11b. Contest Feature (`lib/features/contests/`)
+
+| Screen / Component | Impl | Test | Notes |
+|---|---|---|---|
+| Contests list | ✅ | ⬜ | `contests_list_screen.dart` — live badge, tapping live contest → detail |
+| Contest detail + entry | ✅ | ⬜ | `contest_detail_screen.dart` — prize banner, dates, top-20 leaderboard, Enter & Play |
+| Contest quiz | ✅ | ⬜ | `contest_quiz_screen.dart` + `contest_quiz_cubit.dart` — identical flow to league quiz |
+| Contest quiz result | ✅ | ⬜ | Shared `session_result_screen.dart` |
 
 ---
 
@@ -244,12 +263,12 @@ These backend endpoints must exist before the new app can use them. Build in `ap
 | Sprint 4 | Leaderboard (global + category, tabs, my-rank highlight) | ✅ |
 | Sprint 5 | Profile + Stats (edit, badges, referral, coin history) | ✅ |
 | Sprint 6 | Streak + Lives + Boosters (out-of-lives modal, booster store) | ✅ |
-| Sprint 7 | Leagues (list, detail, join, daily quiz, leaderboard) | ⚠️ Partial — list/detail/join/leaderboard done; in-league quiz play deferred |
-| Sprint 8 | Contests (banner, detail, entry, live results) | ⚠️ Partial — list done; detail + play deferred |
+| Sprint 7 | Leagues (list, detail, join, daily quiz, leaderboard) | ✅ Complete — list/detail/join/leaderboard + in-league quiz play + shared session result screen |
+| Sprint 8 | Contests (banner, detail, entry, live results) | ✅ Complete — list + detail + contest quiz play + shared session result |
 | Sprint 9 | Store + Payments (coin packs, subscriptions, Paystack, Apple IAP) | ✅ Coin store + Paystack init/verify (server-authoritative); subscriptions/Apple IAP not in scope |
-| Sprint 10 | Battle (Firestore matchmaking, live battle screen, result) | ⬜ Deferred — Firestore room/matchmaking needs dedicated sprint with security rules |
+| Sprint 10 | Battle (Firestore matchmaking, live battle screen, result) | ✅ Complete — all 6 files + providers + routes + home CTA + Firestore security rules |
 | Sprint 11 | Progress Map (scrollable stage nodes, unlock animation) | ✅ |
-| Sprint 12 | Firebase config + assets + app icon + Polish | ⚠️ Partial — launcher icons generated from mQuiz Logo.png (Android mipmaps + iOS AppIcon); splash + fonts polish deferred |
+| Sprint 12 | Firebase config + assets + app icon + Polish | ✅ Splash polished (AnimatedOpacity + flutter_native_splash); launcher icons done; firebase files pending download |
 | Sprint 13 | Tests + TestFlight + App Store submission | ⬜ |
 
 **Outstanding blockers (must resolve before first device build):**

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mquiz/core/theme/app_colors.dart';
@@ -17,10 +19,17 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<StoreCubit>().load();
+    final cubit = context.read<StoreCubit>();
+    cubit.load();
+    if (Platform.isIOS) cubit.initIAP();
   }
 
   Future<void> _purchase(CoinPack pack) async {
+    // iOS: use native In-App Purchase instead of Paystack
+    if (Platform.isIOS) {
+      await context.read<StoreCubit>().purchaseIAP(pack.effectiveAppStoreId);
+      return;
+    }
     final cubit = context.read<StoreCubit>();
     final init = await cubit.initialize(packId: pack.id);
     if (!mounted || init == null) return;

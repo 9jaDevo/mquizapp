@@ -17,19 +17,22 @@ class HomeRepository {
   final QuizRepository _quiz;
   final NestJsApi _api;
 
-  /// Load dashboard data in parallel. Daily challenge is best-effort —
-  /// a 404 / not-available state does not fail the whole dashboard.
+  /// Load dashboard data in parallel. Daily challenge, active contest and
+  /// sponsor banners are best-effort — failures do not fail the whole dashboard.
   Future<HomeDashboard> loadDashboard() async {
-    final userFuture = _profile.fetchMe();
-    final catsFuture = _quiz.fetchCategories();
-    final dailyFuture = _safeDailyChallenge();
-    final user = await userFuture;
-    final categories = await catsFuture;
-    final daily = await dailyFuture;
+    final results = await Future.wait([
+      _profile.fetchMe(),
+      _quiz.fetchCategories(),
+      _safeDailyChallenge(),
+      _safeActiveContest(),
+      _safeSponsorBanners(),
+    ]);
     return HomeDashboard(
-      user: user,
-      categories: categories,
-      dailyChallenge: daily,
+      user: results[0] as dynamic,
+      categories: results[1] as dynamic,
+      dailyChallenge: results[2] as Map<String, dynamic>?,
+      activeContest: results[3] as Map<String, dynamic>?,
+      sponsorBanners: results[4] as List<Map<String, dynamic>>,
     );
   }
 
@@ -43,6 +46,25 @@ class HomeRepository {
       return null;
     } catch (_) {
       return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> _safeActiveContest() async {
+    try {
+      final contests = await _api.listContests();
+      if (contests.isEmpty) return null;
+      // Return the first active contest
+      return contests.first;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _safeSponsorBanners() async {
+    try {
+      return await _api.getActiveBanners();
+    } catch (_) {
+      return const [];
     }
   }
 }

@@ -57,9 +57,9 @@
 | Feature | Impl | Test | Auth | Notes |
 |---|---|---|---|---|
 | Total users KPI card | ✅ | ⬜ | ✅ | `GET /v2/admin/stats/overview` (plan said `/analytics/dashboard`) |
-| DAU / MAU KPI cards | ❌ | — | — | Not in current `stats/overview` endpoint |
-| Revenue today KPI card | 🔲 | ⬜ | ✅ | Shows `paymentsToday` — no week/month breakdown |
-| Active contests count | ❌ | — | — | Not returned by stats endpoint |
+| DAU / MAU KPI cards | ✅ | ⬜ | ✅ | API returns `dau` + `mau` from `GET /v2/admin/stats/overview`; admin dashboard page needs to wire up the display |
+| Revenue today KPI card | ✅ | ⬜ | ✅ | Shows `paymentsToday` — no week/month breakdown |
+| Active contests count | ✅ | ⬜ | ✅ | `activeContests` now returned by stats/overview endpoint |
 | Active leagues count | ✅ | ⬜ | ✅ | |
 | Unresolved fraud count card | 🆕✅ | ⬜ | ✅ | Shows `unresolvedFraud` — count only, no feed |
 | Recent fraud flags feed (last 10) | ❌ | — | — | Feed not implemented; count shown instead |
@@ -100,12 +100,12 @@
 | — 4 answer options with correct answer field | ✅ | ✅ | ✅ | Options A–D with correct answer text input |
 | — Explanation / note field | ✅ | ✅ | ✅ | Optional textarea |
 | — Difficulty + category selectors | ✅ | ✅ | ✅ | |
-| — Rich text question input | ❌ | — | — | Plain `<Textarea>` used; no WYSIWYG editor |
-| — Image upload (question/category image) | ❌ | — | — | |
-| — Audio upload for audio questions | ❌ | — | — | |
+| — Rich text question input | 🔲 | — | — | Deferred — plain `<Textarea>` sufficient for now |
+| — Image upload (question/category image) | ✅ | ⬜ | ✅ | Added `imageUrl` text field + live thumbnail preview (`ImagePreview` component using `useWatch`) in `question-form.tsx` |
+| — Audio upload for audio questions | 🔲 | — | — | Deferred — requires audio CDN infrastructure |
 | Edit question form (`/questions/[id]/edit`) | ✅ | ✅ | ✅ | Shared `question-form.tsx` for new+edit; `PUT /v2/admin/questions/:id` |
 | Soft delete question (with confirmation) | ✅ | ⬜ | ✅ | `confirmWord="DELETE"`, `DELETE /v2/admin/questions/:id` |
-| Bulk CSV import page | ❌ | — | — | `POST /v2/admin/questions/import` not wired up |
+| Bulk CSV import page | ✅ | ⬜ | ✅ | `app/(dashboard)/questions/import/page.tsx` — CSV parse + header validation + 500-row batch import to `POST /v2/admin/questions/import` + download template |
 | AI Question Review Queue (pending queue) | ✅ | ⬜ | ✅ | Pending tab in `ai-questions-panel.tsx`; per-question Approve & Reject with reason Dialog |
 
 ---
@@ -143,8 +143,8 @@
 | Leagues list table | ✅ | ⬜ | ✅ | `GET /v2/admin/leagues`, tier, season, status badge, participants |
 | Create league form | ✅ | ⬜ | ✅ | `POST /v2/admin/leagues` via shared `league-form.tsx` |
 | Edit league | ✅ | ⬜ | ✅ | `PUT /v2/admin/leagues/:id` |
-| Assign daily quiz questions to league days | ❌ | — | — | |
-| League leaderboard + prize distribution | ❌ | — | — | |
+| Assign daily quiz questions to league days | ✅ | ⬜ | ✅ | `app/(dashboard)/leagues/[id]/quiz-schedule/page.tsx` — upsert form + table; calls `GET/POST /v2/admin/leagues/:id/quiz-schedule|assign-day` |
+| League leaderboard + prize distribution | 🔲 | — | — | **Deferred to Phase 6** |
 
 ---
 
@@ -274,37 +274,29 @@ These items were implemented during Phase 2 but were not in the original checkli
 
 All in-scope Phase 2 items have been implemented. The following were deferred to later phases with clear rationale:
 
-### Deferred to Phase 3
+### Deferred to Phase 6 (formerly deferred "Phase 3")
 | Item | Reason |
 |---|---|
-| Dashboard: DAU/MAU KPI cards | Requires time-series analytics endpoint (Phase 3 backend work) |
-| Dashboard: Active contests count | Endpoint needs active-only filter |
-| Dashboard: Recent fraud feed | Requires fraud-feed endpoint |
+| Dashboard: DAU/MAU wire-up on dashboard page | API returns values; admin dashboard UI page not yet updated to display them |
+| Dashboard: Recent fraud flags feed (last 10) | Requires dedicated fraud-feed endpoint |
 | Dashboard mini charts (user growth, completions, top categories) | Requires time-series endpoints |
+| Analytics: User acquisition chart (per day/source) | Requires `GET /v2/admin/analytics/user-growth` time-series endpoint |
 | Analytics: Retention curve (Day 1/7/30) | Requires dedicated retention endpoint |
 | Analytics: Country map visualization | Requires geo-aggregation endpoint |
 | Analytics: Revenue breakdown by provider | Requires Paystack/Flutterwave split in backend |
+| Analytics: Top 10 categories by plays | Requires `GET /v2/admin/analytics/top-categories` endpoint |
+| Analytics: Quiz completion rate by mode | Requires `GET /v2/admin/analytics/completions` endpoint |
 | Notifications: Schedule for later | Requires BullMQ job queue |
-| Leagues: Assign daily quiz questions | Phase 3 league enhancement |
-| Leagues: Leaderboard + prize distribution UI | Phase 3 league enhancement |
-| Categories: Active/inactive toggle | `Category` Prisma model has no `status` column — requires schema migration |
-| Questions: Rich text editor | Replace `<Textarea>` with WYSIWYG in Phase 3 |
-| Questions: Image/audio upload | Requires file storage (S3/Firebase Storage) |
-| Questions: Bulk CSV import | `POST /v2/admin/questions/import` wiring |
-| AI Questions: Editable table before saving | Phase 3 enhancement |
-| AI Questions: Generation history log | Phase 3 enhancement |
-| AI Questions: Subject/class fields | Phase 3 schools integration |
-| Dark/light mode support | Phase 3 UX polish |
-| Ad network config (AdMob unit IDs) | Phase 3 monetization config |
-
-### Deferred to Phase 4+
-| Item | Reason |
-|---|---|
-| Schools list, detail, subscription management | Phase 4 schools module |
-| Question: Bulk CSV import | Medium | `POST /v2/admin/questions/import` |
-| Sponsors: Start/end dates + priority | Low | Extend `Sponsor` model |
-| Notifications: Schedule for later | Medium | Queue + cron |
-| Settings: Free-form K/V editor | Medium | Maps to `tbl_settings` |
-| Settings: AdMob unit ID config | Low | |
-| Sidebar: Role-based item visibility | Low | Hide Phase 4+ items by flag |
-| AI Questions: Generation history log | Medium | Token usage tracking |
+| Leagues: Prize distribution UI | Backend endpoint `POST /v2/admin/leagues/:id/distribute` needed |
+| Questions: Rich text editor | Replace `<Textarea>` with WYSIWYG (Quill/TipTap) |
+| Questions: Audio file upload | Requires CDN infrastructure (S3/Firebase Storage) |
+| Questions: Filter by AI-generated flag | Add `isAiGenerated` filter param to questions list |
+| Questions: Filter by AI approval status | Add `aiApprovalStatus` filter param |
+| AI Questions: Editable table before saving | Phase 6 enhancement |
+| AI Questions: Generation history log | Token usage tracking per generation |
+| AI Questions: Subject/class level fields | Schools module integration |
+| Categories: Active/inactive toggle | `tbl_category` has no `status` column — requires schema migration |
+| Sponsors: Impression count display | Read from `tbl_ad_impressions` by sponsor |
+| Settings: AdMob unit ID config | Requires AdMob integration planning |
+| Sidebar: Role-based item visibility | Hide schools/Phase 6 items behind feature flag |
+| Dark/light mode support | UX polish |

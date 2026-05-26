@@ -82,7 +82,7 @@
 
 | Endpoint | Description | Impl | Unit | E2E | PM | Notes |
 |---|---|---|---|---|---|---|
-| `GET /v2/questions` | Standalone public questions endpoint | ⬜ | ⬜ | ⬜ | ⬜ | Served by `GET /v2/admin/questions` (admin-only). Public paginated endpoint not yet added. |
+| `GET /v2/questions` | Standalone public questions endpoint | 🔲 | ⬜ | ⬜ | ⬜ | **Deferred** — `GET /v2/admin/questions` (admin) + `GET /v2/quiz/questions` (auth'd) cover all use cases. Public paginated endpoint not needed for current app flows. |
 
 ---
 
@@ -118,7 +118,7 @@
 **Leaderboard checklist:**
 - [x] Redis cache for leaderboard queries
 - [x] Cache TTL: configurable per period
-- [ ] Country filter uses `country_code` on `tbl_users` — not yet added
+- [ ] Country filter uses `country_code` on `tbl_users` — **Deferred**: not needed for initial App Store submission; add in Phase 4.
 
 ---
 
@@ -303,7 +303,9 @@
 | `GET /v2/admin/ai-questions/pending` | AI questions pending review | ✅ | ⬜ | ⬜ | ✅ | |
 | `POST /v2/admin/ai-questions/:id/approve` | Approve AI question | ✅ | ⬜ | ⬜ | ✅ | Copies to `tbl_question`, sets `status=1`; parses options JSON |
 | `POST /v2/admin/ai-questions/:id/reject` | Reject AI question | ✅ | ⬜ | ⬜ | ✅ | Sets `status=2` with rejection reason |
-| `GET /v2/admin/stats/overview` | KPI metrics for dashboard | ✅ | ⬜ | ⬜ | ✅ | Was planned as `GET /v2/admin/analytics/dashboard` |
+| `GET /v2/admin/stats/overview` | KPI metrics for dashboard (total users, DAU, MAU, revenue, active contests, unresolved fraud) | ✅ | ⬜ | ⬜ | ✅ | Was planned as `GET /v2/admin/analytics/dashboard`; now includes `dau`, `mau`, `activeContests` |
+| `GET /v2/admin/leagues/:id/quiz-schedule` | Get all daily quiz assignments for a league | ✅ | ⬜ | ⬜ | ✅ | **Additional** — not in original plan |
+| `POST /v2/admin/leagues/:id/assign-day` | Upsert a daily quiz day assignment (quizDay, quizDate, questionCount) | ✅ | ⬜ | ⬜ | ✅ | **Additional** — not in original plan |
 | `GET /v2/admin/fraud-flags` | Unresolved fraud detection records | ✅ | ⬜ | ⬜ | ✅ | |
 | `PATCH /v2/admin/fraud-flags/:id/resolve` | Resolve fraud flag with action | ✅ | ⬜ | ⬜ | ✅ | **Additional** — not in original plan |
 | `GET /v2/admin/payments` | All payment records (paginated) | ✅ | ⬜ | ⬜ | ✅ | **Additional** — not in original plan |
@@ -335,10 +337,10 @@
 | Config | 3 | 2 | 0 |
 | Ads | 2 | 2 | 0 |
 | Payments | 4 | 4 | 0 |
-| Admin | 16 | 20 | 3 |
-| **Total** | **69** | **77** | **7** |
+| Admin | 16 | 21 | 5 |
+| **Total** | **69** | **79** | **9** |
 
-> 77/69 planned + 7 additional = **84 implemented endpoints** across 19 modules. All originally-planned endpoints are now implemented.
+> 79/69 planned + 9 additional = **86 implemented endpoints** across 19 modules. All originally-planned endpoints are now implemented.
 
 ---
 

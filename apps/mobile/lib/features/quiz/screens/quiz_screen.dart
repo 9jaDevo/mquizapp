@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:mquiz/core/constants/app_constants.dart';
 import 'package:mquiz/core/theme/app_colors.dart';
 import 'package:mquiz/core/widgets/common_widgets.dart';
+import 'package:mquiz/features/lives/cubit/booster_store_cubit.dart';
+import 'package:mquiz/features/lives/models/lives_models.dart';
 import 'package:mquiz/features/quiz/cubit/quiz_cubit.dart';
 import 'package:mquiz/features/quiz/models/question_model.dart';
 
@@ -121,17 +123,37 @@ class _QuizPlayView extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 24),
-                for (final opt in q.orderedOptions)
-                  _OptionTile(
-                    optionKey: opt.key,
-                    label: opt.value,
-                    selected: selected == opt.key,
-                    onTap: () =>
-                        context.read<QuizCubit>().selectOption(opt.key),
-                  ),
+                // ── Question type branching ─────────────────────────────────
+                if (q.type == 'fun_and_learn')
+                  _FunLearnView(
+                    question: q,
+                    selected: selected,
+                    onSelect: (k) =>
+                        context.read<QuizCubit>().selectOption(k),
+                  )
+                else if (q.type == 'guess_the_word')
+                  _GuessTheWordView(
+                    question: q,
+                    selected: selected,
+                    onSelect: (k) =>
+                        context.read<QuizCubit>().selectOption(k),
+                  )
+                else
+                  for (final opt in q.orderedOptions)
+                    _OptionTile(
+                      optionKey: opt.key,
+                      label: opt.value,
+                      selected: selected == opt.key,
+                      onTap: () =>
+                          context.read<QuizCubit>().selectOption(opt.key),
+                    ),
               ],
             ),
           ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+          child: _BoosterTray(state: state),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
@@ -329,6 +351,263 @@ class _OptionTile extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Booster Tray ─────────────────────────────────────────────────────────────
+
+class _BoosterTray extends StatelessWidget {
+  const _BoosterTray({required this.state});
+  final QuizInProgress state;
+
+  @override
+  Widget build(BuildContext context) {
+    final boosterState = context.watch<BoosterStoreCubit>().state;
+    if (boosterState is! BoosterStoreLoaded) return const SizedBox.shrink();
+    final owned = boosterState.owned
+        .where((b) => (b.quantity ?? 0) > 0)
+        .toList(growable: false);
+    if (owned.isEmpty) return const SizedBox.shrink();
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final booster in owned)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: _BoosterChip(booster: booster, state: state),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BoosterChip extends StatelessWidget {
+  const _BoosterChip({required this.booster, required this.state});
+  final Booster booster;
+  final QuizInProgress state;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = booster.name.toLowerCase();
+    IconData icon;
+    if (name.contains('time') || name.contains('clock')) {
+      icon = Icons.timer_rounded;
+    } else if (name.contains('skip')) {
+      icon = Icons.skip_next_rounded;
+    } else if (name.contains('50') || name.contains('half')) {
+      icon = Icons.looks_two_rounded;
+    } else {
+      icon = Icons.bolt_rounded;
+    }
+    return Tooltip(
+      message: booster.name,
+      child: Material(
+        color: AppColors.primary.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => _applyBooster(context),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 16, color: AppColors.primary),
+                const SizedBox(width: 4),
+                Text(
+                  booster.name,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '×${booster.quantity}',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _applyBooster(BuildContext context) {
+    final cubit = context.read<QuizCubit>();
+    final name = booster.name.toLowerCase();
+    if (name.contains('time') || name.contains('clock')) {
+      cubit.addTime(30);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('+30 seconds added!'),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } else if (name.contains('skip')) {
+      cubit.skipQuestion();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${booster.name} activated!'),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+}
+
+// ── Fun & Learn View ──────────────────────────────────────────────────────────
+// Shows a brief explanation card before revealing answer options.
+
+class _FunLearnView extends StatefulWidget {
+  const _FunLearnView({
+    required this.question,
+    required this.selected,
+    required this.onSelect,
+  });
+  final QuizQuestion question;
+  final String? selected;
+  final ValueChanged<String> onSelect;
+
+  @override
+  State<_FunLearnView> createState() => _FunLearnViewState();
+}
+
+class _FunLearnViewState extends State<_FunLearnView> {
+  bool _showOptions = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-reveal options after 3 s
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) setState(() => _showOptions = true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.25)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.lightbulb_outline_rounded,
+                  color: AppColors.primary, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  widget.question.text,
+                  style: const TextStyle(fontSize: 14, height: 1.45),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (!_showOptions) ...[
+          const SizedBox(height: 20),
+          Center(
+            child: TextButton.icon(
+              onPressed: () => setState(() => _showOptions = true),
+              icon: const Icon(Icons.visibility_outlined),
+              label: const Text('Show options now'),
+            ),
+          ),
+        ] else ...[
+          const SizedBox(height: 16),
+          for (final opt in widget.question.orderedOptions)
+            _OptionTile(
+              optionKey: opt.key,
+              label: opt.value,
+              selected: widget.selected == opt.key,
+              onTap: () => widget.onSelect(opt.key),
+            ),
+        ],
+      ],
+    );
+  }
+}
+
+// ── Guess The Word View ───────────────────────────────────────────────────────
+
+class _GuessTheWordView extends StatelessWidget {
+  const _GuessTheWordView({
+    required this.question,
+    required this.selected,
+    required this.onSelect,
+  });
+  final QuizQuestion question;
+  final String? selected;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    // GTTW uses same MC options but displayed as larger tap tiles
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        for (final opt in question.orderedOptions)
+          GestureDetector(
+            onTap: () => onSelect(opt.key),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: selected == opt.key
+                    ? AppColors.primary
+                    : AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: selected == opt.key
+                      ? AppColors.primary
+                      : AppColors.primary.withValues(alpha: 0.35),
+                  width: 2,
+                ),
+              ),
+              child: Text(
+                opt.value,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: selected == opt.key
+                      ? Colors.white
+                      : AppColors.textPrimary,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

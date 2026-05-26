@@ -55,6 +55,7 @@ dependencies:
   # Utility
   share_plus: ^10.1.4
   screenshot: ^3.0.0
+  shared_preferences: ^2.3.0
   intl: ^0.20.2
   device_info_plus: ^10.1.0
   package_info_plus: ^8.1.3

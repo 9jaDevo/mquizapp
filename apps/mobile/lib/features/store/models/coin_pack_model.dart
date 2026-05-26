@@ -12,6 +12,7 @@ class CoinPack extends Equatable {
     this.currency,
     this.image,
     this.isPopular = false,
+    this.appStoreProductId,
   });
 
   final String id;
@@ -23,8 +24,12 @@ class CoinPack extends Equatable {
   final String? currency;
   final String? image;
   final bool isPopular;
+  /// App Store product identifier for iOS In-App Purchases.
+  /// Falls back to [id] if not explicitly set.
+  final String? appStoreProductId;
 
   int get totalCoins => coins + (bonusCoins ?? 0);
+  String get effectiveAppStoreId => appStoreProductId ?? id;
 
   factory CoinPack.fromJson(Map<String, dynamic> j) => CoinPack(
         id: parseStringOr(j['id'] ?? j['sku'], ''),
@@ -36,6 +41,8 @@ class CoinPack extends Equatable {
         currency: parseString(j['currency']),
         image: parseString(j['image']),
         isPopular: parseBool(j['isPopular'] ?? j['popular']),
+        appStoreProductId:
+            parseString(j['appStoreProductId'] ?? j['ios_product_id']),
       );
 
   @override
@@ -49,6 +56,7 @@ class CoinPack extends Equatable {
         currency,
         image,
         isPopular,
+        appStoreProductId,
       ];
 }
 

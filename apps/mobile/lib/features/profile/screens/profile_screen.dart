@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mquiz/core/constants/app_constants.dart';
@@ -303,6 +304,16 @@ class _ReferralCard extends StatelessWidget {
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.share_rounded, color: Colors.white),
+                  tooltip: 'Share referral',
+                  onPressed: () {
+                    final text =
+                        'Join me on mQuiz and use my referral code ${info.code} '
+                        'to get bonus coins! 🎁\nhttps://mquizapp.com/join?ref=${info.code}';
+                    Share.share(text, subject: 'Join mQuiz with my referral!');
                   },
                 ),
               ],

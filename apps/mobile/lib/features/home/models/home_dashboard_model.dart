@@ -7,14 +7,21 @@ class HomeDashboard extends Equatable {
     required this.user,
     required this.categories,
     this.dailyChallenge,
+    this.activeContest,
+    this.sponsorBanners = const [],
   });
 
   final UserProfile user;
   final List<Category> categories;
   final Map<String, dynamic>? dailyChallenge;
+  final Map<String, dynamic>? activeContest;
+  final List<Map<String, dynamic>> sponsorBanners;
 
   bool get hasDailyChallenge => dailyChallenge != null;
+  bool get hasActiveContest => activeContest != null;
+  bool get hasSponsorBanner => sponsorBanners.isNotEmpty;
 
   @override
-  List<Object?> get props => [user, categories, dailyChallenge];
+  List<Object?> get props =>
+      [user, categories, dailyChallenge, activeContest, sponsorBanners];
 }

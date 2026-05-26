@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mquiz/core/constants/app_constants.dart';
 import 'package:mquiz/core/utils/error_handler.dart';
 import 'package:mquiz/features/quiz/data/quiz_repository.dart';
@@ -75,11 +76,14 @@ class QuizSubmitting extends QuizState {
 }
 
 class QuizCompleted extends QuizState {
-  const QuizCompleted(this.result, this.questions);
+  const QuizCompleted(this.result, this.questions,
+      {this.triggerMysteryBox = false});
   final QuizResult result;
   final List<QuizQuestion> questions;
+  /// Whether to show the mystery-box sheet on the result screen.
+  final bool triggerMysteryBox;
   @override
-  List<Object?> get props => [result, questions];
+  List<Object?> get props => [result, questions, triggerMysteryBox];
 }
 
 class QuizError extends QuizState {
@@ -219,10 +223,37 @@ class QuizCubit extends Cubit<QuizState> {
         answers: submitted,
         durationMs: DateTime.now().difference(startedAt).inMilliseconds,
       );
-      emit(QuizCompleted(result, questions));
+      final triggerBox = await _checkMysteryBoxTrigger();
+      emit(QuizCompleted(result, questions, triggerMysteryBox: triggerBox));
     } catch (e) {
       emit(QuizError(describeError(e)));
     }
+  }
+
+  /// Returns true every 5 completed quizzes to trigger the mystery-box sheet.
+  Future<bool> _checkMysteryBoxTrigger() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final count = (prefs.getInt('quiz_completed_count') ?? 0) + 1;
+      await prefs.setInt('quiz_completed_count', count);
+      return count % 5 == 0;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Adds extra seconds to the current question's countdown (booster: Add Time).
+  void addTime(int secs) {
+    final s = state;
+    if (s is! QuizInProgress) return;
+    emit(s.copyWith(secondsLeft: s.secondsLeft + secs));
+  }
+
+  /// Skips the current question (commits empty answer and advances).
+  void skipQuestion() {
+    final s = state;
+    if (s is! QuizInProgress) return;
+    _commitAnswer('', autoAdvance: true);
   }
 
   void reset() {
