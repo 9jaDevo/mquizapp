@@ -1,5 +1,9 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:mquiz/core/utils/error_handler.dart';
 import 'package:mquiz/features/store/data/store_repository.dart';
 import 'package:mquiz/features/store/models/coin_pack_model.dart';
@@ -138,5 +142,78 @@ class StoreCubit extends Cubit<StoreState> {
     if (current is StoreLoaded) {
       emit(current.copyWith(clearPurchasing: true));
     }
+  }
+
+  // ── Apple In-App Purchase ──────────────────────────────────────────────────
+
+  StreamSubscription<List<PurchaseDetails>>? _iapSubscription;
+
+  /// Initializes the IAP plugin and listens for purchase updates.
+  /// Call once after [load()], on iOS only.
+  void initIAP() {
+    if (!Platform.isIOS) return;
+    _iapSubscription?.cancel();
+    _iapSubscription = InAppPurchase.instance.purchaseStream
+        .listen(_onIAPPurchaseUpdates, onError: (_) {});
+  }
+
+  /// Starts a purchase flow for the given App Store product ID.
+  Future<void> purchaseIAP(String productId) async {
+    if (!Platform.isIOS) return;
+    final current = state;
+    if (current is! StoreLoaded || current.purchasingId != null) return;
+    emit(current.copyWith(purchasingId: productId));
+    try {
+      final available = await InAppPurchase.instance.isAvailable();
+      if (!available) {
+        emit(current.copyWith(clearPurchasing: true));
+        emit(const StoreError('App Store not available.'));
+        return;
+      }
+      final response = await InAppPurchase.instance
+          .queryProductDetails({productId});
+      if (response.productDetails.isEmpty) {
+        emit(current.copyWith(clearPurchasing: true));
+        emit(const StoreError('Product not found in App Store.'));
+        return;
+      }
+      final purchaseParam = PurchaseParam(
+        productDetails: response.productDetails.first,
+      );
+      await InAppPurchase.instance
+          .buyConsumable(purchaseParam: purchaseParam);
+    } catch (e) {
+      final s = state;
+      if (s is StoreLoaded) emit(s.copyWith(clearPurchasing: true));
+      emit(StoreError(describeError(e)));
+    }
+  }
+
+  Future<void> _onIAPPurchaseUpdates(
+      List<PurchaseDetails> purchases) async {
+    for (final purchase in purchases) {
+      if (purchase.status == PurchaseStatus.purchased ||
+          purchase.status == PurchaseStatus.restored) {
+        // Verify with our server — server is the authority on coin credits
+        final event = await verify(
+            purchase.verificationData.serverVerificationData);
+        if (event.success) {
+          await InAppPurchase.instance.completePurchase(purchase);
+        }
+      } else if (purchase.status == PurchaseStatus.error) {
+        final s = state;
+        if (s is StoreLoaded) emit(s.copyWith(clearPurchasing: true));
+        emit(StoreError(
+            purchase.error?.message ?? 'Purchase failed'));
+      } else if (purchase.status == PurchaseStatus.pending) {
+        // Ask-to-Buy / deferred — nothing to do until Apple approves
+      }
+    }
+  }
+
+  @override
+  Future<void> close() {
+    _iapSubscription?.cancel();
+    return super.close();
   }
 }

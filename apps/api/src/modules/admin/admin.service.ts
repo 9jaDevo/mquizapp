@@ -1289,6 +1289,54 @@ export class AdminService {
     return { deleted: true, id };
   }
 
+  async getLeagueQuizSchedule(leagueId: number) {
+    const league = await this.prisma.tbl_league.findUnique({ where: { id: leagueId } });
+    if (!league) {
+      throw new NotFoundException({ error: 'LEAGUE_NOT_FOUND', message: 'League not found' });
+    }
+    const days = await this.prisma.tbl_league_daily_quiz.findMany({
+      where: { league_id: leagueId },
+      orderBy: { quiz_day: 'asc' },
+    });
+    return days.map((d) => ({
+      id: d.id,
+      leagueId: d.league_id,
+      quizDay: d.quiz_day,
+      quizDate: d.quiz_date?.toISOString().split('T')[0] ?? null,
+      questionCount: d.question_count,
+      dateAssigned: d.date_assigned?.toISOString() ?? null,
+    }));
+  }
+
+  async assignLeagueDay(leagueId: number, dto: { quizDay: number; quizDate: string; questionCount?: number }) {
+    const league = await this.prisma.tbl_league.findUnique({ where: { id: leagueId } });
+    if (!league) {
+      throw new NotFoundException({ error: 'LEAGUE_NOT_FOUND', message: 'League not found' });
+    }
+    const row = await this.prisma.tbl_league_daily_quiz.upsert({
+      where: { league_id_quiz_day: { league_id: leagueId, quiz_day: dto.quizDay } },
+      update: {
+        quiz_date: new Date(dto.quizDate),
+        question_count: dto.questionCount ?? 20,
+        date_assigned: new Date(),
+      },
+      create: {
+        league_id: leagueId,
+        quiz_day: dto.quizDay,
+        quiz_date: new Date(dto.quizDate),
+        question_count: dto.questionCount ?? 20,
+      },
+    });
+    return {
+      id: row.id,
+      leagueId: row.league_id,
+      quizDay: row.quiz_day,
+      quizDate: row.quiz_date?.toISOString().split('T')[0] ?? null,
+      questionCount: row.question_count,
+      dateAssigned: row.date_assigned?.toISOString() ?? null,
+    };
+  }
+
   // ─── Sponsors ─────────────────────────────────────────────────────────────
 
   private mapSponsor(s: {

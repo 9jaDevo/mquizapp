@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:mquiz/core/constants/app_constants.dart';
 import 'package:mquiz/core/theme/app_colors.dart';
 import 'package:mquiz/core/widgets/common_widgets.dart';
@@ -65,12 +66,26 @@ class _DashboardView extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
               child: _BattleCta(),
             ),
-          ),
-          if (data.hasDailyChallenge)
+          ),          // ── Active Contest Banner ───────────────────────────────────────────────────
+          if (data.hasActiveContest)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: _ContestBanner(contest: data.activeContest!),
+              ),
+            ),          if (data.hasDailyChallenge)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                 child: _DailyChallengeCard(challenge: data.dailyChallenge!),
+              ),
+            ),
+          // ── Sponsor Banner ──────────────────────────────────────────────────────────
+          if (data.hasSponsorBanner)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: _SponsorBanner(banner: data.sponsorBanners.first),
               ),
             ),
           const SliverToBoxAdapter(
@@ -120,6 +135,12 @@ class _GreetingHeader extends StatelessWidget {
     final lives = user.lives?.current ?? 0;
     final maxLives = user.lives?.max ?? AppConstants.maxLives;
     final streak = user.streak?.current ?? 0;
+    final stage = user.progress?.stageNumber ?? 1;
+    final totalScore = user.progress?.totalScore ?? 0;
+    // Estimate 1000 XP per stage for progress bar fill
+    const xpPerStage = 1000;
+    final xpInStage = totalScore % xpPerStage;
+    final stageFill = (xpInStage / xpPerStage).clamp(0.0, 1.0);
 
     return Container(
       decoration: const BoxDecoration(
@@ -209,6 +230,41 @@ class _GreetingHeader extends StatelessWidget {
                   label: 'Streak',
                   value: streak.toString(),
                   color: AppColors.streak,
+                ),
+              ),
+            ],
+          ),
+          // ── XP / Stage progress bar ───────────────────────────────────────────
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Text(
+                'Stage $stage',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: stageFill,
+                    minHeight: 6,
+                    backgroundColor: Colors.white.withValues(alpha: 0.25),
+                    valueColor:
+                        const AlwaysStoppedAnimation<Color>(AppColors.coin),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '$xpInStage / $xpPerStage XP',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.75),
+                  fontSize: 11,
                 ),
               ),
             ],
@@ -356,6 +412,164 @@ class _BattleCta extends StatelessWidget {
     );
   }
 }
+
+// ── Active Contest Banner ────────────────────────────────────────────────────
+
+class _ContestBanner extends StatelessWidget {
+  const _ContestBanner({required this.contest});
+  final Map<String, dynamic> contest;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = contest['title']?.toString() ?? 'Live Contest';
+    final prize = contest['prizePool'] ?? contest['totalPrize'];
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => context.push(AppConstants.routeContests),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFD97706), Color(0xFFEA580C)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.emoji_events_rounded,
+                  color: Colors.white, size: 30),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Contest Live!',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                      ),
+                    ),
+                    if (prize != null)
+                      Text(
+                        'Prize pool: ₦${prize.toString()}',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontSize: 12,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: Colors.white),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Sponsor Banner ───────────────────────────────────────────────────────────
+
+class _SponsorBanner extends StatelessWidget {
+  const _SponsorBanner({required this.banner});
+  final Map<String, dynamic> banner;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = banner['sponsorName']?.toString() ??
+        banner['name']?.toString() ??
+        'Sponsor';
+    final logoUrl = banner['logoUrl']?.toString() ?? banner['logo']?.toString();
+    final websiteUrl =
+        banner['websiteUrl']?.toString() ?? banner['website']?.toString();
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () async {
+          if (websiteUrl != null) {
+            final uri = Uri.tryParse(websiteUrl);
+            if (uri != null) {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+          }
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE5E7EB)),
+          ),
+          child: Row(
+            children: [
+              if (logoUrl != null && logoUrl.isNotEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Image.network(
+                    logoUrl,
+                    width: 40,
+                    height: 40,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) =>
+                        const Icon(Icons.business, size: 28),
+                  ),
+                )
+              else
+                const Icon(Icons.business, size: 28, color: AppColors.primary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Sponsored',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.open_in_new,
+                  size: 16, color: AppColors.textSecondary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Daily Challenge Card ─────────────────────────────────────────────────────
 
 class _DailyChallengeCard extends StatelessWidget {
   const _DailyChallengeCard({required this.challenge});

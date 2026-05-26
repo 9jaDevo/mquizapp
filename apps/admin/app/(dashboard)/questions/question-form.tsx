@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
@@ -54,6 +54,7 @@ export function QuestionForm({ categories, question }: QuestionFormProps) {
     register,
     handleSubmit,
     setValue,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -215,6 +216,7 @@ export function QuestionForm({ categories, question }: QuestionFormProps) {
           <div className="space-y-2">
             <Label htmlFor="image">Image URL (optional)</Label>
             <Input id="image" {...register('image')} placeholder="https://..." />
+            <ImagePreview control={control} />
           </div>
 
           <div className="flex gap-3">
@@ -233,5 +235,25 @@ export function QuestionForm({ categories, question }: QuestionFormProps) {
         </form>
       </CardContent>
     </Card>
+  );
+}
+
+// ── Inline Image Preview ──────────────────────────────────────────────────────
+
+import { Control } from 'react-hook-form';
+
+function ImagePreview({ control }: { control: Control<FormData> }) {
+  const imageUrl = useWatch({ control, name: 'image' });
+  if (!imageUrl || !imageUrl.startsWith('http')) return null;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={imageUrl}
+      alt="Question image preview"
+      className="mt-2 max-h-40 rounded-md border object-contain"
+      onError={(e) => {
+        (e.target as HTMLImageElement).style.display = 'none';
+      }}
+    />
   );
 }

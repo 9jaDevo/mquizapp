@@ -40,6 +40,7 @@ import { UpdateSponsorDto } from './dto/update-sponsor.dto';
 import { ListQuestionsQueryDto } from './dto/list-questions-query.dto';
 import { GenerateQuestionsDto } from './dto/generate-questions.dto';
 import { ApproveBatchDto } from './dto/approve-batch.dto';
+import { AssignLeagueDayDto } from './dto/assign-league-day.dto';
 import { AnalyticsRangeDto } from './dto/analytics-range.dto';
 import { ListUsersQueryDto } from './dto/list-users-query.dto';
 import { CreateSubcategoryDto } from './dto/create-subcategory.dto';
@@ -355,6 +356,22 @@ export class AdminController {
   @ApiOperation({ summary: 'Delete a league' })
   deleteLeague(@Param('id', ParseIntPipe) id: number) {
     return this.service.deleteLeague(id);
+  }
+
+  @Get('leagues/:id/quiz-schedule')
+  @ApiOperation({ summary: 'Get quiz-day schedule for a league' })
+  leagueQuizSchedule(@Param('id', ParseIntPipe) id: number) {
+    return this.service.getLeagueQuizSchedule(id);
+  }
+
+  @Post('leagues/:id/assign-day')
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Assign (upsert) a quiz day entry for a league' })
+  assignLeagueDay(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: AssignLeagueDayDto,
+  ) {
+    return this.service.assignLeagueDay(id, body);
   }
 
   // ─── Sponsors ─────────────────────────────────────────────────────────────
