@@ -29,8 +29,6 @@ class _RouterScopeState extends State<_RouterScope> {
   @override
   void initState() {
     super.initState();
-    // Trigger initial auth check
-    context.read<AuthCubit>().checkAuth();
     _router = AppRouter.create(context.read<AuthCubit>());
   }
 
