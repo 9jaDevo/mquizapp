@@ -22,7 +22,10 @@ class _SplashScreenState extends State<SplashScreen> {
     Future.delayed(const Duration(milliseconds: 100), () {
       if (mounted) setState(() => _opacity = 1);
     });
-    context.read<AuthCubit>().checkAuth();
+    // Delay auth check until after BlocListener is mounted so it receives the state change
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<AuthCubit>().checkAuth();
+    });
   }
 
   @override

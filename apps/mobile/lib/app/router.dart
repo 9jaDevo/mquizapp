@@ -202,7 +202,8 @@ class AppRouter {
     }
 
     if (authState is Unauthenticated) {
-      if (!publicRoutes.contains(currentPath)) {
+      if (currentPath == AppConstants.routeSplash ||
+          !publicRoutes.contains(currentPath)) {
         return AppConstants.routeLogin;
       }
       return null;
