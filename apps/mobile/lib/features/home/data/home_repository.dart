@@ -17,12 +17,13 @@ class HomeRepository {
   final QuizRepository _quiz;
   final NestJsApi _api;
 
-  /// Load dashboard data in parallel. Daily challenge, active contest and
-  /// sponsor banners are best-effort — failures do not fail the whole dashboard.
+  /// Load dashboard data in parallel. Categories, daily challenge, active
+  /// contest and sponsor banners are best-effort — failures show empty state,
+  /// not a full-screen error.
   Future<HomeDashboard> loadDashboard() async {
     final results = await Future.wait([
       _profile.fetchMe(),
-      _quiz.fetchCategories(),
+      _safeCategories(),
       _safeDailyChallenge(),
       _safeActiveContest(),
       _safeSponsorBanners(),
@@ -34,6 +35,14 @@ class HomeRepository {
       activeContest: results[3] as Map<String, dynamic>?,
       sponsorBanners: results[4] as List<Map<String, dynamic>>,
     );
+  }
+
+  Future<List<Category>> _safeCategories() async {
+    try {
+      return await _quiz.fetchCategories();
+    } catch (_) {
+      return const [];
+    }
   }
 
   Future<Map<String, dynamic>?> _safeDailyChallenge() async {
