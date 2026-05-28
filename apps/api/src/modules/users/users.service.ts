@@ -129,9 +129,14 @@ export class UsersService {
   async getMyBadges(firebaseUid: string) {
     const user = await this.findByFirebaseUid(firebaseUid);
     // tbl_users_badges uses a flat schema (one column per badge type).
-    // Each column is 0 (not earned) or 1 (earned); no badge_id FK exists.
+    // Select only the integer flag columns — avoid thirsty_date/streak_date which
+    // may contain MySQL zero dates (0000-00-00) that Prisma cannot parse.
     const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
-      `SELECT * FROM tbl_users_badges WHERE user_id = ? LIMIT 1`,
+      `SELECT user_id,
+              dashing_debut, combat_winner, clash_winner, most_wanted_winner,
+              ultimate_player, quiz_warrior, super_sonic, flashback, brainiac,
+              big_thing, elite, thirsty, power_elite, sharing_caring, streak
+       FROM tbl_users_badges WHERE user_id = ? LIMIT 1`,
       user.id,
     );
 
