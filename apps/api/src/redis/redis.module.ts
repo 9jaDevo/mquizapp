@@ -15,11 +15,14 @@ export { REDIS_CLIENT } from './redis.constants';
       inject: [ConfigService],
       useFactory: (config: ConfigService): Redis => {
         const url = config.get<string>('REDIS_URL', 'redis://localhost:6379');
-        return new Redis(url, {
+        const client = new Redis(url, {
           maxRetriesPerRequest: 3,
           lazyConnect: true,
           enableOfflineQueue: false,
         });
+        // Suppress unhandled connection errors — Redis is best-effort caching
+        client.on('error', () => { /* suppress ECONNREFUSED / ENOENT */ });
+        return client;
       },
     },
     RedisService,
