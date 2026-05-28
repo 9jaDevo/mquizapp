@@ -152,11 +152,32 @@ export class QuizService {
         });
       }
 
-      // Daily leaderboard entry (one row per submission)
+      // Daily + weekly + monthly leaderboard entries
       if (score > 0) {
+        const _now = new Date();
         await tx.leaderboardDaily.create({
-          data: { userId, score, dateCreated: new Date() },
+          data: { userId, score, dateCreated: _now },
         });
+        const _week = this.isoWeek(_now);
+        await tx.leaderboardWeekly.upsert({
+          where: { userId_weekNumber_year: { userId, weekNumber: _week.weekNumber, year: _week.year } },
+          update: { score: { increment: score }, lastUpdated: _now },
+          create: { userId, weekNumber: _week.weekNumber, year: _week.year, score, lastUpdated: _now, dateCreated: _now },
+        });
+        const _monthStart = new Date(_now.getFullYear(), _now.getMonth(), 1);
+        const _monthlyRow = await tx.leaderboardMonthly.findFirst({
+          where: { userId, dateCreated: { gte: _monthStart } },
+        });
+        if (_monthlyRow) {
+          await tx.leaderboardMonthly.update({
+            where: { id: _monthlyRow.id },
+            data: { score: { increment: score }, lastUpdated: _now },
+          });
+        } else {
+          await tx.leaderboardMonthly.create({
+            data: { userId, score, lastUpdated: _now, dateCreated: _now },
+          });
+        }
       }
 
       // Update user progress total
@@ -327,7 +348,28 @@ export class QuizService {
       }
 
       if (score > 0) {
-        await tx.leaderboardDaily.create({ data: { userId, score, dateCreated: new Date() } });
+        const _now = new Date();
+        await tx.leaderboardDaily.create({ data: { userId, score, dateCreated: _now } });
+        const _week = this.isoWeek(_now);
+        await tx.leaderboardWeekly.upsert({
+          where: { userId_weekNumber_year: { userId, weekNumber: _week.weekNumber, year: _week.year } },
+          update: { score: { increment: score }, lastUpdated: _now },
+          create: { userId, weekNumber: _week.weekNumber, year: _week.year, score, lastUpdated: _now, dateCreated: _now },
+        });
+        const _monthStart = new Date(_now.getFullYear(), _now.getMonth(), 1);
+        const _monthlyRow = await tx.leaderboardMonthly.findFirst({
+          where: { userId, dateCreated: { gte: _monthStart } },
+        });
+        if (_monthlyRow) {
+          await tx.leaderboardMonthly.update({
+            where: { id: _monthlyRow.id },
+            data: { score: { increment: score }, lastUpdated: _now },
+          });
+        } else {
+          await tx.leaderboardMonthly.create({
+            data: { userId, score, lastUpdated: _now, dateCreated: _now },
+          });
+        }
       }
 
       await tx.userProgress.upsert({
@@ -347,6 +389,19 @@ export class QuizService {
         : 0,
       breakdown,
     };
+  }
+
+  private isoWeek(date: Date): { weekNumber: number; year: number } {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+    const week1 = new Date(d.getFullYear(), 0, 4);
+    const weekNumber =
+      1 +
+      Math.round(
+        ((d.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7,
+      );
+    return { weekNumber, year: d.getFullYear() };
   }
 
   private startOfToday(): Date {

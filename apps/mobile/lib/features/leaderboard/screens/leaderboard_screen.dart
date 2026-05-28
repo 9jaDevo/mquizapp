@@ -80,14 +80,69 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                       currentUserId: _currentUserId(),
                     ),
               ),
-            LeaderboardLoaded(:final entries) => entries.isEmpty
-                ? const EmptyStateView(
-                    message: 'No rankings yet — play a quiz to get on the board!',
-                    icon: Icons.leaderboard_outlined,
-                  )
-                : _RankList(entries: entries),
+            LeaderboardLoaded(:final entries, :final myRank, :final period) =>
+              Column(
+                children: [
+                  _MyRankBanner(myRank: myRank, period: period),
+                  Expanded(
+                    child: entries.isEmpty
+                        ? const EmptyStateView(
+                            message: 'No rankings yet — play a quiz to get on the board!',
+                            icon: Icons.leaderboard_outlined,
+                          )
+                        : _RankList(entries: entries),
+                  ),
+                ],
+              ),
           };
         },
+      ),
+    );
+  }
+}
+
+class _MyRankBanner extends StatelessWidget {
+  const _MyRankBanner({required this.myRank, required this.period});
+  final Map<String, dynamic> myRank;
+  final LeaderboardPeriod period;
+
+  @override
+  Widget build(BuildContext context) {
+    final data = myRank[period.name] as Map<String, dynamic>?;
+    if (data == null) return const SizedBox.shrink();
+    final rank = data['rank'] as int?;
+    final score = (data['score'] as num?)?.toInt() ?? 0;
+    final inTop1000 = data['inTop1000'] as bool? ?? false;
+    if (!inTop1000 || rank == null) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.person_pin_rounded, color: AppColors.primary, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Your rank: #$rank',
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              const Icon(Icons.star_rounded, color: AppColors.coin, size: 16),
+              const SizedBox(width: 4),
+              Text('$score pts', style: const TextStyle(fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ],
       ),
     );
   }

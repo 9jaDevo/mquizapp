@@ -48,7 +48,7 @@ class SessionResultScreen extends StatelessWidget {
     }
 
     final result = extra.result;
-    final accuracyPct = (result.accuracy * 100).clamp(0, 100).round();
+    final accuracyPct = result.accuracy.round();
 
     return Scaffold(
       backgroundColor: AppColors.pageBackground,

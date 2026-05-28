@@ -39,7 +39,7 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
           );
         }
         final result = state.result;
-        final accuracyPct = (result.accuracy * 100).clamp(0, 100).round();
+        final accuracyPct = result.accuracy.round();
         return Scaffold(
           backgroundColor: AppColors.pageBackground,
           body: SafeArea(
@@ -177,7 +177,7 @@ class _QuizResultScreenState extends State<QuizResultScreen> {
                       // Share result
                       IconButton.filled(
                         onPressed: () => _share(context, state.result,
-                            (result.accuracy * 100).clamp(0, 100).round()),
+                              result.accuracy.round()),
                         icon: const Icon(Icons.share_rounded),
                         style: IconButton.styleFrom(
                           backgroundColor:
