@@ -13,13 +13,15 @@ export class CategoriesService {
   ) {}
 
   async listCategories(q: ListCategoriesQueryDto) {
-    const languageId = q.languageId ?? 0;
-    const cacheKey = `categories:lang:${languageId}`;
+    const cacheKey = q.languageId !== undefined
+      ? `categories:lang:${q.languageId}`
+      : `categories:all`;
     const cached = await this.redis.get<unknown[]>(cacheKey);
     if (cached) return { categories: cached, cached: true };
 
+    const langFilter = q.languageId !== undefined ? { languageId: q.languageId } : {};
     const categories = await this.prisma.category.findMany({
-      where: { languageId, status: 1 },
+      where: { ...langFilter, status: 1 },
       orderBy: [{ rowOrder: 'asc' }, { id: 'asc' }],
       select: {
         id: true,
@@ -34,7 +36,7 @@ export class CategoriesService {
     }).catch(() =>
       // Fallback: status column may not yet exist in the legacy DB schema
       this.prisma.category.findMany({
-        where: { languageId },
+        where: { ...langFilter },
         orderBy: [{ rowOrder: 'asc' }, { id: 'asc' }],
         select: {
           id: true,
@@ -53,13 +55,15 @@ export class CategoriesService {
   }
 
   async listSubcategories(categoryId: number, q: ListCategoriesQueryDto) {
-    const languageId = q.languageId ?? 0;
-    const cacheKey = `subcategories:lang:${languageId}:cat:${categoryId}`;
+    const cacheKey = q.languageId !== undefined
+      ? `subcategories:lang:${q.languageId}:cat:${categoryId}`
+      : `subcategories:cat:${categoryId}`;
     const cached = await this.redis.get<unknown[]>(cacheKey);
     if (cached) return { subcategories: cached, cached: true };
 
+    const langFilter = q.languageId !== undefined ? { languageId: q.languageId } : {};
     const subcategories = await this.prisma.subcategory.findMany({
-      where: { languageId, maincatId: categoryId, status: 1 },
+      where: { ...langFilter, maincatId: categoryId, status: 1 },
       orderBy: [{ rowOrder: 'asc' }, { id: 'asc' }],
       select: {
         id: true,
@@ -72,7 +76,7 @@ export class CategoriesService {
       },
     }).catch(() =>
       this.prisma.subcategory.findMany({
-        where: { languageId, maincatId: categoryId },
+        where: { ...langFilter, maincatId: categoryId },
         orderBy: [{ rowOrder: 'asc' }, { id: 'asc' }],
         select: {
           id: true,

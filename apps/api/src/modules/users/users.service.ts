@@ -114,15 +114,16 @@ export class UsersService {
     ]);
 
     return {
-      currentCoins: user.coins,
-      totalQuizzesPlayed: dailyAgg._count.id,
-      allTimeScore:
+      coinsBalance: user.coins,
+      quizzesPlayed: dailyAgg._count.id,
+      totalScore:
         (dailyAgg._sum.score ?? 0) + (weeklyAgg._sum.score ?? 0) + (monthlyAgg._sum.score ?? 0),
       bestWeeklyScore: weeklyAgg._max.score ?? 0,
-      coinTransactionsEarned: coinSpent._count?.id ?? 0,
-      coinTransactionsSpent: coinEarned._count?.id ?? 0,
-      currentStreak: streak?.streakCount ?? 0,
-      maxStreak: streak?.maxStreak ?? 0,
+      lifetimeCoinsEarned: coinSpent._count?.id ?? 0, // status=0 rows are earned
+      streakCurrent: streak?.streakCount ?? 0,
+      streakBest: streak?.maxStreak ?? 0,
+      badgesCount: 0,
+      accuracy: 0,
     };
   }
 
@@ -168,7 +169,7 @@ export class UsersService {
       .map(({ key, label }, index) => ({
         id: index + 1,
         badge_id: key,
-        badge_name: label,
+        name: label,
         earned_at: null as Date | null,
       }));
 
@@ -197,7 +198,7 @@ export class UsersService {
         direction: t.status === 0 ? 'earned' : 'spent',
         date: t.date,
       })),
-      pagination: { page: q.page ?? 1, limit: take, total, pages: Math.ceil(total / take) },
+      pagination: { page: q.page ?? 1, limit: take, total, totalPages: Math.ceil(total / take) },
     };
   }
 
