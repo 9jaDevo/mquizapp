@@ -14,7 +14,11 @@ export class LivesService {
 
   async getMyLives(firebaseUid: string) {
     const userId = await this.resolveUserId(firebaseUid);
-    const lives = await this.getOrCreate(userId);
+    const lives = await this.getOrCreate(userId).catch(() => null);
+    if (!lives) {
+      // tbl_user_lives not yet created — return defaults
+      return { current: 5, max: 5, lastRefillAt: new Date(), nextRefillAt: null, intervalMs: LIFE_REFILL_INTERVAL_MS };
+    }
     const refreshed = await this.applyPassiveRefill(lives);
     return this.toResponse(refreshed);
   }

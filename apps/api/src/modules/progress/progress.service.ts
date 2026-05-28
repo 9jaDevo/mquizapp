@@ -9,18 +9,18 @@ export class ProgressService {
     const stages = await this.prisma.progressStage.findMany({
       where: { isActive: true },
       orderBy: { stageNumber: 'asc' },
-    });
+    }).catch(() => [] as Awaited<ReturnType<typeof this.prisma.progressStage.findMany>>);
     return { stages };
   }
 
   async myProgress(firebaseUid: string) {
     const userId = await this.resolveUserId(firebaseUid);
     const [progress, stages] = await Promise.all([
-      this.prisma.userProgress.findUnique({ where: { userId } }),
+      this.prisma.userProgress.findUnique({ where: { userId } }).catch(() => null),
       this.prisma.progressStage.findMany({
         where: { isActive: true },
         orderBy: { stageNumber: 'asc' },
-      }),
+      }).catch(() => [] as Awaited<ReturnType<typeof this.prisma.progressStage.findMany>>),
     ]);
     const currentScore = progress?.totalScore ?? 0;
     // Calculate current stage from totalScore

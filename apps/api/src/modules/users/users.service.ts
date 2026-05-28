@@ -11,9 +11,9 @@ export class UsersService {
   async getMe(firebaseUid: string) {
     const user = await this.findByFirebaseUid(firebaseUid);
     const [lives, progress, streak] = await Promise.all([
-      this.prisma.userLives.findUnique({ where: { userId: user.id } }),
-      this.prisma.userProgress.findUnique({ where: { userId: user.id } }),
-      this.prisma.dailyStreak.findFirst({ where: { userId: user.id }, orderBy: { id: 'desc' } }),
+      this.prisma.userLives.findUnique({ where: { userId: user.id } }).catch(() => null),
+      this.prisma.userProgress.findUnique({ where: { userId: user.id } }).catch(() => null),
+      this.prisma.dailyStreak.findFirst({ where: { userId: user.id }, orderBy: { id: 'desc' } }).catch(() => null),
     ]);
     return {
       id: user.id,
@@ -128,17 +128,45 @@ export class UsersService {
 
   async getMyBadges(firebaseUid: string) {
     const user = await this.findByFirebaseUid(firebaseUid);
-    // tbl_users_badges introspected as raw model — use raw query for portability
-    const badges = await this.prisma.$queryRawUnsafe<
-      Array<{ id: number; badge_id: number; badge_name: string | null; earned_at: Date | null }>
-    >(
-      `SELECT ub.id, ub.badge_id, b.badge_name, ub.created_at AS earned_at
-       FROM tbl_users_badges ub
-       LEFT JOIN tbl_badges b ON b.id = ub.badge_id
-       WHERE ub.user_id = ?
-       ORDER BY ub.id DESC`,
+    // tbl_users_badges uses a flat schema (one column per badge type).
+    // Each column is 0 (not earned) or 1 (earned); no badge_id FK exists.
+    const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+      `SELECT * FROM tbl_users_badges WHERE user_id = ? LIMIT 1`,
       user.id,
     );
+
+    if (!rows.length) {
+      return { badges: [] };
+    }
+
+    const row = rows[0];
+    const BADGE_KEYS: Array<{ key: string; label: string }> = [
+      { key: 'dashing_debut',      label: 'Dashing Debut' },
+      { key: 'combat_winner',      label: 'Combat Winner' },
+      { key: 'clash_winner',       label: 'Clash Winner' },
+      { key: 'most_wanted_winner', label: 'Most Wanted Winner' },
+      { key: 'ultimate_player',    label: 'Ultimate Player' },
+      { key: 'quiz_warrior',       label: 'Quiz Warrior' },
+      { key: 'super_sonic',        label: 'Super Sonic' },
+      { key: 'flashback',          label: 'Flashback' },
+      { key: 'brainiac',           label: 'Brainiac' },
+      { key: 'big_thing',          label: 'Big Thing' },
+      { key: 'elite',              label: 'Elite' },
+      { key: 'thirsty',            label: 'Thirsty' },
+      { key: 'power_elite',        label: 'Power Elite' },
+      { key: 'sharing_caring',     label: 'Sharing & Caring' },
+      { key: 'streak',             label: 'Streak' },
+    ];
+
+    const badges = BADGE_KEYS
+      .filter(({ key }) => Number(row[key]) > 0)
+      .map(({ key, label }, index) => ({
+        id: index + 1,
+        badge_id: key,
+        badge_name: label,
+        earned_at: null as Date | null,
+      }));
+
     return { badges };
   }
 

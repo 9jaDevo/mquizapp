@@ -31,7 +31,23 @@ export class CategoriesService {
         image: true,
         rowOrder: true,
       },
-    });
+    }).catch(() =>
+      // Fallback: status column may not yet exist in the legacy DB schema
+      this.prisma.category.findMany({
+        where: { languageId },
+        orderBy: [{ rowOrder: 'asc' }, { id: 'asc' }],
+        select: {
+          id: true,
+          categoryName: true,
+          slug: true,
+          type: true,
+          isPremium: true,
+          coins: true,
+          image: true,
+          rowOrder: true,
+        },
+      }),
+    );
     await this.redis.set(cacheKey, categories, CACHE_TTL);
     return { categories, cached: false };
   }
@@ -54,7 +70,21 @@ export class CategoriesService {
         coins: true,
         rowOrder: true,
       },
-    });
+    }).catch(() =>
+      this.prisma.subcategory.findMany({
+        where: { languageId, maincatId: categoryId },
+        orderBy: [{ rowOrder: 'asc' }, { id: 'asc' }],
+        select: {
+          id: true,
+          subcategoryName: true,
+          slug: true,
+          image: true,
+          isPremium: true,
+          coins: true,
+          rowOrder: true,
+        },
+      }),
+    );
     await this.redis.set(cacheKey, subcategories, CACHE_TTL);
     return { subcategories, cached: false };
   }
