@@ -33,16 +33,21 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       _error = null;
     });
     try {
-      await NestJsApi.instance.updateMe({'name': _nameController.text.trim()});
+      await NestJsApi.instance
+          .updateMe({'name': _nameController.text.trim()})
+          .timeout(const Duration(seconds: 20));
       await repo.setOnboardingDone();
       if (!mounted) return;
       context.go(AppConstants.routeHome);
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _error = 'Failed to save profile. Please try again.';
-        _saving = false;
-      });
+      // If the API is unavailable (cold start / timeout), still mark onboarding
+      // done and proceed — the name can be updated later from the profile screen.
+      try {
+        await repo.setOnboardingDone();
+      } catch (_) {}
+      if (!mounted) return;
+      context.go(AppConstants.routeHome);
     }
   }
 
