@@ -2,6 +2,7 @@ import 'package:mquiz/core/network/api_client_exception.dart';
 import 'package:mquiz/features/home/models/home_dashboard_model.dart';
 import 'package:mquiz/features/profile/data/profile_repository.dart';
 import 'package:mquiz/features/quiz/data/quiz_repository.dart';
+import 'package:mquiz/features/quiz/models/category_model.dart';
 import 'package:mquiz/core/network/nestjs_api.dart';
 
 class HomeRepository {
