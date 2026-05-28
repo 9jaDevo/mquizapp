@@ -94,6 +94,8 @@ export class CategoriesService {
   }
 
   async invalidateCache(languageId?: number) {
+    // Invalidate both the language-scoped and the unfiltered cache keys
+    await this.redis.del(`categories:all`);
     if (languageId !== undefined) {
       await this.redis.del(`categories:lang:${languageId}`);
     }
