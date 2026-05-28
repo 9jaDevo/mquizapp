@@ -90,7 +90,7 @@ class SubmittedAnswer extends Equatable {
 
   Map<String, dynamic> toJson() => {
         'questionId': questionId,
-        'userAnswer': userAnswer,
+        'answer': userAnswer,
         'timeTakenMs': timeTakenMs,
         if (usedBoosters.isNotEmpty) 'usedBoosters': usedBoosters,
       };
