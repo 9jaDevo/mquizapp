@@ -4,6 +4,8 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateFcmTokenDto } from './dto/update-fcm-token.dto';
 import { CoinHistoryQueryDto } from './dto/coin-history-query.dto';
 
+const LIFE_REFILL_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes per life
+
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
@@ -35,6 +37,11 @@ export class UsersService {
         current: lives.current,
         max: lives.max,
         lastRefillAt: lives.lastRefillAt,
+        nextRefillAt:
+          lives.current < lives.max
+            ? new Date(lives.lastRefillAt.getTime() + LIFE_REFILL_INTERVAL_MS)
+            : null,
+        intervalMs: LIFE_REFILL_INTERVAL_MS,
       },
       progress: progress && {
         stageNumber: progress.stageNumber,
@@ -84,7 +91,7 @@ export class UsersService {
 
   async getMyStats(firebaseUid: string) {
     const user = await this.findByFirebaseUid(firebaseUid);
-    const [dailyAgg, weeklyAgg, monthlyAgg, coinSpent, coinEarned, streak] = await Promise.all([
+    const [dailyAgg, weeklyAgg, monthlyAgg, coinSpent, coinEarned, streak, earnedRaw] = await Promise.all([
       this.prisma.leaderboardDaily.aggregate({
         where: { userId: user.id },
         _sum: { score: true },
@@ -111,6 +118,10 @@ export class UsersService {
         where: { userId: user.id },
         orderBy: { id: 'desc' },
       }),
+      this.prisma.$queryRawUnsafe<Array<{ total: string }>>(
+        'SELECT COALESCE(SUM(CAST(points AS UNSIGNED)), 0) as total FROM tbl_tracker WHERE user_id = ? AND status = 0',
+        user.id,
+      ),
     ]);
 
     return {
@@ -119,7 +130,7 @@ export class UsersService {
       totalScore:
         (dailyAgg._sum.score ?? 0) + (weeklyAgg._sum.score ?? 0) + (monthlyAgg._sum.score ?? 0),
       bestWeeklyScore: weeklyAgg._max.score ?? 0,
-      lifetimeCoinsEarned: coinSpent._count?.id ?? 0, // status=0 rows are earned
+      lifetimeCoinsEarned: Number((earnedRaw as Array<{ total: string }>)[0]?.total ?? 0),
       streakCurrent: streak?.streakCount ?? 0,
       streakBest: streak?.maxStreak ?? 0,
       badgesCount: 0,
