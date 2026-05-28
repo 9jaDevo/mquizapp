@@ -28,7 +28,7 @@ class GlassCard extends StatelessWidget {
         child: Ink(
           decoration: BoxDecoration(
             gradient: gradient,
-            color: gradient == null ? Colors.white : null,
+            color: gradient == null ? Theme.of(context).colorScheme.surface : null,
             borderRadius: BorderRadius.circular(borderRadius),
             border: Border.all(
               color: Colors.white.withValues(alpha: 0.12),

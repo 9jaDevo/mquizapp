@@ -84,7 +84,6 @@ class _SubcategoriesScreenState extends State<SubcategoriesScreen> {
     context.read<QuizCubit>().start(
           categoryId: widget.categoryId,
           subcategoryId: sub?.id,
-          level: 1,
         );
     context.push('/quiz');
   }

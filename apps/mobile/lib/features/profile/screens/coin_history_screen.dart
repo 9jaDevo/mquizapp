@@ -120,7 +120,7 @@ class _CoinHistoryScreenState extends State<CoinHistoryScreen> {
             padding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(ctx).colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: AppColors.border),
             ),
