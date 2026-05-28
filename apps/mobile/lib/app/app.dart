@@ -42,7 +42,7 @@ class _RouterScopeState extends State<_RouterScope> {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),
-        themeMode: ThemeMode.system,
+        themeMode: ThemeMode.light,
         routerConfig: _router,
       ),
     );
