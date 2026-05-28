@@ -15,6 +15,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export class SubmittedAnswerDto {
   @ApiProperty() @IsInt() @Min(1) questionId!: number;
   @ApiProperty() @IsString() @MaxLength(512) answer!: string;
+  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() @Min(0) timeTakenMs?: number;
 }
 
 export class SubmitQuizDto {
@@ -35,4 +36,5 @@ export class SubmitQuizDto {
 
   @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() @Min(0) categoryId?: number;
   @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() @Min(0) subcategoryId?: number;
+  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() @Min(1) level?: number;
 }
