@@ -82,7 +82,7 @@ model UserBookmark {
   questionId Int      @map("question_id")
   createdAt  DateTime @default(now()) @map("created_at")
 
-  @@unique([userId, questionId], map: "uq_user_question")
+  @@unique([userId, questionId], name: "uq_user_question", map: "uq_user_question")
   @@index([userId], map: "idx_bookmarks_user_id")
   @@index([questionId], map: "idx_bookmarks_question_id")
   @@map("tbl_user_bookmarks")
