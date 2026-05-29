@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mquiz/core/utils/error_handler.dart';
+import 'package:mquiz/core/utils/parsers.dart';
 import 'package:mquiz/features/progress/data/progress_repository.dart';
 import 'package:mquiz/features/progress/models/progress_stage_model.dart';
 
@@ -45,17 +46,39 @@ class ProgressCubit extends Cubit<ProgressState> {
   Future<void> load() async {
     emit(const ProgressLoading());
     try {
-      final stages = await _repo.fetchStages();
-      final totalStars =
-          stages.fold<int>(0, (sum, s) => sum + s.starsEarned);
-      final current = stages
-          .where((s) => s.unlocked && !s.completed)
-          .map((s) => s.stageNumber)
-          .fold<int>(0, (a, b) => a > b ? a : b);
+      // Fetch raw stages and user progress in parallel.
+      final results = await Future.wait<dynamic>([
+        _repo.fetchStages(),
+        _repo.fetchMyProgress(),
+      ]);
+      final stages = results[0] as List<ProgressStage>;
+      final myProgress = results[1] as Map<String, dynamic>;
+
+      final totalScore = parseIntOr(myProgress['totalScore'], 0);
+      final currentStageNum = parseIntOr(
+        (myProgress['currentStage'] as Map<String, dynamic>?)?['stageNumber'],
+        1,
+      );
+
+      // Compute per-user unlock / completion state from the score ladder.
+      final enriched = stages
+          .map((s) => ProgressStage(
+                stageNumber: s.stageNumber,
+                title: s.title,
+                description: s.description,
+                minScore: s.minScore,
+                unlocked: totalScore >= s.minScore,
+                completed: s.stageNumber < currentStageNum,
+                starsEarned: 0,
+                maxStars: 3,
+              ))
+          .toList(growable: false);
+
+      final current = currentStageNum;
       emit(ProgressLoaded(
-        stages: stages,
+        stages: enriched,
         currentStage: current,
-        totalStars: totalStars,
+        totalStars: 0,
       ));
     } catch (e) {
       emit(ProgressError(describeError(e)));

@@ -6,6 +6,7 @@ class ProgressStage extends Equatable {
     required this.stageNumber,
     required this.title,
     this.description,
+    this.minScore = 0,
     this.categoryId,
     this.subcategoryId,
     this.unlocked = false,
@@ -19,6 +20,7 @@ class ProgressStage extends Equatable {
   final int stageNumber;
   final String title;
   final String? description;
+  final int minScore;
   final int? categoryId;
   final int? subcategoryId;
   final bool unlocked;
@@ -33,6 +35,7 @@ class ProgressStage extends Equatable {
             parseIntOr(j['stageNumber'] ?? j['stage_number'] ?? j['order'], 0),
         title: parseStringOr(j['title'] ?? j['name'], 'Stage'),
         description: parseString(j['description']),
+        minScore: parseIntOr(j['minScore'] ?? j['min_score'], 0),
         categoryId: parseInt(j['categoryId'] ?? j['category_id']),
         subcategoryId: parseInt(j['subcategoryId'] ?? j['subcategory_id']),
         unlocked: parseBool(j['unlocked']),

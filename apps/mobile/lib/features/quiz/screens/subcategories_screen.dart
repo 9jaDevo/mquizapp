@@ -3,6 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mquiz/core/theme/app_colors.dart';
 import 'package:mquiz/core/widgets/common_widgets.dart';
+import 'package:mquiz/features/home/cubit/home_cubit.dart';
+import 'package:mquiz/features/lives/cubit/lives_cubit.dart';
+import 'package:mquiz/features/lives/widgets/out_of_lives_sheet.dart';
 import 'package:mquiz/features/quiz/cubit/categories_cubit.dart';
 import 'package:mquiz/features/quiz/cubit/quiz_cubit.dart';
 import 'package:mquiz/features/quiz/models/category_model.dart';
@@ -80,12 +83,40 @@ class _SubcategoriesScreenState extends State<SubcategoriesScreen> {
     );
   }
 
-  void _startQuiz(BuildContext context, Subcategory? sub) {
+  Future<void> _startQuiz(BuildContext context, Subcategory? sub) async {
+    // Check lives from the already-loaded home dashboard (fastest path).
+    final homeState = context.read<HomeCubit>().state;
+    final livesFromHome =
+        homeState is HomeLoaded ? homeState.data.user.lives?.current : null;
+
+    if (livesFromHome != null && livesFromHome <= 0) {
+      // Load fresh lives data so the sheet shows correct countdown.
+      await context.read<LivesCubit>().load();
+      if (!context.mounted) return;
+      final restored = await OutOfLivesSheet.show(context);
+      if (!context.mounted || restored != true) return;
+      // A life was just restored — fall through and consume it below.
+    }
+
+    // Server-authoritative consume.
+    final consumed = await context.read<LivesCubit>().consume();
+    if (!context.mounted) return;
+    if (!consumed) {
+      // Server rejected (lives truly = 0). Reload and show sheet.
+      await context.read<LivesCubit>().load();
+      if (!context.mounted) return;
+      await OutOfLivesSheet.show(context);
+      return;
+    }
+
+    // Refresh home header so the lives counter decrements immediately.
+    context.read<HomeCubit>().refresh();
+
     context.read<QuizCubit>().start(
           categoryId: widget.categoryId,
           subcategoryId: sub?.id,
         );
-    context.push('/quiz');
+    if (context.mounted) context.push('/quiz');
   }
 }
 

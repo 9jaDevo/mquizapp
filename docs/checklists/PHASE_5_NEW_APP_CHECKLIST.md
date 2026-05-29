@@ -50,7 +50,7 @@ These backend endpoints must exist before the new app can use them. Build in `ap
 |---|---|---|
 | Flutter project created (`flutter create`) | ✅ | `apps/mobile/` — bundle ID set via `--org com.togafrica` |
 | Bundle ID set to `com.togafrica.mquiz` on Android AND iOS | ✅ | Same ID = Android upgrade, fresh iOS submission |
-| Firebase project configured (existing project, new app registration) | ⬜ | Need `google-services.json` + `GoogleService-Info.plist` from Firebase Console |
+| Firebase project configured (existing project, new app registration) | ✅ | `google-services.json` (android/app/) + `GoogleService-Info.plist` (ios/Runner/) downloaded and present |
 | AdMob App ID registered for iOS | ⬜ | Android AdMob ID can be reused |
 | GoRouter installed and configured | ✅ | `go_router ^14.6.3` — `app/router.dart` with auth redirect + ShellRoute |
 | `flutter_bloc` (Cubit) installed | ✅ | `flutter_bloc ^9.1.1` + `equatable ^2.0.7` |
@@ -58,7 +58,7 @@ These backend endpoints must exist before the new app can use them. Build in `ap
 | `NestJsApi` service ported from `lib/core/network/nestjs_api.dart` | ✅ | ~55 typed methods in `core/network/nestjs_api.dart` |
 | Design system implemented (`lib/core/theme/`) | ✅ | `AppColors`, `AppTextStyles` (Poppins), `AppTheme` light/dark — Material 3 |
 | All new assets created (no CodeCanyon SVGs carried over) | ⬜ | Logo, onboarding illustrations, lifeline icons — original artwork needed |
-| App icon (original design) | ⬜ | `flutter_launcher_icons` ready in pubspec; artwork needed |
+| App icon (original design) | ✅ | `assets/images/app_icon.png` present; `flutter_launcher_icons` configured in pubspec |
 | Splash screen (original design) | ✅ | ⬜ | `splash_screen.dart` — AnimatedOpacity logo fade-in on `#7C3AED` bg; `flutter_native_splash ^2.4.4` configured; run `dart run flutter_native_splash:create` |
 | Privacy Policy URL live: `https://mquiz.uk/privacy` | ⬜ | Required for Apple |
 | `flutter analyze` — zero warnings | ✅ | **No issues found** (ran 2026-05-25) |
@@ -103,6 +103,8 @@ These backend endpoints must exist before the new app can use them. Build in `ap
 | Screen / Component | Impl | Test | Notes |
 |---|---|---|---|
 | Category/subcategory selection screen | ✅ | ⬜ | `subcategories_screen.dart` |
+| Lives gate on quiz start | ✅ | ⬜ | `_startQuiz()` checks lives → `LivesCubit.consume()` → `OutOfLivesSheet` if 0 |
+| Lives gate on quiz start | ✅ | ⬜ | `_startQuiz()` checks lives → `LivesCubit.consume()` → `OutOfLivesSheet` if 0 |
 | Quiz screen (all question types) | ✅ | ⬜ | `quiz_screen.dart` — MC, image support, timer |
 | — Multiple choice (standard) | ✅ | ⬜ | `_OptionTile` with square badge |
 | — Fun & Learn | ✅ | ⬜ | `_FunLearnView` — explanation card, auto-reveal after 3s, "Show options now" button |
@@ -268,10 +270,12 @@ These backend endpoints must exist before the new app can use them. Build in `ap
 | Sprint 9 | Store + Payments (coin packs, subscriptions, Paystack, Apple IAP) | ✅ Coin store + Paystack init/verify (server-authoritative); subscriptions/Apple IAP not in scope |
 | Sprint 10 | Battle (Firestore matchmaking, live battle screen, result) | ✅ Complete — all 6 files + providers + routes + home CTA + Firestore security rules |
 | Sprint 11 | Progress Map (scrollable stage nodes, unlock animation) | ✅ |
-| Sprint 12 | Firebase config + assets + app icon + Polish | ✅ Splash polished (AnimatedOpacity + flutter_native_splash); launcher icons done; firebase files pending download |
+| Sprint 12 | Firebase config + assets + app icon + Polish | ✅ Complete — firebase files downloaded, app icon done, splash polished |
 | Sprint 13 | Tests + TestFlight + App Store submission | ⬜ |
 
 **Outstanding blockers (must resolve before first device build):**
-- ⬜ Download `google-services.json` from Firebase Console → `apps/mobile/android/app/`
-- ⬜ Download `GoogleService-Info.plist` from Firebase Console → `apps/mobile/ios/Runner/`
-- ⬜ Original logo/icon artwork (no CodeCanyon assets)
+- ✅ ~~Download `google-services.json`~~ — present at `apps/mobile/android/app/google-services.json`
+- ✅ ~~Download `GoogleService-Info.plist`~~ — present at `apps/mobile/ios/Runner/GoogleService-Info.plist`
+- ✅ ~~Original logo/icon artwork~~ — `assets/images/app_icon.png` in place
+- ⬜ Run `dart run flutter_launcher_icons:generate` to generate native icon assets
+- ⬜ Run `dart run flutter_native_splash:create` to generate native splash assets
