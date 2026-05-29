@@ -341,8 +341,6 @@ class _SocialButton extends StatelessWidget {
   }
 }
 
-
-class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
 
   @override
