@@ -29,10 +29,11 @@ async function getQuestions(params: {
 
 async function getCategories(): Promise<Category[]> {
   try {
-    return await apiServer.get<Category[]>('/v2/categories', {
+    const res = await apiServer.get<{ items: Category[] }>('/v2/admin/categories', {
       tags: ['categories'],
       revalidate: 300,
     });
+    return res.items ?? [];
   } catch {
     return [];
   }

@@ -4,10 +4,11 @@ import type { Category, Question } from '@/types/api';
 import { QuestionForm } from '../../question-form';
 
 async function getCategories(): Promise<Category[]> {
-  return apiServer.get<Category[]>('/v2/categories', {
+  const res = await apiServer.get<{ items: Category[] }>('/v2/admin/categories', {
     tags: ['categories'],
     revalidate: 300,
   });
+  return res.items ?? [];
 }
 
 async function getQuestion(id: number): Promise<Question | null> {
