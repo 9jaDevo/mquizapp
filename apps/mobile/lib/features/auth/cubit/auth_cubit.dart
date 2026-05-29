@@ -169,6 +169,44 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
+  Future<void> registerWithEmail({
+    required String email,
+    required String password,
+    required String name,
+    String? fcmToken,
+  }) async {
+    emit(const AuthLoading());
+    try {
+      final user = await _repo.registerWithEmail(
+        email: email,
+        password: password,
+        name: name,
+        fcmToken: fcmToken,
+      );
+      _emitAuthenticated(user);
+    } catch (e) {
+      emit(AuthError(_mapError(e)));
+    }
+  }
+
+  Future<void> signInWithEmail({
+    required String email,
+    required String password,
+    String? fcmToken,
+  }) async {
+    emit(const AuthLoading());
+    try {
+      final user = await _repo.signInWithEmail(
+        email: email,
+        password: password,
+        fcmToken: fcmToken,
+      );
+      _emitAuthenticated(user);
+    } catch (e) {
+      emit(AuthError(_mapError(e)));
+    }
+  }
+
   Future<void> signOut() async {
     emit(const AuthLoading());
     try {
@@ -189,6 +227,17 @@ class AuthCubit extends Cubit<AuthState> {
 
   String _mapError(Object e) {
     final msg = e.toString();
+    if (msg.contains('email-already-in-use')) {
+      return 'An account with that email already exists';
+    }
+    if (msg.contains('user-not-found') || msg.contains('invalid-credential')) {
+      return 'Incorrect email or password';
+    }
+    if (msg.contains('wrong-password')) return 'Incorrect password';
+    if (msg.contains('weak-password')) {
+      return 'Password must be at least 6 characters';
+    }
+    if (msg.contains('invalid-email')) return 'Please enter a valid email';
     if (msg.contains('cancelled')) return 'Sign-in cancelled';
     if (msg.contains('network')) return 'No internet connection';
     if (msg.contains('invalid-verification-code')) return 'Invalid OTP code';
@@ -198,6 +247,8 @@ class AuthCubit extends Cubit<AuthState> {
 
   static MquizAuthProvider _providerFromFirebase(String? providerId) {
     switch (providerId) {
+      case 'password':
+        return MquizAuthProvider.email;
       case 'google.com':
         return MquizAuthProvider.google;
       case 'apple.com':

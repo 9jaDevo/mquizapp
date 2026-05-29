@@ -63,6 +63,36 @@ class AuthRepository {
     return user;
   }
 
+  Future<AuthModel> registerWithEmail({
+    required String email,
+    required String password,
+    required String name,
+    String? fcmToken,
+  }) async {
+    final user = await _remote.registerWithEmail(
+      email: email,
+      password: password,
+      name: name,
+      fcmToken: fcmToken,
+    );
+    await _local.saveUser(user);
+    return user;
+  }
+
+  Future<AuthModel> signInWithEmail({
+    required String email,
+    required String password,
+    String? fcmToken,
+  }) async {
+    final user = await _remote.signInWithEmail(
+      email: email,
+      password: password,
+      fcmToken: fcmToken,
+    );
+    await _local.saveUser(user);
+    return user;
+  }
+
   Future<void> signOut() async {
     await Future.wait([
       _remote.signOut(),
