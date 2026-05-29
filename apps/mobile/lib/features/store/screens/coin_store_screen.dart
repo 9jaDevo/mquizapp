@@ -31,7 +31,7 @@ class _CoinStoreScreenState extends State<CoinStoreScreen> {
       return;
     }
     final cubit = context.read<StoreCubit>();
-    final init = await cubit.initialize(packId: pack.id);
+    final init = await cubit.initialize(pack: pack);
     if (!mounted || init == null) return;
     if (init.authorizationUrl.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(

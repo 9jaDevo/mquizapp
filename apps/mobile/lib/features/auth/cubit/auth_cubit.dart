@@ -218,11 +218,25 @@ class AuthCubit extends Cubit<AuthState> {
   }
 
   void _emitAuthenticated(AuthModel user) {
-    if (user.isNewUser || (user.name?.isEmpty ?? true)) {
-      emit(AuthNeedsProfileSetup(user));
-    } else {
-      emit(Authenticated(user));
-    }
+    _repo.isOnboardingDone().then((done) {
+      if (isClosed) return;
+      if (done) {
+        emit(Authenticated(user));
+        return;
+      }
+      if (user.isNewUser || (user.name?.isEmpty ?? true)) {
+        emit(AuthNeedsProfileSetup(user));
+      } else {
+        emit(Authenticated(user));
+      }
+    }).catchError((_) {
+      if (isClosed) return;
+      if (user.isNewUser || (user.name?.isEmpty ?? true)) {
+        emit(AuthNeedsProfileSetup(user));
+      } else {
+        emit(Authenticated(user));
+      }
+    });
   }
 
   String _mapError(Object e) {

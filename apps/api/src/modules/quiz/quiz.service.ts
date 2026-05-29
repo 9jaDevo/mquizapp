@@ -156,7 +156,7 @@ export class QuizService {
       if (score > 0) {
         const _now = new Date();
         await tx.leaderboardDaily.create({
-          data: { userId, score, dateCreated: _now },
+          data: { userId, score, correctAnswers: correctCount, totalAnswers: breakdown.length, dateCreated: _now },
         });
         const _week = this.isoWeek(_now);
         await tx.leaderboardWeekly.upsert({
@@ -349,7 +349,7 @@ export class QuizService {
 
       if (score > 0) {
         const _now = new Date();
-        await tx.leaderboardDaily.create({ data: { userId, score, dateCreated: _now } });
+        await tx.leaderboardDaily.create({ data: { userId, score, correctAnswers: correctCount, totalAnswers: body.answers.length, dateCreated: _now } });
         const _week = this.isoWeek(_now);
         await tx.leaderboardWeekly.upsert({
           where: { userId_weekNumber_year: { userId, weekNumber: _week.weekNumber, year: _week.year } },

@@ -51,15 +51,7 @@ class LoginScreen extends StatelessWidget {
                     height: 88,
                     fit: BoxFit.contain,
                   ),
-                  const SizedBox(height: 24),
-                  Text(
-                    AppConstants.appName,
-                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 16),
                   Text(
                     'Learn. Play. Win.',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(

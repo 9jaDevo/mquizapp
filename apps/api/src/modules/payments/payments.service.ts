@@ -58,12 +58,11 @@ export class PaymentsService {
       throw new NotFoundException({ error: 'ITEM_NOT_FOUND', message: 'Coin store item not found' });
     }
 
-    // Paystack expects amount in kobo (NGN minor units) — but item.coins ≠ price.
-    // Use dto.amount (in kobo) provided by client AND validated server-side.
-    if (dto.amountKobo <= 0) {
+    // Use price from DB — client never controls the charged amount (security)
+    if (item.priceKobo <= 0) {
       throw new BadRequestException({
-        error: 'INVALID_AMOUNT',
-        message: 'Amount must be positive',
+        error: 'ITEM_NOT_PRICED',
+        message: 'This item is not available for purchase at this time',
       });
     }
 
@@ -83,7 +82,7 @@ export class PaymentsService {
         uid: user.id.toString(),
         payment_type: 'paystack',
         payment_address: email,
-        payment_amount: (dto.amountKobo / 100).toString(),
+        payment_amount: (item.priceKobo / 100).toString(),
         coin_used: item.coins.toString(),
         details: JSON.stringify({ itemId: item.id, reference }),
         status: 0,
@@ -91,7 +90,7 @@ export class PaymentsService {
       },
     });
 
-    const initRes = await this.callPaystack(secret, email, dto.amountKobo, reference, {
+    const initRes = await this.callPaystack(secret, email, item.priceKobo, reference, {
       userId: user.id,
       itemId: item.id,
       coins: item.coins,
