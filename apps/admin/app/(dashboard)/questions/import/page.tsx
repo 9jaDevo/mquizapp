@@ -205,8 +205,8 @@ export default function ImportQuestionsPage() {
             '/v2/admin/questions/import',
             { questions: batch },
           );
-          imported += res.imported ?? batch.length;
-          failed += res.failed ?? 0;
+          imported += res.data.imported ?? batch.length;
+          failed += res.data.failed ?? 0;
         } catch {
           failed += batch.length;
         }
