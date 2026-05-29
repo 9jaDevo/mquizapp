@@ -282,3 +282,28 @@ export interface SettingRow {
   type: string;
   message: string;
 }
+
+// ─── Coin Store ──────────────────────────────────────────────────────────────
+
+export interface CoinPack {
+  id: number;
+  title: string;
+  coins: number;
+  type: number;
+  productId: string;
+  image: string | null;
+  description: string;
+  status: number;
+  priceKobo: number;
+}
+
+// ─── Progress Stages ─────────────────────────────────────────────────────────
+
+export interface ProgressStage {
+  id: number;
+  stageNumber: number;
+  name: string;
+  minScore: number;
+  iconUrl: string | null;
+  isActive: boolean;
+}

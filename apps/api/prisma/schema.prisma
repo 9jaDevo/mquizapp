@@ -133,6 +133,23 @@ model AiQuestion {
   @@map("tbl_ai_questions")
 }
 
+model AiGenerationLog {
+  id               Int      @id @default(autoincrement())
+  adminUserId      Int?     @map("admin_user_id")
+  topic            String   @db.VarChar(255)
+  categoryId       Int      @default(0) @map("category_id")
+  difficulty       String   @default("medium") @db.VarChar(20)
+  count            Int      @default(0)
+  tokensUsed       Int      @default(0) @map("tokens_used")
+  promptTokens     Int      @default(0) @map("prompt_tokens")
+  completionTokens Int      @default(0) @map("completion_tokens")
+  model            String   @default("") @db.VarChar(64)
+  createdAt        DateTime @default(now()) @map("created_at") @db.DateTime(0)
+
+  @@index([createdAt], map: "idx_ai_gen_log_created")
+  @@map("tbl_ai_generation_logs")
+}
+
 model DailyStreak {
   id              Int       @id @default(autoincrement())
   userId          Int       @map("user_id")
