@@ -207,11 +207,14 @@ class _GreetingHeader extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: StatPill(
-                  icon: Icons.bolt_rounded,
-                  label: 'Coins',
-                  value: coins.toString(),
-                  color: AppColors.coin,
+                child: GestureDetector(
+                  onTap: () => context.push(AppConstants.routeCoinStore),
+                  child: StatPill(
+                    icon: Icons.bolt_rounded,
+                    label: 'Coins',
+                    value: coins.toString(),
+                    color: AppColors.coin,
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
