@@ -78,4 +78,17 @@ class LivesCubit extends Cubit<LivesUiState> {
       return false;
     }
   }
+
+  /// Consumes one life. Returns true if consumed, false if the server
+  /// rejected the request (out of lives or other error).
+  Future<bool> consume() async {
+    try {
+      final lives = await _repo.consumeLife();
+      emit(LivesLoaded(lives: lives));
+      return true;
+    } catch (_) {
+      // 400 = out of lives; other errors treated the same way
+      return false;
+    }
+  }
 }

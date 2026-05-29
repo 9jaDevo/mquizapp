@@ -20,6 +20,11 @@ class LivesRepository {
     return LivesState.fromJson(data);
   }
 
+  Future<LivesState> consumeLife() async {
+    final data = await _api.consumeLife();
+    return LivesState.fromJson(data);
+  }
+
   Future<StreakStatus> fetchStreak() async {
     final data = await _api.getStreak();
     return StreakStatus.fromJson(data);
