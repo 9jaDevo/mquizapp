@@ -298,3 +298,45 @@ class _EmailAuthDialogState extends State<_EmailAuthDialog> {
 // ── Generic social button ──────────────────────────────────────────────────────
 
 class _SocialButton extends StatelessWidget {
+  const _SocialButton({
+    required this.label,
+    required this.icon,
+    this.onTap,
+    this.color,
+    this.labelColor,
+    this.outlined = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback? onTap;
+  final Color? color;
+  final Color? labelColor;
+  final bool outlined;
+
+  @override
+  Widget build(BuildContext context) {
+    if (outlined) {
+      return OutlinedButton.icon(
+        onPressed: onTap,
+        icon: Icon(icon),
+        label: Text(label),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(double.infinity, 52),
+        ),
+      );
+    }
+    return ElevatedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, color: labelColor ?? Colors.white),
+      label: Text(
+        label,
+        style: TextStyle(color: labelColor ?? Colors.white),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color ?? AppColors.primary,
+        minimumSize: const Size(double.infinity, 52),
+      ),
+    );
+  }
+}
