@@ -9,6 +9,7 @@ class CoinPack extends Equatable {
     this.bonusCoins,
     this.priceUsd,
     this.priceLocal,
+    this.priceKobo = 0,
     this.currency,
     this.image,
     this.isPopular = false,
@@ -21,6 +22,7 @@ class CoinPack extends Equatable {
   final int? bonusCoins;
   final double? priceUsd;
   final double? priceLocal;
+  final int priceKobo;
   final String? currency;
   final String? image;
   final bool isPopular;
@@ -38,6 +40,7 @@ class CoinPack extends Equatable {
         bonusCoins: parseInt(j['bonusCoins'] ?? j['bonus']),
         priceUsd: parseDouble(j['priceUsd'] ?? j['price_usd']),
         priceLocal: parseDouble(j['priceLocal'] ?? j['price']),
+        priceKobo: parseIntOr(j['priceKobo'] ?? j['price_kobo'], 0),
         currency: parseString(j['currency']),
         image: parseString(j['image']),
         isPopular: parseBool(j['isPopular'] ?? j['popular']),
@@ -53,6 +56,7 @@ class CoinPack extends Equatable {
         bonusCoins,
         priceUsd,
         priceLocal,
+        priceKobo,
         currency,
         image,
         isPopular,

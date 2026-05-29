@@ -94,7 +94,7 @@ export class UsersService {
     const [dailyAgg, weeklyAgg, monthlyAgg, coinSpent, coinEarned, streak, earnedRaw] = await Promise.all([
       this.prisma.leaderboardDaily.aggregate({
         where: { userId: user.id },
-        _sum: { score: true },
+        _sum: { score: true, correctAnswers: true, totalAnswers: true },
         _count: { id: true },
       }),
       this.prisma.leaderboardWeekly.aggregate({
@@ -134,7 +134,9 @@ export class UsersService {
       streakCurrent: streak?.streakCount ?? 0,
       streakBest: streak?.maxStreak ?? 0,
       badgesCount: 0,
-      accuracy: 0,
+      accuracy: (dailyAgg._sum.totalAnswers ?? 0) > 0
+        ? (dailyAgg._sum.correctAnswers ?? 0) / (dailyAgg._sum.totalAnswers ?? 0)
+        : 0,
     };
   }
 
@@ -152,37 +154,35 @@ export class UsersService {
       user.id,
     );
 
-    if (!rows.length) {
-      return { badges: [] };
-    }
+    const row: Record<string, unknown> = rows.length ? rows[0] : {};
 
-    const row = rows[0];
-    const BADGE_KEYS: Array<{ key: string; label: string }> = [
-      { key: 'dashing_debut',      label: 'Dashing Debut' },
-      { key: 'combat_winner',      label: 'Combat Winner' },
-      { key: 'clash_winner',       label: 'Clash Winner' },
-      { key: 'most_wanted_winner', label: 'Most Wanted Winner' },
-      { key: 'ultimate_player',    label: 'Ultimate Player' },
-      { key: 'quiz_warrior',       label: 'Quiz Warrior' },
-      { key: 'super_sonic',        label: 'Super Sonic' },
-      { key: 'flashback',          label: 'Flashback' },
-      { key: 'brainiac',           label: 'Brainiac' },
-      { key: 'big_thing',          label: 'Big Thing' },
-      { key: 'elite',              label: 'Elite' },
-      { key: 'thirsty',            label: 'Thirsty' },
-      { key: 'power_elite',        label: 'Power Elite' },
-      { key: 'sharing_caring',     label: 'Sharing & Caring' },
-      { key: 'streak',             label: 'Streak' },
+    const BADGE_DEFS: Array<{ key: string; name: string; description: string; requirement: string }> = [
+      { key: 'dashing_debut',      name: 'Dashing Debut',        description: 'First steps into the quiz arena',      requirement: 'Complete your first quiz' },
+      { key: 'combat_winner',      name: 'Combat Winner',         description: 'Defeated a rival in 1v1 battle',         requirement: 'Win a 1v1 battle challenge' },
+      { key: 'clash_winner',       name: 'Clash Winner',          description: 'Conquered a clash tournament',           requirement: 'Win a clash tournament' },
+      { key: 'most_wanted_winner', name: 'Most Wanted Winner',    description: 'Ruled the weekly leaderboard',           requirement: 'Finish #1 on the weekly leaderboard' },
+      { key: 'ultimate_player',    name: 'Ultimate Player',       description: 'Reached the top tier of play',           requirement: 'Earn 10,000 total XP' },
+      { key: 'quiz_warrior',       name: 'Quiz Warrior',          description: 'Consistent quiz champion',               requirement: 'Complete 50 quizzes' },
+      { key: 'super_sonic',        name: 'Super Sonic',           description: 'Lightning-fast answer machine',          requirement: 'Answer 10 questions correctly in under 30s' },
+      { key: 'flashback',          name: 'Flashback',             description: 'Loyal across many sessions',             requirement: 'Play quizzes on 7 different days' },
+      { key: 'brainiac',           name: 'Brainiac',              description: 'Near-perfect quiz performance',          requirement: 'Achieve 90%+ accuracy in a quiz' },
+      { key: 'big_thing',          name: 'Big Thing',             description: 'Racked up serious coin earnings',        requirement: 'Earn 1,000 lifetime coins' },
+      { key: 'elite',              name: 'Elite',                 description: 'Advanced through the progress map',      requirement: 'Reach Stage 5 on the progress map' },
+      { key: 'thirsty',            name: 'Thirsty',               description: 'Kept the streak alive all week',        requirement: 'Maintain a 7-day login streak' },
+      { key: 'power_elite',        name: 'Power Elite',           description: 'Master of the progress map',            requirement: 'Reach Stage 10 on the progress map' },
+      { key: 'sharing_caring',     name: 'Sharing & Caring',      description: 'Growing the mQuiz community',           requirement: 'Invite a friend to join mQuiz' },
+      { key: 'streak',             name: 'Streak',                description: 'Unstoppable — played every day',        requirement: 'Maintain a 30-day login streak' },
     ];
 
-    const badges = BADGE_KEYS
-      .filter(({ key }) => Number(row[key]) > 0)
-      .map(({ key, label }, index) => ({
-        id: index + 1,
-        badge_id: key,
-        name: label,
-        earned_at: null as Date | null,
-      }));
+    const badges = BADGE_DEFS.map(({ key, name, description, requirement }, index) => ({
+      id: index + 1,
+      badgeId: key,
+      name,
+      description,
+      requirement,
+      isEarned: Number(row[key] ?? 0) > 0,
+      earnedAt: null as Date | null,
+    }));
 
     return { badges };
   }

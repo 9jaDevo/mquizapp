@@ -49,7 +49,7 @@ export class CoinsService {
     const items = await this.prisma.tbl_coin_store.findMany({
       where: { status: 1 },
       orderBy: { coins: 'asc' },
-      select: { id: true, title: true, coins: true, product_id: true, image: true, description: true },
+      select: { id: true, title: true, coins: true, product_id: true, image: true, description: true, priceKobo: true },
     });
     return { items };
   }

@@ -92,14 +92,13 @@ class StoreCubit extends Cubit<StoreState> {
   /// Initializes a payment. Returns the authorization URL the caller must
   /// open in an in-app browser. The server is the only authority for crediting.
   Future<PaymentInit?> initialize({
-    required String packId,
-    String provider = 'paystack',
+    required CoinPack pack,
   }) async {
     final current = state;
     if (current is! StoreLoaded || current.purchasingId != null) return null;
-    emit(current.copyWith(purchasingId: packId));
+    emit(current.copyWith(purchasingId: pack.id));
     try {
-      final init = await _repo.initialize(packId: packId, provider: provider);
+      final init = await _repo.initialize(itemId: int.parse(pack.id));
       return init;
     } catch (e) {
       emit(current.copyWith(clearPurchasing: true));

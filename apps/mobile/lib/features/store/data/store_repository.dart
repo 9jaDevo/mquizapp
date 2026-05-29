@@ -19,12 +19,10 @@ class StoreRepository {
   }
 
   Future<PaymentInit> initialize({
-    required String packId,
-    required String provider, // 'paystack' | 'flutterwave'
+    required int itemId,
   }) async {
     final data = await _api.initializePayment({
-      'packId': packId,
-      'provider': provider,
+      'itemId': itemId,
     });
     return PaymentInit.fromJson(data);
   }
