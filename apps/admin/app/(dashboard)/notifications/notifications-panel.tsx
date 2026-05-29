@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { useSession } from 'next-auth/react';
 import { useApiClient } from '@/hooks/use-api-client';
 import type { NotificationHistoryItem } from '@/types/api';
 
@@ -31,6 +32,7 @@ interface HistoryResp {
 
 export function NotificationsPanel() {
   const api = useApiClient();
+  const { status } = useSession();
   const [history, setHistory] = React.useState<NotificationHistoryItem[]>([]);
   const [loadingHistory, setLoadingHistory] = React.useState(true);
 
@@ -56,8 +58,8 @@ export function NotificationsPanel() {
   }, [api]);
 
   React.useEffect(() => {
-    loadHistory();
-  }, [loadHistory]);
+    if (status === 'authenticated') loadHistory();
+  }, [loadHistory, status]);
 
   async function onSubmit(data: FormData) {
     try {
