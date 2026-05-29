@@ -88,6 +88,11 @@ class _ProfileView extends StatelessWidget {
                   onTap: () => context.push(AppConstants.routeProfileEdit),
                 ),
                 _ActionTile(
+                  icon: Icons.rocket_launch_outlined,
+                  label: 'My Boosters',
+                  onTap: () => context.push(AppConstants.routeBoosters),
+                ),
+                _ActionTile(
                   icon: Icons.history_rounded,
                   label: 'Coin History',
                   onTap: () => context.push(AppConstants.routeCoinHistory),
