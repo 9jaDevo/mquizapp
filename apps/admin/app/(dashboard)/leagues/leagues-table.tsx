@@ -87,6 +87,12 @@ export function LeaguesTable({ data, pageCount, pageIndex }: LeaguesTableProps) 
             >
               Edit
             </Link>
+            <Link
+              href={`/leagues/${row.original.id}/leaderboard`}
+              className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+            >
+              Leaderboard
+            </Link>
             {!distributed && (
               <Button
                 size="sm"

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
@@ -21,26 +22,53 @@ import {
   Mountain,
 } from 'lucide-react';
 
+// roles: empty array = visible to all roles; non-empty = only those roles (super_admin always sees all)
 const navItems = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Users', href: '/users', icon: Users },
-  { label: 'Questions', href: '/questions', icon: HelpCircle },
-  { label: 'AI Questions', href: '/ai-questions', icon: Sparkles },
-  { label: 'Categories', href: '/categories', icon: Tag },
-  { label: 'Contests', href: '/contests', icon: Trophy },
-  { label: 'Leagues', href: '/leagues', icon: Shield },
-  { label: 'Progress Stages', href: '/progress-stages', icon: Mountain },
-  { label: 'Notifications', href: '/notifications', icon: Bell },
-  { label: 'Analytics', href: '/analytics', icon: BarChart2 },
-  { label: 'Sponsors', href: '/sponsors', icon: Megaphone },
-  { label: 'Coin Store', href: '/coin-store', icon: Store },
-  { label: 'Fraud Flags', href: '/fraud-flags', icon: AlertTriangle },
-  { label: 'Schools', href: '/schools', icon: GraduationCap },
-  { label: 'Settings', href: '/settings', icon: Settings },
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: [] as string[] },
+  {
+    label: 'Users',
+    href: '/users',
+    icon: Users,
+    roles: ['super_admin', 'content_admin', 'school_admin', 'support_admin'],
+  },
+  { label: 'Questions', href: '/questions', icon: HelpCircle, roles: ['super_admin', 'content_admin'] },
+  { label: 'AI Questions', href: '/ai-questions', icon: Sparkles, roles: ['super_admin', 'content_admin'] },
+  { label: 'Categories', href: '/categories', icon: Tag, roles: ['super_admin', 'content_admin'] },
+  { label: 'Contests', href: '/contests', icon: Trophy, roles: ['super_admin', 'content_admin'] },
+  { label: 'Leagues', href: '/leagues', icon: Shield, roles: ['super_admin', 'content_admin'] },
+  {
+    label: 'Progress Stages',
+    href: '/progress-stages',
+    icon: Mountain,
+    roles: ['super_admin', 'content_admin'],
+  },
+  {
+    label: 'Notifications',
+    href: '/notifications',
+    icon: Bell,
+    roles: ['super_admin', 'content_admin', 'school_admin', 'support_admin'],
+  },
+  { label: 'Analytics', href: '/analytics', icon: BarChart2, roles: ['super_admin', 'finance_admin'] },
+  { label: 'Sponsors', href: '/sponsors', icon: Megaphone, roles: ['super_admin', 'finance_admin'] },
+  { label: 'Coin Store', href: '/coin-store', icon: Store, roles: ['super_admin', 'finance_admin'] },
+  {
+    label: 'Fraud Flags',
+    href: '/fraud-flags',
+    icon: AlertTriangle,
+    roles: ['super_admin', 'support_admin'],
+  },
+  { label: 'Schools', href: '/schools', icon: GraduationCap, roles: ['super_admin', 'school_admin'] },
+  { label: 'Settings', href: '/settings', icon: Settings, roles: ['super_admin'] },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const role = (session?.user as { role?: string } | undefined)?.role ?? '';
+
+  const visibleItems = navItems.filter(
+    (item) => item.roles.length === 0 || role === 'super_admin' || item.roles.includes(role),
+  );
 
   return (
     <aside className="flex h-full w-60 flex-col border-r bg-background">
@@ -55,7 +83,7 @@ export function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-2 py-3">
         <ul className="space-y-1">
-          {navItems.map(({ label, href, icon: Icon }) => {
+          {visibleItems.map(({ label, href, icon: Icon }) => {
             const isActive =
               href === '/dashboard'
                 ? pathname === '/dashboard'

@@ -101,6 +101,17 @@ const columns: ColumnDef<Question>[] = [
     ),
   },
   {
+    accessorKey: 'aiGenerated',
+    header: 'Source',
+    size: 80,
+    cell: ({ getValue }) =>
+      getValue<number>() === 1 ? (
+        <Badge variant="secondary">AI</Badge>
+      ) : (
+        <span className="text-xs text-muted-foreground">Manual</span>
+      ),
+  },
+  {
     id: 'actions',
     header: 'Actions',
     cell: ({ row }) => <QuestionsActions question={row.original} />,
@@ -115,6 +126,7 @@ interface QuestionsTableProps {
   initialSearch?: string;
   initialCategoryId?: string;
   initialDifficulty?: string;
+  initialIsAi?: string;
 }
 
 export function QuestionsTable({
@@ -125,6 +137,7 @@ export function QuestionsTable({
   initialSearch = '',
   initialCategoryId = '',
   initialDifficulty = '',
+  initialIsAi = '',
 }: QuestionsTableProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -197,6 +210,24 @@ export function QuestionsTable({
               <SelectItem value="1">Easy (1)</SelectItem>
               <SelectItem value="2">Medium (2)</SelectItem>
               <SelectItem value="3">Hard (3)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="w-36">
+          <Select
+            value={initialIsAi || 'all'}
+            onValueChange={(v) =>
+              applyFilter({ isAi: !v || v === 'all' ? undefined : v })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All sources" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All sources</SelectItem>
+              <SelectItem value="true">AI Generated</SelectItem>
+              <SelectItem value="false">Manual</SelectItem>
             </SelectContent>
           </Select>
         </div>

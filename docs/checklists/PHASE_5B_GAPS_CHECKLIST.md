@@ -184,21 +184,19 @@ The dashboard KPI cards exist but DAU/MAU are not wired and mini-charts are abse
 | Feature | Status | Notes |
 |---|---|---|
 | DAU / MAU display in KPI cards | ✅ | Already rendered in `dashboard/page.tsx` via stats overview |
-| Recent fraud feed (last 10 records) | ⬜ | Requires `fraudFeed` array from stats endpoint OR separate `GET /v2/admin/fraud-flags?limit=10` call |
-| User growth line chart | ⬜ | API ready (A5 complete); Recharts wiring deferred |
-| Quiz completions per day bar chart | ⬜ | API ready; chart UI deferred |
-| Top 5 categories pie chart | ⬜ | API ready; chart UI deferred |
+| Recent fraud feed (last 10 records) | ✅ | Already rendered in `dashboard/page.tsx` via `stats.recentFraud` |
+| User growth line chart | ✅ | `DashboardMiniCharts` component with 7d AreaChart; calls `GET /v2/admin/analytics/user-growth?days=7` |
+| Quiz completions per day bar chart | ✅ | `DashboardMiniCharts` with 7d BarChart; calls `GET /v2/admin/analytics/quiz-completions?days=7` |
+| Top 5 categories pie chart | ✅ | Rendered as ranked list in `DashboardMiniCharts`; calls `GET /v2/admin/analytics/top-categories` |
 
 ---
 
 ### B4. Questions — Missing Filters 🟠 P1
 
-**Blocked on schema:** the `Question` model has no `ai_generated` or `ai_approval_status` columns. Requires a schema migration before filters become meaningful. Deferred.
-
 | Feature | Status | Notes |
 |---|---|---|
-| Filter: AI-generated flag (yes/no) | ❌ | Blocked — needs `ai_generated TINYINT` column on `tbl_question` |
-| Filter: AI approval status (pending/approved/rejected) | ❌ | Blocked — needs `ai_approval_status` column on `tbl_question` |
+| Filter: AI-generated flag (yes/no) | ✅ | `ai_generated TINYINT` column added to `tbl_question` via migration `2026_05_29_add_ai_generated_to_tbl_question.sql`. `isAi` filter wired in `listQuestions`. AI source badge + filter dropdown added to questions table. |
+| Filter: AI approval status (pending/approved/rejected) | ❌ | N/A on `tbl_question` — only approved questions reach this table. Filter by source (AI vs Manual) covers the use case. Pending/rejected questions remain in `tbl_ai_questions` with `status` field. |
 
 ---
 
@@ -206,25 +204,25 @@ The dashboard KPI cards exist but DAU/MAU are not wired and mini-charts are abse
 
 | Feature | Status | Notes |
 |---|---|---|
-| Generate form: subject field | ⬜ | Add `subject` optional text input to `ai-questions-panel.tsx` generate form |
-| Generate form: class/grade level field | ⬜ | Add `classLevel` select (SS1/SS2/SS3/JSS1–JSS3/Primary) |
-| Editable generated questions table | ⬜ | Allow editing question text, options, correct answer before approve-all |
-| AI generation history log | ⬜ | Table showing past generation runs: date, topic, count generated, tokens used. Requires `GET /v2/admin/ai-questions/history` |
+| Generate form: subject field | ✅ | Optional text input added to `ai-questions-panel.tsx` generate form |
+| Generate form: class/grade level field | ✅ | Select dropdown added (SS1/SS2/SS3/JSS1–JSS3/Primary 1–6) |
+| Editable generated questions table | ✅ | Pencil icon per question opens inline edit form (question, options A–D, correct answer, note). PATCH `/v2/admin/ai-questions/:id` saves changes. `UpdateAiQuestionDto` added. |
+| AI generation history log | ✅ | History tab shows past generation runs: date, topic, count, tokens used. Calls `GET /v2/admin/ai-questions/history` |
 
 ---
 
-### B6. Analytics Charts (All Missing) 🟡 P2
+### B6. Analytics Charts 🟡 P2
 
-All blocked on Section A5 endpoints.
+All Section A5 endpoints complete. Charts now wired and rendering.
 
 | Feature | Status | Notes |
 |---|---|---|
-| User acquisition chart (daily new registrations, Recharts LineChart) | ⬜ | Blocked on `GET /v2/admin/analytics/users-over-time` |
-| Day 1 / Day 7 / Day 30 retention curve | ⬜ | Blocked on `GET /v2/admin/analytics/retention` |
-| Revenue breakdown: Paystack vs Flutterwave bar chart | ⬜ | Blocked on A5 + A10 |
-| Top 10 categories by plays (horizontal bar chart) | ⬜ | Blocked on `GET /v2/admin/analytics/top-categories` |
-| Quiz completion rate by mode (pie chart) | ⬜ | Blocked on `GET /v2/admin/analytics/quiz-completions` |
-| Country map: users by country code | ⬜ | Blocked on geo-aggregation endpoint |
+| User acquisition chart (daily new registrations, Recharts LineChart) | ✅ | Calls `GET /v2/admin/analytics/users-over-time`; renders in analytics page |
+| Day 1 / Day 7 / Day 30 retention stat cards | ✅ | Calls `GET /v2/admin/analytics/retention`; displays retention %, user counts |
+| Revenue breakdown: Paystack vs Flutterwave bar chart | ✅ | BarChart added to `analytics-charts.tsx`; calls `GET /v2/admin/analytics/revenue-breakdown?days=30`; shows revenue per provider |
+| Top 10 categories by plays (horizontal bar chart) | ✅ | Calls `GET /v2/admin/analytics/top-categories`; renders top categories |
+| Quiz completion rate by day (bar chart) | ✅ | Calls `GET /v2/admin/analytics/quiz-completions`; renders completions trend |
+| Country map: users by country code | ✅ | Calls `GET /v2/admin/analytics/country-distribution`; renders in table |
 
 ---
 
@@ -240,8 +238,8 @@ All blocked on Section A5 endpoints.
 
 | Feature | Status | Notes |
 |---|---|---|
-| League leaderboard view in admin (`/leagues/[id]/leaderboard`) | ⬜ | Standalone leaderboard page not built (per-league participant ranking endpoint also TBD) |
-| Distribute prizes action (with `confirmWord="DISTRIBUTE"`) | ✅ | Distribute button added to leagues table; calls `POST /v2/admin/leagues/:id/distribute-prizes` (A9). Hidden once `prizeStatus=1`. |
+| League leaderboard view in admin (`/leagues/[id]/leaderboard`) | ✅ | Server component page created; shows ranked participants with profile, score, games played. Calls `GET /v2/admin/leagues/:id/leaderboard` (A9). Leaderboard link in leagues table. |
+| Distribute prizes action (with `confirmWord="DISTRIBUTE"`) | ✅ | Distribute button in leagues table; calls `POST /v2/admin/leagues/:id/distribute-prizes` (A9). Hidden once `prizeStatus=1`. |
 
 ---
 
@@ -258,7 +256,7 @@ All blocked on Section A5 endpoints.
 
 | Feature | Status | Notes |
 |---|---|---|
-| Impression count column in sponsors list | ⬜ | API records impressions in `tbl_sponsor_banners.impressions`; just needs to be surfaced in the table |
+| Impression count column in sponsors list | ✅ | Displays `currentImpressions / impressionLimit views` next to Active/Inactive badge in sponsors-manager.tsx |
 
 ---
 
@@ -270,7 +268,7 @@ Coin Store and Progress Stages pages won't be reachable without nav links.
 |---|---|---|
 | "Coin Store" link in sidebar (under Monetization) | ✅ | Added in `components/sidebar.tsx` |
 | "Progress Stages" link in sidebar (under Gamification) | ✅ | Added in `components/sidebar.tsx` |
-| Role-based sidebar item visibility | ⬜ | All items always visible; super-admin vs staff roles not yet differentiated |
+| Role-based sidebar item visibility | ✅ | `useSession()` added; `navItems` mapped with `roles[]`; `content_admin / school_admin / finance_admin / support_admin / super_admin` each see their permitted items only |
 
 ---
 

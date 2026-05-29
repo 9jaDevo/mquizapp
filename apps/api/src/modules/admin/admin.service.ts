@@ -22,6 +22,7 @@ import { CreateQuestionDto } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { ImportQuestionsDto } from './dto/import-questions.dto';
 import { RejectAiQuestionDto } from './dto/reject-ai-question.dto';
+import { UpdateAiQuestionDto } from './dto/update-ai-question.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { ReorderCategoriesDto } from './dto/reorder-categories.dto';
@@ -107,6 +108,7 @@ export class AdminService {
     if (q.search) where.question = { contains: q.search };
     if (q.categoryId !== undefined) where.category = q.categoryId;
     if (q.difficulty !== undefined) where.level = q.difficulty;
+    if (q.isAi !== undefined) where.aiGenerated = q.isAi ? 1 : 0;
     const [items, total] = await Promise.all([
       this.prisma.question.findMany({ where, orderBy: { id: 'desc' }, skip, take }),
       this.prisma.question.count({ where }),
@@ -557,7 +559,10 @@ export class AdminService {
     const level = difficultyToLevel[dto.difficultyLevel];
 
     const client = new OpenAI({ apiKey });
-    const prompt = `Generate exactly ${dto.count} multiple-choice quiz questions about "${dto.topic}" at ${dto.difficultyLevel} difficulty. Return a JSON object with a "questions" array. Each question must have: question (string), optiona, optionb, optionc, optiond (strings), answer (one of "a","b","c","d" — the correct option key), note (short explanation).`;
+    const contextParts: string[] = [`topic: "${dto.topic}"`, `difficulty: ${dto.difficultyLevel}`];
+    if (dto.subject) contextParts.push(`subject: ${dto.subject}`);
+    if (dto.classLevel) contextParts.push(`class level: ${dto.classLevel}`);
+    const prompt = `Generate exactly ${dto.count} multiple-choice quiz questions with ${contextParts.join(', ')}. Return a JSON object with a "questions" array. Each question must have: question (string), optiona, optionb, optionc, optiond (strings), answer (one of "a","b","c","d" — the correct option key), note (short explanation).`;
 
     const modelName = process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
     let parsed: { questions: Array<{ question: string; optiona: string; optionb: string; optionc: string; optiond: string; answer: string; note?: string }> };
@@ -689,6 +694,7 @@ export class AdminService {
           answer: ai.correctAnswer,
           level: ai.level,
           note: ai.note ?? '',
+          aiGenerated: 1,
         },
       });
 
@@ -741,6 +747,40 @@ export class AdminService {
     });
 
     return { rejected: true, id: updated.id.toString() };
+  }
+
+  async updateAiQuestion(id: number, dto: UpdateAiQuestionDto) {
+    const ai = await this.prisma.aiQuestion.findUnique({ where: { id: BigInt(id) } });
+    if (!ai) {
+      throw new NotFoundException({ error: 'AI_QUESTION_NOT_FOUND', message: 'AI question not found' });
+    }
+    if (ai.status !== 0) {
+      throw new BadRequestException({ error: 'ALREADY_REVIEWED', message: 'Cannot edit a reviewed question' });
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (dto.question !== undefined) updateData.question = dto.question;
+    if (dto.note !== undefined) updateData.note = dto.note;
+    if (dto.answer !== undefined) updateData.correctAnswer = dto.answer;
+
+    if (
+      dto.optiona !== undefined ||
+      dto.optionb !== undefined ||
+      dto.optionc !== undefined ||
+      dto.optiond !== undefined
+    ) {
+      let opts: Record<string, string> = {};
+      try { opts = JSON.parse(ai.options) as Record<string, string>; } catch { /* keep empty */ }
+      if (dto.optiona !== undefined) opts['a'] = dto.optiona;
+      if (dto.optionb !== undefined) opts['b'] = dto.optionb;
+      if (dto.optionc !== undefined) opts['c'] = dto.optionc;
+      if (dto.optiond !== undefined) opts['d'] = dto.optiond;
+      updateData.options = JSON.stringify(opts);
+    }
+
+    if (Object.keys(updateData).length === 0) return { updated: false };
+    await this.prisma.aiQuestion.update({ where: { id: BigInt(id) }, data: updateData });
+    return { updated: true };
   }
 
   async listSettings() {
@@ -1356,6 +1396,44 @@ export class AdminService {
       this.prisma.tbl_league.count({ where }),
     ]);
     return this.paginate(rows.map((r) => this.mapLeague(r)), total, page, take);
+  }
+
+  async getLeagueLeaderboard(id: number, limit = 50) {
+    const safeLimit = Math.min(Math.max(limit, 1), 200);
+    const league = await this.prisma.tbl_league.findUnique({
+      where: { id },
+      select: { id: true, name: true },
+    });
+    if (!league) {
+      throw new NotFoundException({ error: 'LEAGUE_NOT_FOUND', message: 'League not found' });
+    }
+    const rows = await this.prisma.$queryRawUnsafe<
+      Array<{
+        user_id: number;
+        name: string;
+        profile: string | null;
+        cumulative_best_score: number;
+        games_played: number;
+      }>
+    >(
+      `SELECT lb.user_id, lb.cumulative_best_score, lb.games_played, u.name, u.profile
+       FROM tbl_league_leaderboard lb
+       JOIN tbl_users u ON u.id = lb.user_id
+       WHERE lb.league_id = ?
+       ORDER BY lb.cumulative_best_score DESC, lb.last_updated ASC
+       LIMIT ?`,
+      id,
+      safeLimit,
+    );
+    const entries = rows.map((r, idx) => ({
+      rank: idx + 1,
+      userId: Number(r.user_id),
+      name: r.name,
+      profile: r.profile,
+      score: Number(r.cumulative_best_score),
+      gamesPlayed: Number(r.games_played),
+    }));
+    return { leagueId: id, leagueName: league.name, entries };
   }
 
   async getLeague(id: number) {

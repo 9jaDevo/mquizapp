@@ -104,10 +104,12 @@ model Question {
   answer       String  @db.Text
   level        Int
   note         String  @db.Text
+  aiGenerated  Int     @default(0) @map("ai_generated") @db.TinyInt
 
   @@index([category], map: "category")
   @@index([languageId], map: "language_id")
   @@index([subcategory], map: "subcategory")
+  @@index([aiGenerated], map: "idx_question_ai_generated")
   @@map("tbl_question")
 }
 

@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Pencil } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -23,11 +24,19 @@ import {
 import { useApiClient } from '@/hooks/use-api-client';
 import type { Category, Question } from '@/types/api';
 
+const CLASS_LEVELS = [
+  'SS1', 'SS2', 'SS3',
+  'JSS1', 'JSS2', 'JSS3',
+  'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6',
+] as const;
+
 const schema = z.object({
   topic: z.string().min(3, 'Topic must be at least 3 characters'),
   count: z.number().int().min(1).max(20),
   difficultyLevel: z.enum(['easy', 'medium', 'hard']),
   categoryId: z.number({ error: 'Category is required' }),
+  subject: z.string().max(255).optional(),
+  classLevel: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -52,6 +61,15 @@ interface PendingResp {
   pagination?: { page: number; limit: number; total: number; pages: number };
 }
 
+interface AiHistoryItem {
+  id: number;
+  topic: string;
+  categoryId: number;
+  count: number;
+  tokensUsed: number;
+  createdAt: string;
+}
+
 function parseOptions(raw: string): string[] {
   if (!raw) return [];
   try {
@@ -68,6 +86,17 @@ export function AiQuestionsPanel({ categories }: AiQuestionsPanelProps) {
   const api = useApiClient();
   const [generatedQuestions, setGeneratedQuestions] = React.useState<Question[]>([]);
   const [isApproving, setIsApproving] = React.useState(false);
+  const [editingId, setEditingId] = React.useState<number | null>(null);
+  const [editDraft, setEditDraft] = React.useState<{
+    question: string;
+    optiona: string;
+    optionb: string;
+    optionc: string;
+    optiond: string;
+    answer: string;
+    note: string;
+  }>({ question: '', optiona: '', optionb: '', optionc: '', optiond: '', answer: 'a', note: '' });
+  const [isSavingEdit, setIsSavingEdit] = React.useState(false);
 
   const [pending, setPending] = React.useState<PendingAiQuestion[]>([]);
   const [pendingLoading, setPendingLoading] = React.useState(false);
@@ -75,6 +104,8 @@ export function AiQuestionsPanel({ categories }: AiQuestionsPanelProps) {
 
   const [rejectTarget, setRejectTarget] = React.useState<PendingAiQuestion | null>(null);
   const [rejectReason, setRejectReason] = React.useState('');
+  const [history, setHistory] = React.useState<AiHistoryItem[]>([]);
+  const [historyLoading, setHistoryLoading] = React.useState(false);
 
   const {
     register,
@@ -97,6 +128,20 @@ export function AiQuestionsPanel({ categories }: AiQuestionsPanelProps) {
       toast.error(e instanceof Error ? e.message : 'Failed to load pending');
     } finally {
       setPendingLoading(false);
+    }
+  }, [api]);
+
+  const loadHistory = React.useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const res = await api
+        .get<{ items: AiHistoryItem[] }>('/v2/admin/ai-questions/history?page=1&limit=20')
+        .then((r) => r.data as { items: AiHistoryItem[] });
+      setHistory(res.items ?? []);
+    } catch {
+      toast.error('Failed to load history');
+    } finally {
+      setHistoryLoading(false);
     }
   }, [api]);
 
@@ -129,7 +174,35 @@ export function AiQuestionsPanel({ categories }: AiQuestionsPanelProps) {
       setIsApproving(false);
     }
   }
+  function openEdit(q: Question) {
+    setEditingId(q.id as number);
+    setEditDraft({
+      question: q.question ?? '',
+      optiona: q.optiona ?? '',
+      optionb: q.optionb ?? '',
+      optionc: q.optionc ?? '',
+      optiond: q.optiond ?? '',
+      answer: q.answer ?? 'a',
+      note: q.note ?? '',
+    });
+  }
 
+  async function saveEdit() {
+    if (editingId === null) return;
+    setIsSavingEdit(true);
+    try {
+      await api.patch(`/v2/admin/ai-questions/${editingId}`, editDraft);
+      setGeneratedQuestions((prev) =>
+        prev.map((q) => (q.id === editingId ? { ...q, ...editDraft } : q)),
+      );
+      toast.success('Question updated');
+      setEditingId(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to save');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  }
   async function approveOne(q: PendingAiQuestion) {
     setBusyId(q.id);
     try {
@@ -162,10 +235,17 @@ export function AiQuestionsPanel({ categories }: AiQuestionsPanelProps) {
   }
 
   return (
-    <Tabs defaultValue="generate" onValueChange={(v) => v === 'pending' && loadPending()}>
+    <Tabs
+      defaultValue="generate"
+      onValueChange={(v) => {
+        if (v === 'pending') loadPending();
+        if (v === 'history') loadHistory();
+      }}
+    >
       <TabsList>
         <TabsTrigger value="generate">Generate</TabsTrigger>
         <TabsTrigger value="pending">Pending Queue</TabsTrigger>
+        <TabsTrigger value="history">History</TabsTrigger>
       </TabsList>
 
       <TabsContent value="generate" className="space-y-6">
@@ -233,6 +313,32 @@ export function AiQuestionsPanel({ categories }: AiQuestionsPanelProps) {
                 </div>
               </div>
 
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="subject">Subject (optional)</Label>
+                  <Input
+                    id="subject"
+                    {...register('subject')}
+                    placeholder="e.g. Mathematics, Biology"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Class Level (optional)</Label>
+                  <Select onValueChange={(v: string | null) => { if (v) setValue('classLevel', v); }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Any level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CLASS_LEVELS.map((cl) => (
+                        <SelectItem key={cl} value={cl}>
+                          {cl}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Generating...' : 'Generate'}
               </Button>
@@ -251,6 +357,68 @@ export function AiQuestionsPanel({ categories }: AiQuestionsPanelProps) {
             <CardContent>
               <ul className="space-y-4">
                 {generatedQuestions.map((q, i) => {
+                  const isEditing = editingId === (q.id as number);
+                  if (isEditing) {
+                    return (
+                      <li key={q.id ?? i} className="rounded-md border p-4 text-sm space-y-3">
+                        <div className="space-y-1">
+                          <Label>Question</Label>
+                          <Textarea
+                            value={editDraft.question}
+                            onChange={(e) => setEditDraft((d) => ({ ...d, question: e.target.value }))}
+                            rows={3}
+                          />
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {(['a', 'b', 'c', 'd'] as const).map((key) => (
+                            <div key={key} className="space-y-1">
+                              <Label>Option {key.toUpperCase()}</Label>
+                              <Input
+                                value={editDraft[`option${key}` as keyof typeof editDraft]}
+                                onChange={(e) => {
+                                  const field = `option${key}` as 'optiona' | 'optionb' | 'optionc' | 'optiond';
+                                  setEditDraft((d) => ({ ...d, [field]: e.target.value }));
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex items-end gap-3">
+                          <div className="w-36 space-y-1">
+                            <Label>Correct Answer</Label>
+                            <Select
+                              value={editDraft.answer}
+                              onValueChange={(v) => setEditDraft((d) => ({ ...d, answer: v }))}
+                            >
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="a">A</SelectItem>
+                                <SelectItem value="b">B</SelectItem>
+                                <SelectItem value="c">C</SelectItem>
+                                <SelectItem value="d">D</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex-1 space-y-1">
+                            <Label>Note (optional)</Label>
+                            <Input
+                              value={editDraft.note}
+                              onChange={(e) => setEditDraft((d) => ({ ...d, note: e.target.value }))}
+                              placeholder="Short explanation"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={saveEdit} disabled={isSavingEdit}>
+                            {isSavingEdit ? 'Saving…' : 'Save'}
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </li>
+                    );
+                  }
                   const opts = [q.optiona, q.optionb, q.optionc, q.optiond];
                   if (q.optione) opts.push(q.optione);
                   const correctIdx = q.answer
@@ -258,7 +426,17 @@ export function AiQuestionsPanel({ categories }: AiQuestionsPanelProps) {
                     : -1;
                   return (
                     <li key={q.id ?? i} className="rounded-md border p-4 text-sm space-y-2">
-                      <p className="font-medium">{q.question}</p>
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-medium flex-1">{q.question}</p>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 shrink-0"
+                          onClick={() => openEdit(q)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                       <ul className="space-y-1">
                         {opts.map((opt, j) => (
                           <li
@@ -344,6 +522,53 @@ export function AiQuestionsPanel({ categories }: AiQuestionsPanelProps) {
                   );
                 })}
               </ul>
+            )}
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="history">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Generation History</CardTitle>
+            <Button size="sm" variant="outline" onClick={loadHistory} disabled={historyLoading}>
+              {historyLoading ? 'Loading…' : 'Refresh'}
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {historyLoading ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
+            ) : history.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">No generation history yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-muted-foreground">
+                      <th className="pb-2 text-left font-medium">Date</th>
+                      <th className="pb-2 text-left font-medium">Topic</th>
+                      <th className="pb-2 text-left font-medium">Category</th>
+                      <th className="pb-2 text-right font-medium">Count</th>
+                      <th className="pb-2 text-right font-medium">Tokens</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {history.map((h) => (
+                      <tr key={h.id} className="border-b last:border-0">
+                        <td className="py-2 pr-4 whitespace-nowrap text-muted-foreground">
+                          {new Date(h.createdAt).toLocaleString()}
+                        </td>
+                        <td className="py-2 pr-4 max-w-[200px] truncate">{h.topic}</td>
+                        <td className="py-2 pr-4 text-muted-foreground">
+                          {categories.find((c) => c.id === h.categoryId)?.name ?? `#${h.categoryId}`}
+                        </td>
+                        <td className="py-2 pr-4 text-right">{h.count}</td>
+                        <td className="py-2 text-right">{h.tokensUsed.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </CardContent>
         </Card>

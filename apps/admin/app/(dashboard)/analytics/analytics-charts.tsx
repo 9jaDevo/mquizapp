@@ -25,6 +25,24 @@ import type {
   TimeSeriesPoint,
 } from '@/types/api';
 
+interface RetentionPeriod {
+  cohortSize: number;
+  returned: number;
+  rate: number;
+}
+
+interface RetentionResp {
+  d1: RetentionPeriod;
+  d7: RetentionPeriod;
+  d30: RetentionPeriod;
+}
+
+interface RevenueBreakdownItem {
+  provider: string;
+  total: number;
+  count: number;
+}
+
 interface AnalyticsChartsProps {
   stats: DashboardStats | null;
   userGrowth: TimeSeriesPoint[];
@@ -33,6 +51,8 @@ interface AnalyticsChartsProps {
   completions: TimeSeriesPoint[];
   topCategories: CategoryStat[];
   countries: CountryStat[];
+  retention?: RetentionResp | null;
+  revenueBreakdown?: RevenueBreakdownItem[] | null;
 }
 
 const COLORS = [
@@ -60,6 +80,8 @@ export function AnalyticsCharts({
   completions,
   topCategories,
   countries,
+  retention,
+  revenueBreakdown,
 }: AnalyticsChartsProps) {
   return (
     <div className="space-y-6">
@@ -253,6 +275,52 @@ export function AnalyticsCharts({
           </CardContent>
         </Card>
       </div>
+
+      {revenueBreakdown && revenueBreakdown.length > 0 && (
+        <div>
+          <h2 className="mb-4 text-lg font-semibold">Revenue by Provider (30d)</h2>
+          <Card>
+            <CardContent className="pt-4">
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={revenueBreakdown} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="provider" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} tickFormatter={(v: number) => `₦${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip formatter={(v) => [`₦${(v as number).toLocaleString()}`, 'Revenue']} />
+                  <Bar dataKey="total" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {retention && (
+        <div>
+          <h2 className="mb-4 text-lg font-semibold">User Retention</h2>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {(
+              [
+                { label: 'Day 1 Retention', period: retention.d1 },
+                { label: 'Day 7 Retention', period: retention.d7 },
+                { label: 'Day 30 Retention', period: retention.d30 },
+              ] as const
+            ).map(({ label, period }) => (
+              <Card key={label}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-muted-foreground">{label}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold">{(period.rate * 100).toFixed(1)}%</p>
+                  <p className="text-xs text-muted-foreground">
+                    {period.returned.toLocaleString()} / {period.cohortSize.toLocaleString()} users
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
