@@ -58,6 +58,7 @@ export interface Question {
   answer: string;
   level: number;
   note: string;
+  aiGenerated?: number;
 }
 
 // ─── Category ────────────────────────────────────────────────────────────────
@@ -131,6 +132,15 @@ export interface League {
   participantCount?: number;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface LeagueLeaderboardEntry {
+  rank: number;
+  userId: number;
+  name: string;
+  profile: string | null;
+  score: number;
+  gamesPlayed: number;
 }
 
 // ─── Sponsor / Ad ────────────────────────────────────────────────────────────

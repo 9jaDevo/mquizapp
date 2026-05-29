@@ -19,8 +19,26 @@ interface ItemsResp<T> {
   items: T[];
 }
 
+interface RetentionPeriod {
+  cohortSize: number;
+  returned: number;
+  rate: number;
+}
+
+interface RetentionResp {
+  d1: RetentionPeriod;
+  d7: RetentionPeriod;
+  d30: RetentionPeriod;
+}
+
+interface RevenueBreakdownItem {
+  provider: string;
+  total: number;
+  count: number;
+}
+
 export default async function AnalyticsPage() {
-  const [stats, growth, revenue, completions, topCats, countries] =
+  const [stats, growth, revenue, completions, topCats, countries, retentionResult, breakdownResult] =
     await Promise.allSettled([
       apiServer.get<DashboardStats>('/v2/admin/stats/overview', {
         tags: ['stats'],
@@ -46,6 +64,14 @@ export default async function AnalyticsPage() {
         '/v2/admin/analytics/country-distribution',
         { tags: ['analytics-countries'], revalidate: 600 },
       ),
+      apiServer.get<RetentionResp>('/v2/admin/analytics/retention', {
+        tags: ['analytics-retention'],
+        revalidate: 600,
+      }),
+      apiServer.get<{ items: RevenueBreakdownItem[] }>('/v2/admin/analytics/revenue-breakdown?days=30', {
+        tags: ['analytics-revenue-breakdown'],
+        revalidate: 300,
+      }),
     ]);
 
   const statsVal = stats.status === 'fulfilled' ? stats.value : null;
@@ -59,6 +85,10 @@ export default async function AnalyticsPage() {
     topCats.status === 'fulfilled' ? topCats.value.items : [];
   const countriesVal =
     countries.status === 'fulfilled' ? countries.value.items : [];
+  const retentionVal =
+    retentionResult.status === 'fulfilled' ? retentionResult.value : null;
+  const revenueBreakdownVal =
+    breakdownResult.status === 'fulfilled' ? breakdownResult.value.items : [];
 
   return (
     <div className="space-y-6">
@@ -74,6 +104,8 @@ export default async function AnalyticsPage() {
         completions={completionsVal}
         topCategories={topCatsVal}
         countries={countriesVal}
+        retention={retentionVal}
+        revenueBreakdown={revenueBreakdownVal}
       />
     </div>
   );

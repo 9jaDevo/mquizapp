@@ -28,6 +28,7 @@ import { CreateQuestionDto } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { ImportQuestionsDto } from './dto/import-questions.dto';
 import { RejectAiQuestionDto } from './dto/reject-ai-question.dto';
+import { UpdateAiQuestionDto } from './dto/update-ai-question.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { ReorderCategoriesDto } from './dto/reorder-categories.dto';
@@ -183,6 +184,15 @@ export class AdminController {
   @ApiOperation({ summary: 'Reject an AI question with optional reason' })
   rejectAiQuestion(@Param('id', ParseIntPipe) id: number, @Body() body: RejectAiQuestionDto) {
     return this.service.rejectAiQuestion(id, body);
+  }
+
+  @Patch('ai-questions/:id')
+  @ApiOperation({ summary: 'Edit a pending AI question before approval' })
+  updateAiQuestion(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateAiQuestionDto,
+  ) {
+    return this.service.updateAiQuestion(id, dto);
   }
 
   // ─── Fraud & Payments ────────────────────────────────────────────────────
@@ -382,6 +392,15 @@ export class AdminController {
     @Body() body: AssignLeagueDayDto,
   ) {
     return this.service.assignLeagueDay(id, body);
+  }
+
+  @Get('leagues/:id/leaderboard')
+  @ApiOperation({ summary: 'League leaderboard — top N participants by cumulative score' })
+  getLeagueLeaderboard(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('limit') limit?: string,
+  ) {
+    return this.service.getLeagueLeaderboard(id, limit ? +limit : 50);
   }
 
   @Post('leagues/:id/distribute-prizes')

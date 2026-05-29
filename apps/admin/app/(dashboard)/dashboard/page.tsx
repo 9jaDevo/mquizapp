@@ -1,5 +1,5 @@
 import { apiServer } from '@/lib/api-server';
-import type { DashboardStats } from '@/types/api';
+import type { CategoryStat, DashboardStats, TimeSeriesPoint } from '@/types/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
@@ -14,23 +14,35 @@ import {
   Calendar,
   Sparkles,
 } from 'lucide-react';
-
-async function getStats(): Promise<DashboardStats> {
-  return apiServer.get<DashboardStats>('/v2/admin/stats/overview', {
-    tags: ['dashboard-stats'],
-    revalidate: 60,
-  });
-}
+import { DashboardMiniCharts } from './dashboard-mini-charts';
 
 export default async function DashboardPage() {
-  let stats: DashboardStats | null = null;
-  let error: string | null = null;
+  const [statsResult, growthResult, completionsResult, topCatsResult] = await Promise.allSettled([
+    apiServer.get<DashboardStats>('/v2/admin/stats/overview', {
+      tags: ['dashboard-stats'],
+      revalidate: 60,
+    }),
+    apiServer.get<{ series: TimeSeriesPoint[] }>('/v2/admin/analytics/user-growth?days=7', {
+      tags: ['dashboard-user-growth'],
+      revalidate: 300,
+    }),
+    apiServer.get<{ series: TimeSeriesPoint[] }>('/v2/admin/analytics/quiz-completions?days=7', {
+      tags: ['dashboard-completions'],
+      revalidate: 300,
+    }),
+    apiServer.get<{ items: CategoryStat[] }>('/v2/admin/analytics/top-categories', {
+      tags: ['dashboard-top-cats'],
+      revalidate: 600,
+    }),
+  ]);
 
-  try {
-    stats = await getStats();
-  } catch (e) {
-    error = e instanceof Error ? e.message : 'Failed to load stats';
-  }
+  const stats = statsResult.status === 'fulfilled' ? statsResult.value : null;
+  const error = statsResult.status === 'rejected'
+    ? (statsResult.reason instanceof Error ? statsResult.reason.message : 'Failed to load stats')
+    : null;
+  const userGrowth = growthResult.status === 'fulfilled' ? growthResult.value.series : [];
+  const completions = completionsResult.status === 'fulfilled' ? completionsResult.value.series : [];
+  const topCategories = topCatsResult.status === 'fulfilled' ? topCatsResult.value.items : [];
 
   const statCards = [
     { label: 'Total Users', value: stats?.totalUsers, icon: Users, color: 'text-blue-500' },
@@ -119,6 +131,12 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      <DashboardMiniCharts
+        userGrowth={userGrowth}
+        completions={completions}
+        topCategories={topCategories}
+      />
     </div>
   );
 }

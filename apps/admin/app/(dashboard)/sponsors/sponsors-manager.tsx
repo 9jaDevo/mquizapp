@@ -240,6 +240,12 @@ export function SponsorsManager({ initialSponsors }: SponsorsManagerProps) {
                         {sponsor.isActive ? 'Active' : 'Inactive'}
                       </Badge>
                     )}
+                    {sponsor.currentImpressions !== undefined && (
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {(sponsor.currentImpressions).toLocaleString()}
+                        {sponsor.impressionLimit ? ` / ${sponsor.impressionLimit.toLocaleString()}` : ''} views
+                      </span>
+                    )}
                     <Button
                       size="icon"
                       variant="ghost"

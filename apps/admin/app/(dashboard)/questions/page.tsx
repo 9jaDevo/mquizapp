@@ -14,6 +14,7 @@ async function getQuestions(params: {
   search?: string;
   categoryId?: number;
   difficulty?: number;
+  isAi?: boolean;
 }): Promise<LegacyPaginated<Question>> {
   const sp = new URLSearchParams();
   sp.set('page', String(params.page));
@@ -21,6 +22,7 @@ async function getQuestions(params: {
   if (params.search) sp.set('search', params.search);
   if (params.categoryId) sp.set('categoryId', String(params.categoryId));
   if (params.difficulty) sp.set('difficulty', String(params.difficulty));
+  if (params.isAi !== undefined) sp.set('isAi', String(params.isAi));
   return apiServer.get<LegacyPaginated<Question>>(
     `/v2/admin/questions?${sp.toString()}`,
     { tags: ['questions'], revalidate: 60 },
@@ -47,12 +49,15 @@ export default async function QuestionsPage({
     search?: string;
     categoryId?: string;
     difficulty?: string;
+    isAi?: string;
   }>;
 }) {
   const params = await searchParams;
   const page = parseInt(params.page ?? '1', 10);
   const categoryId = params.categoryId ? parseInt(params.categoryId, 10) : undefined;
   const difficulty = params.difficulty ? parseInt(params.difficulty, 10) : undefined;
+  const isAi =
+    params.isAi === 'true' ? true : params.isAi === 'false' ? false : undefined;
 
   let data: LegacyPaginated<Question> | null = null;
   let error: string | null = null;
@@ -64,6 +69,7 @@ export default async function QuestionsPage({
       search: params.search,
       categoryId,
       difficulty,
+      isAi,
     });
   } catch (e) {
     error = e instanceof Error ? e.message : 'Failed to load questions';
@@ -98,6 +104,7 @@ export default async function QuestionsPage({
         initialSearch={params.search ?? ''}
         initialCategoryId={params.categoryId ?? ''}
         initialDifficulty={params.difficulty ?? ''}
+        initialIsAi={params.isAi ?? ''}
       />
     </div>
   );
