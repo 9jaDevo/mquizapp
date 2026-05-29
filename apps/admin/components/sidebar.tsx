@@ -17,6 +17,8 @@ import {
   Settings,
   GraduationCap,
   AlertTriangle,
+  Store,
+  Mountain,
 } from 'lucide-react';
 
 const navItems = [
@@ -27,9 +29,11 @@ const navItems = [
   { label: 'Categories', href: '/categories', icon: Tag },
   { label: 'Contests', href: '/contests', icon: Trophy },
   { label: 'Leagues', href: '/leagues', icon: Shield },
+  { label: 'Progress Stages', href: '/progress-stages', icon: Mountain },
   { label: 'Notifications', href: '/notifications', icon: Bell },
   { label: 'Analytics', href: '/analytics', icon: BarChart2 },
   { label: 'Sponsors', href: '/sponsors', icon: Megaphone },
+  { label: 'Coin Store', href: '/coin-store', icon: Store },
   { label: 'Fraud Flags', href: '/fraud-flags', icon: AlertTriangle },
   { label: 'Schools', href: '/schools', icon: GraduationCap },
   { label: 'Settings', href: '/settings', icon: Settings },

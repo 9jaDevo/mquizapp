@@ -19,6 +19,7 @@ import { FirebaseAuthGuard } from '../../common/guards/firebase-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { InitializePaymentDto } from './dto/initialize-payment.dto';
+import { VerifyAppleIapDto } from './dto/verify-apple-iap.dto';
 import { CoinHistoryQueryDto } from '../users/dto/coin-history-query.dto';
 
 @ApiTags('payments')
@@ -43,6 +44,21 @@ export class PaymentsController {
   @ApiOperation({ summary: 'Verify a Paystack payment by reference and fulfill if successful' })
   verify(@CurrentUser() user: DecodedIdToken, @Param('reference') reference: string) {
     return this.service.verifyPayment(user.uid, reference);
+  }
+
+  @ApiBearerAuth('firebase-token')
+  @UseGuards(FirebaseAuthGuard)
+  @Post('apple-iap/verify')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @ApiOperation({
+    summary: 'Verify an Apple In-App Purchase receipt and credit coins (idempotent on transactionId).',
+  })
+  verifyAppleIap(
+    @CurrentUser() user: DecodedIdToken,
+    @Body() body: VerifyAppleIapDto,
+  ) {
+    return this.service.verifyAppleIap(user.uid, body);
   }
 
   @ApiBearerAuth('firebase-token')

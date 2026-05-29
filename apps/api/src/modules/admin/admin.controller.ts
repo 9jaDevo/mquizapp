@@ -45,6 +45,10 @@ import { AnalyticsRangeDto } from './dto/analytics-range.dto';
 import { ListUsersQueryDto } from './dto/list-users-query.dto';
 import { CreateSubcategoryDto } from './dto/create-subcategory.dto';
 import { UpdateSubcategoryDto } from './dto/update-subcategory.dto';
+import { CreateCoinPackDto } from './dto/create-coin-pack.dto';
+import { UpdateCoinPackDto } from './dto/update-coin-pack.dto';
+import { CreateProgressStageDto } from './dto/create-progress-stage.dto';
+import { UpdateProgressStageDto } from './dto/update-progress-stage.dto';
 
 @ApiTags('admin')
 @ApiBearerAuth('firebase-token')
@@ -159,6 +163,12 @@ export class AdminController {
   @ApiOperation({ summary: 'List AI-generated questions awaiting review' })
   aiPending(@Query() q: ListPaginationDto) {
     return this.service.listPendingAiQuestions(q);
+  }
+
+  @Get('ai-questions/history')
+  @ApiOperation({ summary: 'List recent AI generation log entries (audit trail)' })
+  aiHistory(@Query() q: ListPaginationDto) {
+    return this.service.listAiGenerationHistory(q);
   }
 
   @Post('ai-questions/:id/approve')
@@ -374,6 +384,14 @@ export class AdminController {
     return this.service.assignLeagueDay(id, body);
   }
 
+  @Post('leagues/:id/distribute-prizes')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Mark league prizes as distributed' })
+  distributeLeague(@Param('id', ParseIntPipe) id: number) {
+    return this.service.distributeLeaguePrizes(id);
+  }
+
   // ─── Sponsors ─────────────────────────────────────────────────────────────
 
   @Get('sponsors')
@@ -448,5 +466,79 @@ export class AdminController {
   @ApiOperation({ summary: 'Top 10 countries by registered user count' })
   analyticsCountries() {
     return this.service.analyticsCountryDistribution();
+  }
+
+  @Get('analytics/retention')
+  @ApiOperation({ summary: 'Day 1 / Day 7 / Day 30 retention rates' })
+  analyticsRetention() {
+    return this.service.analyticsRetention();
+  }
+
+  @Get('analytics/revenue-breakdown')
+  @ApiOperation({ summary: 'Revenue grouped by payment provider for the last N days' })
+  analyticsRevenueBreakdown(@Query() q: AnalyticsRangeDto) {
+    return this.service.analyticsRevenueBreakdown(q.days ?? 30);
+  }
+
+  // ─── Coin Store (IAP packs) ───────────────────────────────────────────
+
+  @Get('coin-store')
+  @ApiOperation({ summary: 'List all coin packs (active and inactive)' })
+  listCoinPacks() {
+    return this.service.listCoinPacks();
+  }
+
+  @Post('coin-store')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Create a coin pack' })
+  createCoinPack(@Body() body: CreateCoinPackDto) {
+    return this.service.createCoinPack(body);
+  }
+
+  @Patch('coin-store/:id')
+  @ApiOperation({ summary: 'Update a coin pack' })
+  updateCoinPack(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: UpdateCoinPackDto,
+  ) {
+    return this.service.updateCoinPack(id, body);
+  }
+
+  @Delete('coin-store/:id')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Soft-delete (deactivate) a coin pack' })
+  deleteCoinPack(@Param('id', ParseIntPipe) id: number) {
+    return this.service.deleteCoinPack(id);
+  }
+
+  // ─── Progress Stages ────────────────────────────────────────────────────
+
+  @Get('progress-stages')
+  @ApiOperation({ summary: 'List all progress stages ordered by stage number' })
+  listProgressStages() {
+    return this.service.listProgressStages();
+  }
+
+  @Post('progress-stages')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Create a progress stage' })
+  createProgressStage(@Body() body: CreateProgressStageDto) {
+    return this.service.createProgressStage(body);
+  }
+
+  @Patch('progress-stages/:id')
+  @ApiOperation({ summary: 'Update a progress stage' })
+  updateProgressStage(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: UpdateProgressStageDto,
+  ) {
+    return this.service.updateProgressStage(id, body);
+  }
+
+  @Delete('progress-stages/:id')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Delete a progress stage' })
+  deleteProgressStage(@Param('id', ParseIntPipe) id: number) {
+    return this.service.deleteProgressStage(id);
   }
 }
