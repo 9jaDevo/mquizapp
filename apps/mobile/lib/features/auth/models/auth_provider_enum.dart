@@ -1,4 +1,4 @@
-enum MquizAuthProvider { google, apple, phone, guest }
+enum MquizAuthProvider { google, apple, phone, guest, email }
 
 extension AuthProviderExtension on MquizAuthProvider {
   String get apiType {
@@ -11,6 +11,8 @@ extension AuthProviderExtension on MquizAuthProvider {
         return 'phone';
       case MquizAuthProvider.guest:
         return 'guest';
+      case MquizAuthProvider.email:
+        return 'email';
     }
   }
 }

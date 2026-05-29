@@ -127,6 +127,61 @@ class AuthRemoteDataSource {
     );
   }
 
+  // ── Email / Password ───────────────────────────────────────────────────────
+  Future<AuthModel> registerWithEmail({
+    required String email,
+    required String password,
+    required String name,
+    String? fcmToken,
+  }) async {
+    final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    final firebaseUser = userCredential.user!;
+    await firebaseUser.updateDisplayName(name);
+
+    final data = await _api.authLogin(
+      type: mquiz.MquizAuthProvider.email.apiType,
+      name: name,
+      email: email,
+      fcmToken: fcmToken,
+    );
+
+    return AuthModel.fromApiResponse(
+      data,
+      firebaseUser.uid,
+      mquiz.MquizAuthProvider.email,
+      true,
+    );
+  }
+
+  Future<AuthModel> signInWithEmail({
+    required String email,
+    required String password,
+    String? fcmToken,
+  }) async {
+    final userCredential = await _firebaseAuth.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    final firebaseUser = userCredential.user!;
+
+    final data = await _api.authLogin(
+      type: mquiz.MquizAuthProvider.email.apiType,
+      email: email,
+      name: firebaseUser.displayName,
+      fcmToken: fcmToken,
+    );
+
+    return AuthModel.fromApiResponse(
+      data,
+      firebaseUser.uid,
+      mquiz.MquizAuthProvider.email,
+      userCredential.additionalUserInfo?.isNewUser ?? false,
+    );
+  }
+
   // ── Guest ──────────────────────────────────────────────────────────────────
   Future<AuthModel> signInAsGuest({String? fcmToken}) async {
     final userCredential = await _firebaseAuth.signInAnonymously();
