@@ -10,9 +10,17 @@ import 'package:mquiz/features/contests/models/contest_model.dart';
 import 'package:mquiz/features/leaderboard/models/leaderboard_entry_model.dart';
 
 class ContestDetailScreen extends StatefulWidget {
-  const ContestDetailScreen({super.key, required this.contest});
+  /// Regular navigation: pass [contest] directly.
+  /// Deep link navigation: pass [contestId] only — screen will fetch data.
+  const ContestDetailScreen({
+    super.key,
+    this.contest,
+    this.contestId = 0,
+  }) : assert(contest != null || contestId > 0,
+            'Either contest or a valid contestId must be provided');
 
-  final Contest contest;
+  final Contest? contest;
+  final int contestId;
 
   @override
   State<ContestDetailScreen> createState() => _ContestDetailScreenState();
@@ -28,10 +36,25 @@ class _ContestDetailScreenState extends State<ContestDetailScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<ContestDetailCubit>().load(
-          widget.contest,
-          currentUserId: _currentUserId(),
-        );
+    final contest = widget.contest;
+    if (contest != null) {
+      context.read<ContestDetailCubit>().load(
+            contest,
+            currentUserId: _currentUserId(),
+          );
+    } else {
+      context.read<ContestDetailCubit>().loadById(
+            widget.contestId,
+            currentUserId: _currentUserId(),
+          );
+    }
+  }
+
+  String get _title {
+    if (widget.contest != null) return widget.contest!.name;
+    final state = context.read<ContestDetailCubit>().state;
+    if (state is ContestDetailLoaded) return state.contest.name;
+    return 'Contest';
   }
 
   @override
@@ -41,7 +64,11 @@ class _ContestDetailScreenState extends State<ContestDetailScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        title: Text(widget.contest.name),
+        title: BlocBuilder<ContestDetailCubit, ContestDetailState>(
+          builder: (_, state) => Text(
+            state is ContestDetailLoaded ? state.contest.name : _title,
+          ),
+        ),
       ),
       body: BlocBuilder<ContestDetailCubit, ContestDetailState>(
         builder: (context, state) => switch (state) {
@@ -50,10 +77,20 @@ class _ContestDetailScreenState extends State<ContestDetailScreen> {
             const Center(child: CircularProgressIndicator()),
           ContestDetailError(message: final m) => ErrorStateView(
               message: m,
-              onRetry: () => context.read<ContestDetailCubit>().load(
-                    widget.contest,
-                    currentUserId: _currentUserId(),
-                  ),
+              onRetry: () {
+                final contest = widget.contest;
+                if (contest != null) {
+                  context.read<ContestDetailCubit>().load(
+                        contest,
+                        currentUserId: _currentUserId(),
+                      );
+                } else {
+                  context.read<ContestDetailCubit>().loadById(
+                        widget.contestId,
+                        currentUserId: _currentUserId(),
+                      );
+                }
+              },
             ),
           ContestDetailLoaded() => _DetailBody(state: state),
         },

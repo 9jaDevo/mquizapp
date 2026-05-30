@@ -98,6 +98,16 @@ class _ProfileView extends StatelessWidget {
                   onTap: () => context.push(AppConstants.routeCoinHistory),
                 ),
                 _ActionTile(
+                  icon: Icons.bookmarks_outlined,
+                  label: 'Saved Questions',
+                  onTap: () => context.push(AppConstants.routeBookmarks),
+                ),
+                _ActionTile(
+                  icon: Icons.settings_outlined,
+                  label: 'Settings',
+                  onTap: () => context.push(AppConstants.routeSettings),
+                ),
+                _ActionTile(
                   icon: Icons.logout,
                   label: 'Sign Out',
                   color: AppColors.wrong,

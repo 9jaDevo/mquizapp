@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:mquiz/core/ads/ad_service.dart';
 import 'package:mquiz/core/constants/app_constants.dart';
 import 'package:mquiz/core/theme/app_colors.dart';
 import 'package:mquiz/core/widgets/common_widgets.dart';
@@ -18,6 +19,14 @@ class QuizResultScreen extends StatefulWidget {
 
 class _QuizResultScreenState extends State<QuizResultScreen> {
   bool _mysteryBoxShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Non-blocking: triggers an interstitial ad every N completions.
+    WidgetsBinding.instance.addPostFrameCallback(
+        (_) => AdService.instance.recordQuizCompletion());
+  }
 
   @override
   Widget build(BuildContext context) {

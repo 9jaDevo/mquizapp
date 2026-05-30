@@ -31,19 +31,33 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- AdMob: replace with real iOS AdMob App ID before App Store submission -->
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-REPLACE_WITH_IOS_ADMOB_APP_ID</string>
+	<!-- App Tracking Transparency — required on iOS 14+ before showing ads -->
+	<key>NSUserTrackingUsageDescription</key>
+	<string>mQuiz uses your data to show relevant ads and improve your quiz experience.</string>
+	<!-- Deep link scheme mquiz:// for push notification routing and sharing -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.togafrica.mquiz</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>mquiz</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

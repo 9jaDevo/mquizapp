@@ -7,6 +7,7 @@ import 'package:mquiz/core/theme/app_colors.dart';
 import 'package:mquiz/core/widgets/common_widgets.dart';
 import 'package:mquiz/features/home/cubit/home_cubit.dart';
 import 'package:mquiz/features/home/models/home_dashboard_model.dart';
+import 'package:mquiz/features/notifications/cubit/notifications_cubit.dart';
 import 'package:mquiz/features/profile/models/user_profile_model.dart';
 import 'package:mquiz/features/quiz/models/category_model.dart';
 
@@ -200,6 +201,36 @@ class _GreetingHeader extends StatelessWidget {
               IconButton(
                 onPressed: () => context.go(AppConstants.routeProfile),
                 icon: const Icon(Icons.person_outline, color: Colors.white),
+              ),
+              BlocBuilder<NotificationsCubit, NotificationsState>(
+                builder: (context, state) {
+                  final unread =
+                      state is NotificationsLoaded ? state.unreadCount : 0;
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      IconButton(
+                        onPressed: () => context
+                            .push(AppConstants.routeNotifications),
+                        icon: const Icon(Icons.notifications_outlined,
+                            color: Colors.white),
+                      ),
+                      if (unread > 0)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: AppColors.wrong,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
             ],
           ),

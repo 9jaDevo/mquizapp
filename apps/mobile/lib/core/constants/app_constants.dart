@@ -58,6 +58,9 @@ abstract final class AppConstants {
   static const String routeProfile = '/profile';
   static const String routeProfileEdit = '/profile/edit';
   static const String routeCoinHistory = '/profile/coin-history';
+  static const String routeNotifications = '/notifications';
+  static const String routeSettings = '/settings';
+  static const String routeBookmarks = '/bookmarks';
   static const String routeSubcategories = '/categories/:categoryId';
   static const String routeQuiz = '/quiz';
   static const String routeQuizResult = '/quiz/result';

@@ -7,12 +7,14 @@ import 'package:mquiz/features/auth/screens/login_screen.dart';
 import 'package:mquiz/features/auth/screens/otp_screen.dart';
 import 'package:mquiz/features/auth/screens/profile_setup_screen.dart';
 import 'package:mquiz/features/auth/screens/splash_screen.dart';
+import 'package:mquiz/features/bookmarks/screens/bookmarks_screen.dart';
 import 'package:mquiz/features/contests/screens/contests_list_screen.dart';
 import 'package:mquiz/features/home/screens/home_screen.dart';
 import 'package:mquiz/features/leaderboard/screens/leaderboard_screen.dart';
 import 'package:mquiz/features/leagues/screens/league_detail_screen.dart';
 import 'package:mquiz/features/leagues/screens/leagues_list_screen.dart';
 import 'package:mquiz/features/lives/screens/booster_store_screen.dart';
+import 'package:mquiz/features/notifications/screens/notifications_screen.dart';
 import 'package:mquiz/features/profile/screens/coin_history_screen.dart';
 import 'package:mquiz/features/profile/screens/edit_profile_screen.dart';
 import 'package:mquiz/features/profile/screens/profile_screen.dart';
@@ -28,6 +30,7 @@ import 'package:mquiz/features/contests/screens/contest_quiz_screen.dart';
 import 'package:mquiz/features/contests/models/contest_model.dart';
 import 'package:mquiz/features/leagues/screens/league_quiz_screen.dart';
 import 'package:mquiz/features/quiz/screens/session_result_screen.dart';
+import 'package:mquiz/features/settings/screens/settings_screen.dart';
 import 'package:mquiz/features/store/screens/coin_store_screen.dart';
 
 class AppRouter {
@@ -110,8 +113,13 @@ class AppRouter {
         GoRoute(
           path: AppConstants.routeContestDetail,
           builder: (ctx, state) {
-            final contest = state.extra as Contest;
-            return ContestDetailScreen(contest: contest);
+            // Support both object-passing (normal navigation) and deep-link
+            // (extra == null). When arriving via deep link, the screen fetches
+            // its own data using the contestId path parameter.
+            final contest = state.extra as Contest?;
+            final id =
+                int.tryParse(state.pathParameters['contestId'] ?? '0') ?? 0;
+            return ContestDetailScreen(contest: contest, contestId: id);
           },
         ),
         GoRoute(
@@ -179,6 +187,18 @@ class AppRouter {
                   builder: (ctx, _) => const CoinHistoryScreen(),
                 ),
               ],
+            ),
+            GoRoute(
+              path: AppConstants.routeNotifications,
+              builder: (ctx, _) => const NotificationsScreen(),
+            ),
+            GoRoute(
+              path: AppConstants.routeSettings,
+              builder: (ctx, _) => const SettingsScreen(),
+            ),
+            GoRoute(
+              path: AppConstants.routeBookmarks,
+              builder: (ctx, _) => const BookmarksScreen(),
             ),
           ],
         ),
