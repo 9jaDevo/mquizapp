@@ -30,6 +30,8 @@ class QuizInProgress extends QuizState {
     required this.secondsLeft,
     required this.elapsedMsPerQuestion,
     required this.startedAt,
+    this.hiddenOptions = const {},
+    this.appliedBoosterCodes = const {},
   });
 
   final List<QuizQuestion> questions;
@@ -46,6 +48,12 @@ class QuizInProgress extends QuizState {
 
   final DateTime startedAt;
 
+  /// Option keys hidden by the 50/50 booster for the current question.
+  final Set<String> hiddenOptions;
+
+  /// Booster codes already applied to the current question (prevents re-use).
+  final Set<String> appliedBoosterCodes;
+
   QuizQuestion get current => questions[index];
   int get total => questions.length;
   bool get isLast => index >= questions.length - 1;
@@ -56,6 +64,8 @@ class QuizInProgress extends QuizState {
     Map<int, String>? answers,
     int? secondsLeft,
     Map<int, int>? elapsedMsPerQuestion,
+    Set<String>? hiddenOptions,
+    Set<String>? appliedBoosterCodes,
   }) =>
       QuizInProgress(
         questions: questions,
@@ -65,10 +75,12 @@ class QuizInProgress extends QuizState {
         elapsedMsPerQuestion:
             elapsedMsPerQuestion ?? this.elapsedMsPerQuestion,
         startedAt: startedAt,
+        hiddenOptions: hiddenOptions ?? this.hiddenOptions,
+        appliedBoosterCodes: appliedBoosterCodes ?? this.appliedBoosterCodes,
       );
 
   @override
-  List<Object?> get props => [questions, index, answers, secondsLeft];
+  List<Object?> get props => [questions, index, answers, secondsLeft, hiddenOptions, appliedBoosterCodes];
 }
 
 class QuizSubmitting extends QuizState {
@@ -174,7 +186,7 @@ class QuizCubit extends Cubit<QuizState> {
     final s = state;
     if (s is! QuizInProgress) return;
     final qId = s.current.id;
-    final elapsedMs = (AppConstants.secondsPerQuestion - s.secondsLeft) * 1000;
+    final elapsedMs = ((AppConstants.secondsPerQuestion - s.secondsLeft) * 1000).clamp(0, AppConstants.secondsPerQuestion * 1000);
     final newAnswers = Map<int, String>.from(s.answers);
     newAnswers[qId] = newAnswers[qId] ?? answer;
     final newElapsed = Map<int, int>.from(s.elapsedMsPerQuestion)
@@ -196,6 +208,8 @@ class QuizCubit extends Cubit<QuizState> {
         answers: newAnswers,
         elapsedMsPerQuestion: newElapsed,
         secondsLeft: AppConstants.secondsPerQuestion,
+        hiddenOptions: const {},
+        appliedBoosterCodes: const {},
       ));
     }
   }
@@ -254,6 +268,51 @@ class QuizCubit extends Cubit<QuizState> {
     final s = state;
     if (s is! QuizInProgress) return;
     _commitAnswer('', autoAdvance: true);
+  }
+
+  /// Applies a booster for the current question.
+  /// Enforces single-use per question via [appliedBoosterCodes].
+  Future<void> applyBooster({
+    required String code,
+    required int boosterTypeId,
+  }) async {
+    final s = state;
+    if (s is! QuizInProgress) return;
+    if (s.appliedBoosterCodes.contains(code)) return;
+
+    final newCodes = Set<String>.from(s.appliedBoosterCodes)..add(code);
+
+    if (code == '50_50' || code == 'fifty_fifty') {
+      try {
+        final removed = await _repo.fiftyFifty(
+          questionId: s.current.id,
+          boosterTypeId: boosterTypeId,
+        );
+        final newHidden = Set<String>.from(s.hiddenOptions)..addAll(removed);
+        emit(s.copyWith(hiddenOptions: newHidden, appliedBoosterCodes: newCodes));
+      } catch (_) {
+        // Booster API failed — do not mark as used so user can retry
+      }
+    } else if (code == 'time_freeze' || code == 'add_time') {
+      try {
+        await _repo.consumeBooster(boosterTypeId);
+        emit(s.copyWith(
+          secondsLeft: s.secondsLeft + 30,
+          appliedBoosterCodes: newCodes,
+        ));
+      } catch (_) {}
+    } else if (code == 'skip') {
+      try {
+        await _repo.consumeBooster(boosterTypeId);
+        emit(s.copyWith(appliedBoosterCodes: newCodes));
+        _commitAnswer('', autoAdvance: true);
+      } catch (_) {}
+    } else {
+      try {
+        await _repo.consumeBooster(boosterTypeId);
+        emit(s.copyWith(appliedBoosterCodes: newCodes));
+      } catch (_) {}
+    }
   }
 
   void reset() {

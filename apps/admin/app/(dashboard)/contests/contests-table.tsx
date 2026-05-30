@@ -78,6 +78,12 @@ export function ContestsTable({ data, pageCount, pageIndex }: ContestsTableProps
             >
               Edit
             </Link>
+            <Link
+              href={`/contests/${contest.id}/questions`}
+              className={buttonVariants({ variant: 'outline', size: 'sm' })}
+            >
+              Questions
+            </Link>
             {contest.status === 'ended' && (
               <Button
                 size="sm"

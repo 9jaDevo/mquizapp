@@ -90,6 +90,63 @@ export class BoostersService {
     });
   }
 
+  /**
+   * Fifty-fifty booster: consumes 1 booster from inventory and returns
+   * 2 wrong option keys for the given question so the client can hide them.
+   */
+  async fiftyFifty(firebaseUid: string, questionId: number, boosterTypeId: number, source: 'quiz' | 'contest') {
+    const userId = await this.resolveUserId(firebaseUid);
+
+    // Validate booster type
+    const type = await this.prisma.boosterType.findUnique({ where: { id: boosterTypeId } });
+    if (!type || !type.isActive) {
+      throw new NotFoundException({ error: 'BOOSTER_NOT_FOUND', message: 'Booster type not found' });
+    }
+    if (type.code !== '50_50') {
+      throw new BadRequestException({ error: 'INVALID_BOOSTER', message: 'Booster is not a 50/50 type' });
+    }
+
+    // Fetch question and correct answer
+    let correctKey: string | null = null;
+    let optionKeys: string[] = ['a', 'b', 'c', 'd'];
+
+    if (source === 'contest') {
+      const q = await this.prisma.tbl_contest_question.findUnique({ where: { id: questionId } });
+      if (!q) throw new NotFoundException({ error: 'QUESTION_NOT_FOUND', message: 'Question not found' });
+      correctKey = q.answer?.trim().toLowerCase() ?? null;
+      if (q.optione) optionKeys = ['a', 'b', 'c', 'd', 'e'];
+    } else {
+      const q = await this.prisma.question.findUnique({ where: { id: questionId } });
+      if (!q) throw new NotFoundException({ error: 'QUESTION_NOT_FOUND', message: 'Question not found' });
+      correctKey = q.answer?.trim().toLowerCase() ?? null;
+      if (q.optione) optionKeys = ['a', 'b', 'c', 'd', 'e'];
+    }
+
+    // Consume booster atomically
+    await this.prisma.$transaction(async (tx) => {
+      const inv = await tx.userBoosterInventory.findUnique({
+        where: { userId_boosterTypeId: { userId, boosterTypeId } },
+      });
+      if (!inv || inv.quantity <= 0) {
+        throw new BadRequestException({ error: 'NO_BOOSTERS', message: 'No 50/50 boosters in inventory' });
+      }
+      await tx.userBoosterInventory.update({
+        where: { id: inv.id },
+        data: { quantity: { decrement: 1 } },
+      });
+    });
+
+    // Pick 2 wrong options to remove (shuffle wrong options, take first 2)
+    const wrongOptions = optionKeys.filter((k) => k !== correctKey);
+    for (let i = wrongOptions.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [wrongOptions[i], wrongOptions[j]] = [wrongOptions[j], wrongOptions[i]];
+    }
+    const removedOptions = wrongOptions.slice(0, 2);
+
+    return { removedOptions };
+  }
+
   private async resolveUserId(firebaseUid: string): Promise<number> {
     const u = await this.prisma.user.findFirst({
       where: { firebaseId: firebaseUid },

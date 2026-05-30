@@ -68,6 +68,7 @@ class Booster extends Equatable {
     required this.coinCost,
     this.icon,
     this.quantity,
+    this.code,
   });
 
   final int id;
@@ -76,6 +77,11 @@ class Booster extends Equatable {
   final int coinCost;
   final String? icon;
   final int? quantity;
+  /// Machine-readable booster code (e.g. '50_50', 'time_freeze', 'skip').
+  final String? code;
+
+  /// The booster type ID used for API calls.
+  int get boosterTypeId => id;
 
   factory Booster.fromJson(Map<String, dynamic> j) => Booster(
         id: parseIntOr(j['id'] ?? j['boosterTypeId'], 0),
@@ -84,8 +90,9 @@ class Booster extends Equatable {
         coinCost: parseIntOr(j['coinCost'] ?? j['cost'] ?? j['price'], 0),
         icon: parseString(j['icon'] ?? j['image']),
         quantity: parseInt(j['quantity'] ?? j['owned']),
+        code: parseString(j['code'] ?? j['boosterCode']),
       );
 
   @override
-  List<Object?> get props => [id, name, description, coinCost, icon, quantity];
+  List<Object?> get props => [id, name, description, coinCost, icon, quantity, code];
 }

@@ -151,13 +151,14 @@ class _QuizPlayView extends StatelessWidget {
                   )
                 else
                   for (final opt in q.orderedOptions)
-                    _OptionTile(
-                      optionKey: opt.key,
-                      label: opt.value,
-                      selected: selected == opt.key,
-                      onTap: () =>
-                          context.read<QuizCubit>().selectOption(opt.key),
-                    ),
+                    if (!state.hiddenOptions.contains(opt.key))
+                      _OptionTile(
+                        optionKey: opt.key,
+                        label: opt.value,
+                        selected: selected == opt.key,
+                        onTap: () =>
+                            context.read<QuizCubit>().selectOption(opt.key),
+                      ),
               ],
             ),
           ),
@@ -423,6 +424,7 @@ class _BoosterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isUsed = state.appliedBoosterCodes.contains(booster.code);
     final name = booster.name.toLowerCase();
     IconData icon;
     if (name.contains('time') || name.contains('clock')) {
@@ -434,27 +436,28 @@ class _BoosterChip extends StatelessWidget {
     } else {
       icon = Icons.bolt_rounded;
     }
+    final color = isUsed ? Colors.grey : AppColors.primary;
     return Tooltip(
-      message: booster.name,
+      message: isUsed ? '${booster.name} (used)' : booster.name,
       child: Material(
-        color: AppColors.primary.withValues(alpha: 0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
-          onTap: () => _applyBooster(context),
+          onTap: isUsed ? null : () => _applyBooster(context),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 16, color: AppColors.primary),
+                Icon(icon, size: 16, color: color),
                 const SizedBox(width: 4),
                 Text(
                   booster.name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.primary,
+                    color: color,
                   ),
                 ),
                 const SizedBox(width: 4),
@@ -462,7 +465,7 @@ class _BoosterChip extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                   decoration: BoxDecoration(
-                    color: AppColors.primary,
+                    color: color,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -483,28 +486,10 @@ class _BoosterChip extends StatelessWidget {
   }
 
   void _applyBooster(BuildContext context) {
-    final cubit = context.read<QuizCubit>();
-    final name = booster.name.toLowerCase();
-    if (name.contains('time') || name.contains('clock')) {
-      cubit.addTime(30);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('+30 seconds added!'),
-          behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 2),
-        ),
-      );
-    } else if (name.contains('skip')) {
-      cubit.skipQuestion();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${booster.name} activated!'),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
+    context.read<QuizCubit>().applyBooster(
+          code: booster.code ?? booster.name.toLowerCase().replaceAll(' ', '_'),
+          boosterTypeId: booster.boosterTypeId,
+        );
   }
 }
 
