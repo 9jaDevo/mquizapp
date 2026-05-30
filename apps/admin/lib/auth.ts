@@ -80,9 +80,10 @@ export const authOptions: NextAuthOptions = {
             console.error('Firebase custom token exchange failed', await exchangeRes.text());
             return null;
           }
-          const { idToken, expiresIn } = await exchangeRes.json() as {
+          const { idToken, expiresIn, refreshToken } = await exchangeRes.json() as {
             idToken: string;
             expiresIn: string;
+            refreshToken: string;
           };
 
           return {
@@ -94,6 +95,7 @@ export const authOptions: NextAuthOptions = {
             role,
             permissions,
             firebaseToken: idToken,
+            firebaseRefreshToken: refreshToken,
             firebaseTokenExpiry: Date.now() + (parseInt(expiresIn, 10) - 60) * 1000,
           };
         } catch (err) {
@@ -169,8 +171,49 @@ export const authOptions: NextAuthOptions = {
         token.role = (user as { role?: string }).role ?? 'admin';
         token.permissions = (user as { permissions?: string }).permissions ?? '';
         token.firebaseToken = (user as { firebaseToken?: string }).firebaseToken ?? '';
+        token.firebaseRefreshToken = (user as { firebaseRefreshToken?: string }).firebaseRefreshToken ?? '';
         token.firebaseTokenExpiry = (user as { firebaseTokenExpiry?: number }).firebaseTokenExpiry ?? 0;
       }
+
+      // Proactively refresh the Firebase ID token if it expires within 5 minutes
+      if (
+        token.firebaseRefreshToken &&
+        token.firebaseTokenExpiry &&
+        token.firebaseTokenExpiry < Date.now() + 5 * 60 * 1000
+      ) {
+        const apiKey = process.env.FIREBASE_API_KEY;
+        if (apiKey) {
+          try {
+            const refreshRes = await fetch(
+              `https://securetoken.googleapis.com/v1/token?key=${apiKey}`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `grant_type=refresh_token&refresh_token=${encodeURIComponent(token.firebaseRefreshToken)}`,
+              },
+            );
+            if (refreshRes.ok) {
+              const { id_token, expires_in, refresh_token } = await refreshRes.json() as {
+                id_token: string;
+                expires_in: string;
+                refresh_token: string;
+              };
+              token.firebaseToken = id_token;
+              token.firebaseRefreshToken = refresh_token;
+              token.firebaseTokenExpiry = Date.now() + (parseInt(expires_in, 10) - 60) * 1000;
+            } else {
+              // Refresh endpoint rejected — clear token so next request forces re-login
+              console.warn('Firebase token refresh rejected — clearing token');
+              token.firebaseToken = '';
+              token.firebaseRefreshToken = '';
+              token.firebaseTokenExpiry = 0;
+            }
+          } catch (e) {
+            console.error('Firebase token refresh error', e);
+          }
+        }
+      }
+
       return token;
     },
 

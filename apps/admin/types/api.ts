@@ -69,6 +69,7 @@ export interface Category {
   slug?: string | null;
   type?: number;
   isPremium?: number;
+  status?: number;
   coins?: number;
   image?: string | null;
   rowOrder?: number;

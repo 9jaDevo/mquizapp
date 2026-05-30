@@ -24,6 +24,7 @@ declare module 'next-auth' {
     role?: string;
     permissions?: string;
     firebaseToken?: string;
+    firebaseRefreshToken?: string;
     firebaseTokenExpiry?: number;
   }
 }
@@ -31,6 +32,7 @@ declare module 'next-auth' {
 declare module 'next-auth/jwt' {
   interface JWT {
     firebaseToken?: string;
+    firebaseRefreshToken?: string;
     firebaseTokenExpiry?: number;
     isAdmin: boolean;
     userId: string;

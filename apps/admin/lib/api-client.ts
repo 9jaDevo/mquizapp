@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { getSession } from 'next-auth/react';
+import { getSession, signOut } from 'next-auth/react';
+import { toast } from 'sonner';
 import type { ApiResponse } from '@/types/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
@@ -31,6 +32,12 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
+    if (error.response?.status === 401) {
+      // Token expired or rejected — sign out and redirect to login
+      toast.error('Your session has expired. Please sign in again.');
+      void signOut({ callbackUrl: '/login' });
+      return Promise.reject(new Error('Session expired'));
+    }
     const message =
       error.response?.data?.message ?? error.message ?? 'Network error';
     return Promise.reject(new Error(message));

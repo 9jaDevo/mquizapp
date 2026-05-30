@@ -240,6 +240,7 @@ interface SortableCategoryRowProps {
   onEditCancel: () => void;
   onDelete: () => void;
   onTogglePremium: () => void;
+  onToggleStatus: () => void;
 }
 
 function SortableCategoryRow({
@@ -252,6 +253,7 @@ function SortableCategoryRow({
   onEditCancel,
   onDelete,
   onTogglePremium,
+  onToggleStatus,
 }: SortableCategoryRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: cat.id });
@@ -304,6 +306,18 @@ function SortableCategoryRow({
             {cat.isPremium === 1 && (
               <Badge variant="secondary" className="text-xs">Premium</Badge>
             )}
+            <Button
+              size="icon"
+              variant="ghost"
+              title={cat.status === 0 ? 'Inactive (click to activate)' : 'Active (click to deactivate)'}
+              onClick={onToggleStatus}
+            >
+              {cat.status === 0 ? (
+                <EyeOff className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <Eye className="h-4 w-4 text-green-600" />
+              )}
+            </Button>
             <Button
               size="icon"
               variant="ghost"
@@ -412,6 +426,17 @@ export function CategoriesManager({ initialCategories }: CategoriesManagerProps)
     }
   }
 
+  async function handleToggleStatus(cat: Category) {
+    const newVal = cat.status === 0 ? 1 : 0;
+    try {
+      await api.patch(`/v2/admin/categories/${cat.id}`, { status: newVal });
+      setCategories((prev) => prev.map((c) => (c.id === cat.id ? { ...c, status: newVal } : c)));
+      toast.success(newVal === 1 ? 'Category activated' : 'Category deactivated');
+    } catch {
+      toast.error('Failed to update status');
+    }
+  }
+
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -475,6 +500,7 @@ export function CategoriesManager({ initialCategories }: CategoriesManagerProps)
                       onEditCancel={() => setEditingId(null)}
                       onDelete={() => setDeleteTarget(cat)}
                       onTogglePremium={() => handleTogglePremium(cat)}
+                      onToggleStatus={() => handleToggleStatus(cat)}
                     />
                   ))}
                 </ul>
