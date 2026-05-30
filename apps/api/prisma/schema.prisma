@@ -32,6 +32,7 @@ model User {
   apiToken           String   @map("api_token") @db.LongText
   appLanguage        String?  @map("app_language") @db.VarChar(512)
   webLanguage        String?  @map("web_language") @db.VarChar(512)
+  ageGroup           String?  @map("age_group") @db.VarChar(20)
 
   @@index([email, mobile], map: "email")
   @@index([fcmId(length: 333)], map: "fcm_id")

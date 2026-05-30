@@ -95,6 +95,7 @@ class UserProfile extends Equatable {
     this.countryCode,
     this.countryName,
     this.appLanguage,
+    this.ageGroup,
     this.dateRegistered,
     this.lives,
     this.progress,
@@ -120,6 +121,7 @@ class UserProfile extends Equatable {
       countryCode: parseString(j['countryCode']),
       countryName: parseString(j['countryName']),
       appLanguage: parseString(j['appLanguage']),
+      ageGroup: parseString(j['ageGroup']),
       dateRegistered: parseDateTime(j['dateRegistered']),
       lives: livesJson is Map<String, dynamic>
           ? LivesSnapshot.fromJson(livesJson)
@@ -147,6 +149,7 @@ class UserProfile extends Equatable {
   final String? countryCode;
   final String? countryName;
   final String? appLanguage;
+  final String? ageGroup;
   final DateTime? dateRegistered;
   final LivesSnapshot? lives;
   final ProgressSnapshot? progress;
@@ -158,6 +161,7 @@ class UserProfile extends Equatable {
     String? profileImage,
     String? mobile,
     String? appLanguage,
+    String? ageGroup,
     String? countryCode,
     String? countryName,
     LivesSnapshot? lives,
@@ -179,6 +183,7 @@ class UserProfile extends Equatable {
       countryCode: countryCode ?? this.countryCode,
       countryName: countryName ?? this.countryName,
       appLanguage: appLanguage ?? this.appLanguage,
+      ageGroup: ageGroup ?? this.ageGroup,
       dateRegistered: dateRegistered,
       lives: lives ?? this.lives,
       progress: progress ?? this.progress,
@@ -198,6 +203,7 @@ class UserProfile extends Equatable {
         removeAds,
         countryCode,
         appLanguage,
+        ageGroup,
         lives,
         progress,
         streak,

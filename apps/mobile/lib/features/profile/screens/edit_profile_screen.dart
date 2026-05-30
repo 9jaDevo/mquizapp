@@ -11,6 +11,20 @@ import 'package:mquiz/core/theme/app_colors.dart';
 import 'package:mquiz/core/widgets/common_widgets.dart';
 import 'package:mquiz/features/profile/cubit/profile_cubit.dart';
 
+const _languageOptions = [
+  ('en', 'English'),
+  ('yo', 'Yoruba'),
+  ('ha', 'Hausa'),
+  ('ig', 'Igbo'),
+];
+
+const _ageGroupOptions = [
+  ('child', 'Child (0–12)'),
+  ('teen', 'Teen (13–17)'),
+  ('adult', 'Adult (18–64)'),
+  ('senior', 'Senior (65+)'),
+];
+
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
 
@@ -22,6 +36,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _name;
   late final TextEditingController _mobile;
+  late String _language;
+  String? _ageGroup;
 
   File? _pickedImage;
   bool _uploadingImage = false;
@@ -33,6 +49,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final profile = s is ProfileLoaded ? s.profile : null;
     _name = TextEditingController(text: profile?.name ?? '');
     _mobile = TextEditingController(text: profile?.mobile ?? '');
+    _language = profile?.appLanguage ?? 'en';
+    _ageGroup = profile?.ageGroup;
   }
 
   @override
@@ -174,6 +192,43 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     return null;
                   },
                 ),
+                const SizedBox(height: 20),
+                // ── Language ──────────────────────────────────────────────
+                Text('App language',
+                    style: Theme.of(context).textTheme.labelLarge),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: _language,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  ),
+                  items: _languageOptions
+                      .map((l) => DropdownMenuItem(
+                            value: l.$1,
+                            child: Text(l.$2),
+                          ))
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) setState(() => _language = v);
+                  },
+                ),
+                const SizedBox(height: 20),
+                // ── Age group ─────────────────────────────────────────────
+                Text('Age group',
+                    style: Theme.of(context).textTheme.labelLarge),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: _ageGroupOptions.map((g) {
+                    return ChoiceChip(
+                      label: Text(g.$2),
+                      selected: _ageGroup == g.$1,
+                      onSelected: (_) => setState(() => _ageGroup = g.$1),
+                    );
+                  }).toList(),
+                ),
                 const Spacer(),
                 PrimaryButton(
                   label: 'Save Changes',
@@ -215,6 +270,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       'name': _name.text.trim(),
       if (_mobile.text.trim().isNotEmpty) 'mobile': _mobile.text.trim(),
       if (uploadedUrl != null) 'profile': uploadedUrl,
+      'appLanguage': _language,
+      if (_ageGroup != null) 'ageGroup': _ageGroup,
     };
     final ok = await context.read<ProfileCubit>().updateProfile(patch);
     if (!mounted) return;

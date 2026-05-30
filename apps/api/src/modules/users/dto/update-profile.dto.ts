@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateProfileDto {
@@ -8,4 +8,7 @@ export class UpdateProfileDto {
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(64) appLanguage?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(3) countryCode?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(100) countryName?: string;
+  @ApiPropertyOptional({ enum: ['child', 'teen', 'adult', 'senior'] })
+  @IsOptional() @IsString() @IsIn(['child', 'teen', 'adult', 'senior'])
+  ageGroup?: string;
 }
