@@ -164,7 +164,7 @@ class LeagueQuizCubit extends Cubit<LeagueQuizState> {
     if (s is! LeagueQuizInProgress) return;
     final qId = s.current.id;
     final elapsedMs =
-        (AppConstants.secondsPerQuestion - s.secondsLeft) * 1000;
+        ((AppConstants.secondsPerQuestion - s.secondsLeft) * 1000).clamp(0, AppConstants.secondsPerQuestion * 1000);
     final newAnswers = Map<int, String>.from(s.answers);
     newAnswers[qId] = newAnswers[qId] ?? answer;
     final newElapsed = Map<int, int>.from(s.elapsedMsPerQuestion)

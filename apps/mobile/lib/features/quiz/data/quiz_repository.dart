@@ -52,4 +52,18 @@ class QuizRepository {
     final raw = await _api.submitQuiz(payload);
     return QuizResult.fromJson(raw);
   }
+
+  Future<List<String>> fiftyFifty({
+    required int questionId,
+    required int boosterTypeId,
+    String source = 'quiz',
+  }) =>
+      _api.fiftyFifty(
+        questionId: questionId,
+        boosterTypeId: boosterTypeId,
+        source: source,
+      );
+
+  Future<void> consumeBooster(int boosterTypeId) =>
+      _api.consumeBooster(boosterTypeId);
 }

@@ -457,9 +457,29 @@ class NestJsApi {
     final res = await _c.post<Map<String, dynamic>>(
       '/boosters/consume',
       (d) => Map<String, dynamic>.from(d as Map),
-      body: {'booster_type_id': boosterTypeId},
+      body: {'boosterTypeId': boosterTypeId},
     );
     return res.data ?? <String, dynamic>{};
+  }
+
+  /// Applies the 50/50 booster — consumes 1 from inventory and returns
+  /// the list of option keys (e.g. ['b', 'c']) to hide.
+  Future<List<String>> fiftyFifty({
+    required int questionId,
+    required int boosterTypeId,
+    String source = 'quiz',
+  }) async {
+    final res = await _c.post<Map<String, dynamic>>(
+      '/boosters/fifty-fifty',
+      (d) => Map<String, dynamic>.from(d as Map),
+      body: {
+        'questionId': questionId,
+        'boosterTypeId': boosterTypeId,
+        'source': source,
+      },
+    );
+    final removed = (res.data?['removedOptions'] as List?)?.cast<String>();
+    return removed ?? <String>[];
   }
 
   // ── Payments ───────────────────────────────────────────────────────────────

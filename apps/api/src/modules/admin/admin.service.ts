@@ -1384,6 +1384,159 @@ export class AdminService {
     return this.mapContest(updated);
   }
 
+  async listContestQuestions(contestId: number) {
+    const contest = await this.prisma.tbl_contest.findUnique({ where: { id: contestId } });
+    if (!contest) throw new NotFoundException({ error: 'CONTEST_NOT_FOUND', message: 'Contest not found' });
+    const qs = await this.prisma.tbl_contest_question.findMany({
+      where: { contest_id: contestId },
+      orderBy: { id: 'asc' },
+    });
+    return {
+      contestId,
+      total: qs.length,
+      questions: qs.map((q) => ({
+        id: q.id,
+        text: q.question,
+        type: q.question_type,
+        image: q.image,
+        options: { a: q.optiona, b: q.optionb, c: q.optionc, d: q.optiond, ...(q.optione ? { e: q.optione } : {}) },
+        answer: q.answer,
+        note: q.note,
+        languageId: q.langauge_id,
+      })),
+    };
+  }
+
+  async addContestQuestion(contestId: number, dto: {
+    question: string; optiona: string; optionb: string; optionc: string; optiond: string;
+    optione?: string; answer: string; image?: string; note?: string; languageId?: number;
+  }) {
+    const contest = await this.prisma.tbl_contest.findUnique({ where: { id: contestId } });
+    if (!contest) throw new NotFoundException({ error: 'CONTEST_NOT_FOUND', message: 'Contest not found' });
+    const q = await this.prisma.tbl_contest_question.create({
+      data: {
+        contest_id: contestId,
+        question: dto.question,
+        optiona: dto.optiona,
+        optionb: dto.optionb,
+        optionc: dto.optionc,
+        optiond: dto.optiond,
+        optione: dto.optione ?? '',
+        answer: dto.answer,
+        image: dto.image ?? '',
+        note: dto.note ?? '',
+        langauge_id: dto.languageId ?? 0,
+        question_type: 0,
+      },
+    });
+    return { id: q.id, contestId, text: q.question, answer: q.answer };
+  }
+
+  async updateContestQuestion(contestId: number, qid: number, dto: {
+    question: string; optiona: string; optionb: string; optionc: string; optiond: string;
+    optione?: string; answer: string; image?: string; note?: string; languageId?: number;
+  }) {
+    const q = await this.prisma.tbl_contest_question.findFirst({ where: { id: qid, contest_id: contestId } });
+    if (!q) throw new NotFoundException({ error: 'QUESTION_NOT_FOUND', message: 'Question not found' });
+    const updated = await this.prisma.tbl_contest_question.update({
+      where: { id: qid },
+      data: {
+        question: dto.question,
+        optiona: dto.optiona,
+        optionb: dto.optionb,
+        optionc: dto.optionc,
+        optiond: dto.optiond,
+        optione: dto.optione ?? '',
+        answer: dto.answer,
+        image: dto.image ?? q.image,
+        note: dto.note ?? q.note,
+        langauge_id: dto.languageId ?? q.langauge_id,
+      },
+    });
+    return { id: updated.id, contestId, text: updated.question, answer: updated.answer };
+  }
+
+  async deleteContestQuestion(contestId: number, qid: number) {
+    const q = await this.prisma.tbl_contest_question.findFirst({ where: { id: qid, contest_id: contestId } });
+    if (!q) throw new NotFoundException({ error: 'QUESTION_NOT_FOUND', message: 'Question not found' });
+    await this.prisma.tbl_contest_question.delete({ where: { id: qid } });
+    return { deleted: true, id: qid };
+  }
+
+  async listLeagueDayQuestions(leagueId: number, dayId: number) {
+    const day = await this.prisma.tbl_league_daily_quiz.findFirst({ where: { id: dayId, league_id: leagueId } });
+    if (!day) throw new NotFoundException({ error: 'DAY_NOT_FOUND', message: 'Daily quiz slot not found' });
+    const links = await this.prisma.tbl_league_daily_quiz_questions.findMany({
+      where: { daily_quiz_id: dayId },
+      orderBy: { question_order: 'asc' },
+    });
+    if (!links.length) return { dayId, leagueId, quizDay: day.quiz_day, total: 0, questions: [] };
+    const ids = links.map((l) => l.question_id);
+    const qs = await this.prisma.question.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, question: true, optiona: true, optionb: true, optionc: true, optiond: true, optione: true, answer: true, category: true, level: true },
+    });
+    const qMap = new Map(qs.map((q) => [q.id, q]));
+    return {
+      dayId,
+      leagueId,
+      quizDay: day.quiz_day,
+      total: links.length,
+      questions: links.map((l) => {
+        const q = qMap.get(l.question_id);
+        return {
+          linkId: l.id,
+          questionId: l.question_id,
+          order: l.question_order,
+          text: q?.question ?? '(not found)',
+          answer: q?.answer,
+          categoryId: q?.category,
+          level: q?.level,
+        };
+      }),
+    };
+  }
+
+  async addLeagueDayQuestions(leagueId: number, dayId: number, questionIds: number[]) {
+    const day = await this.prisma.tbl_league_daily_quiz.findFirst({ where: { id: dayId, league_id: leagueId } });
+    if (!day) throw new NotFoundException({ error: 'DAY_NOT_FOUND', message: 'Daily quiz slot not found' });
+
+    // Validate all question IDs exist
+    const found = await this.prisma.question.findMany({ where: { id: { in: questionIds } }, select: { id: true } });
+    if (found.length !== questionIds.length) {
+      throw new BadRequestException({ error: 'INVALID_QUESTIONS', message: 'One or more question IDs not found' });
+    }
+
+    // Get current max order
+    const maxOrder = await this.prisma.tbl_league_daily_quiz_questions.aggregate({
+      where: { daily_quiz_id: dayId },
+      _max: { question_order: true },
+    });
+    let order = (maxOrder._max.question_order ?? 0) + 1;
+
+    const results: number[] = [];
+    for (const qId of questionIds) {
+      try {
+        await this.prisma.tbl_league_daily_quiz_questions.create({
+          data: { daily_quiz_id: dayId, question_id: qId, question_order: order++ },
+        });
+        results.push(qId);
+      } catch {
+        // skip duplicates (unique constraint)
+      }
+    }
+    return { dayId, added: results.length, questionIds: results };
+  }
+
+  async removeLeagueDayQuestion(leagueId: number, dayId: number, linkId: number) {
+    const day = await this.prisma.tbl_league_daily_quiz.findFirst({ where: { id: dayId, league_id: leagueId } });
+    if (!day) throw new NotFoundException({ error: 'DAY_NOT_FOUND', message: 'Daily quiz slot not found' });
+    const link = await this.prisma.tbl_league_daily_quiz_questions.findFirst({ where: { id: linkId, daily_quiz_id: dayId } });
+    if (!link) throw new NotFoundException({ error: 'LINK_NOT_FOUND', message: 'Question link not found' });
+    await this.prisma.tbl_league_daily_quiz_questions.delete({ where: { id: linkId } });
+    return { deleted: true, id: linkId };
+  }
+
   async distributeLeaguePrizes(id: number) {
     const existing = await this.prisma.tbl_league.findUnique({ where: { id } });
     if (!existing) {

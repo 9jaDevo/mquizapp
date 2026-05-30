@@ -51,6 +51,8 @@ import { CreateCoinPackDto } from './dto/create-coin-pack.dto';
 import { UpdateCoinPackDto } from './dto/update-coin-pack.dto';
 import { CreateProgressStageDto } from './dto/create-progress-stage.dto';
 import { UpdateProgressStageDto } from './dto/update-progress-stage.dto';
+import { CreateContestQuestionDto } from './dto/create-contest-question.dto';
+import { AddLeagueDayQuestionsDto } from './dto/add-league-day-questions.dto';
 
 @ApiTags('admin')
 @ApiBearerAuth('firebase-token')
@@ -364,6 +366,42 @@ export class AdminController {
     return this.service.distributeContestPrizes(id);
   }
 
+  @Get('contests/:id/questions')
+  @ApiOperation({ summary: 'List all questions for a contest' })
+  listContestQuestions(@Param('id', ParseIntPipe) id: number) {
+    return this.service.listContestQuestions(id);
+  }
+
+  @Post('contests/:id/questions')
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Add a question to a contest' })
+  addContestQuestion(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: CreateContestQuestionDto,
+  ) {
+    return this.service.addContestQuestion(id, body);
+  }
+
+  @Put('contests/:contestId/questions/:qid')
+  @ApiOperation({ summary: 'Update a contest question' })
+  updateContestQuestion(
+    @Param('contestId', ParseIntPipe) contestId: number,
+    @Param('qid', ParseIntPipe) qid: number,
+    @Body() body: CreateContestQuestionDto,
+  ) {
+    return this.service.updateContestQuestion(contestId, qid, body);
+  }
+
+  @Delete('contests/:contestId/questions/:qid')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Remove a question from a contest' })
+  deleteContestQuestion(
+    @Param('contestId', ParseIntPipe) contestId: number,
+    @Param('qid', ParseIntPipe) qid: number,
+  ) {
+    return this.service.deleteContestQuestion(contestId, qid);
+  }
+
   // ─── Leagues ──────────────────────────────────────────────────────────────
 
   @Get('leagues')
@@ -429,6 +467,37 @@ export class AdminController {
   @ApiOperation({ summary: 'Mark league prizes as distributed' })
   distributeLeague(@Param('id', ParseIntPipe) id: number) {
     return this.service.distributeLeaguePrizes(id);
+  }
+
+  @Get('leagues/:id/quiz-days/:dayId/questions')
+  @ApiOperation({ summary: 'List questions for a league daily-quiz slot' })
+  listLeagueDayQuestions(
+    @Param('id', ParseIntPipe) leagueId: number,
+    @Param('dayId', ParseIntPipe) dayId: number,
+  ) {
+    return this.service.listLeagueDayQuestions(leagueId, dayId);
+  }
+
+  @Post('leagues/:id/quiz-days/:dayId/questions')
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Add questions to a league daily-quiz slot (by question IDs from the question bank)' })
+  addLeagueDayQuestions(
+    @Param('id', ParseIntPipe) leagueId: number,
+    @Param('dayId', ParseIntPipe) dayId: number,
+    @Body() body: AddLeagueDayQuestionsDto,
+  ) {
+    return this.service.addLeagueDayQuestions(leagueId, dayId, body.questionIds);
+  }
+
+  @Delete('leagues/:id/quiz-days/:dayId/questions/:qid')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Remove a question from a league daily-quiz slot' })
+  removeLeagueDayQuestion(
+    @Param('id', ParseIntPipe) leagueId: number,
+    @Param('dayId', ParseIntPipe) dayId: number,
+    @Param('qid', ParseIntPipe) qid: number,
+  ) {
+    return this.service.removeLeagueDayQuestion(leagueId, dayId, qid);
   }
 
   // ─── Sponsors ─────────────────────────────────────────────────────────────

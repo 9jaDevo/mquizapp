@@ -1,10 +1,11 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Plus, Trash2, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -172,7 +173,8 @@ export default function LeagueQuizSchedulePage() {
                     <th className="pb-2 text-left font-medium pr-4">Day</th>
                     <th className="pb-2 text-left font-medium pr-4">Date</th>
                     <th className="pb-2 text-left font-medium pr-4">Questions</th>
-                    <th className="pb-2 text-left font-medium">Assigned At</th>
+                    <th className="pb-2 text-left font-medium pr-4">Assigned At</th>
+                    <th className="pb-2 text-left font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -181,10 +183,18 @@ export default function LeagueQuizSchedulePage() {
                       <td className="py-2 pr-4 font-medium">{day.quizDay}</td>
                       <td className="py-2 pr-4">{day.quizDate ?? '—'}</td>
                       <td className="py-2 pr-4">{day.questionCount}</td>
-                      <td className="py-2 text-muted-foreground text-xs">
+                      <td className="py-2 pr-4 text-muted-foreground text-xs">
                         {day.dateAssigned
                           ? new Date(day.dateAssigned).toLocaleDateString()
                           : '—'}
+                      </td>
+                      <td className="py-2">
+                        <Link
+                          href={`/leagues/${leagueId}/quiz-days/${day.id}/questions`}
+                          className={buttonVariants({ variant: 'outline', size: 'sm' })}
+                        >
+                          Manage Questions
+                        </Link>
                       </td>
                     </tr>
                   ))}

@@ -37,14 +37,18 @@ export class NotificationsService {
       }),
     ]);
 
-    // Batch-check read status from Redis
+    // Batch-check read status from Redis (best-effort — Redis may be unavailable)
     const readSet = new Set<number>();
     if (all.length) {
-      const keys = all.map((n) => `notif:read:${user.id}:${n.id}`);
-      const vals = await this.redis.getClient().mget(keys);
-      vals.forEach((v, i) => {
-        if (v) readSet.add(all[i].id);
-      });
+      try {
+        const keys = all.map((n) => `notif:read:${user.id}:${n.id}`);
+        const vals = await this.redis.getClient().mget(keys);
+        vals.forEach((v, i) => {
+          if (v) readSet.add(all[i].id);
+        });
+      } catch {
+        // Redis unavailable — treat all notifications as unread
+      }
     }
 
     return {
