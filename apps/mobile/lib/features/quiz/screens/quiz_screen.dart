@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mquiz/core/constants/app_constants.dart';
 import 'package:mquiz/core/theme/app_colors.dart';
 import 'package:mquiz/core/widgets/common_widgets.dart';
+import 'package:mquiz/features/bookmarks/cubit/bookmarks_cubit.dart';
 import 'package:mquiz/features/lives/cubit/booster_store_cubit.dart';
 import 'package:mquiz/features/lives/models/lives_models.dart';
 import 'package:mquiz/features/quiz/cubit/quiz_cubit.dart';
@@ -87,6 +88,16 @@ class _QuizPlayView extends StatelessWidget {
               context.read<QuizCubit>().reset();
               context.pop();
             }
+          },
+          onBookmark: () {
+            context.read<BookmarksCubit>().addInQuiz(state.current.id);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Question bookmarked'),
+                behavior: SnackBarBehavior.floating,
+                duration: Duration(seconds: 2),
+              ),
+            );
           },
         ),
         Expanded(
@@ -200,6 +211,7 @@ class _QuizHeader extends StatelessWidget {
     required this.secondsLeft,
     required this.timeFraction,
     required this.onClose,
+    required this.onBookmark,
   });
 
   final int index;
@@ -208,6 +220,7 @@ class _QuizHeader extends StatelessWidget {
   final int secondsLeft;
   final double timeFraction;
   final VoidCallback onClose;
+  final VoidCallback onBookmark;
 
   @override
   Widget build(BuildContext context) {
@@ -240,6 +253,11 @@ class _QuizHeader extends StatelessWidget {
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
+              ),
+              IconButton(
+                onPressed: onBookmark,
+                icon: const Icon(Icons.bookmark_border),
+                tooltip: 'Bookmark question',
               ),
               Container(
                 padding:
@@ -368,7 +386,21 @@ class _BoosterTray extends StatelessWidget {
     final owned = boosterState.owned
         .where((b) => (b.quantity ?? 0) > 0)
         .toList(growable: false);
-    if (owned.isEmpty) return const SizedBox.shrink();
+    if (owned.isEmpty) {
+      if (boosterState.catalog.isEmpty) return const SizedBox.shrink();
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: () => context.push(AppConstants.routeCoinStore),
+          icon: const Icon(Icons.bolt_rounded, size: 16),
+          label: const Text('Get Boosters'),
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.primary,
+            textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+        ),
+      );
+    }
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(

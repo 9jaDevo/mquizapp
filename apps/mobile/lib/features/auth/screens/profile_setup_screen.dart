@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
-import 'package:mquiz/core/constants/app_constants.dart';
 import 'package:mquiz/core/network/nestjs_api.dart';
 import 'package:mquiz/core/theme/app_colors.dart';
-import 'package:mquiz/features/auth/auth_repository.dart';
+import 'package:mquiz/features/auth/cubit/auth_cubit.dart';
 
 const _languages = [
   ('en', 'English'),
@@ -47,7 +45,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       setState(() => _error = 'Please select your age group');
       return;
     }
-    final repo = context.read<AuthRepository>();
     setState(() {
       _saving = true;
       _error = null;
@@ -60,18 +57,13 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             'ageGroup': _ageGroup,
           })
           .timeout(const Duration(seconds: 20));
-      await repo.setOnboardingDone();
       if (!mounted) return;
-      context.go(AppConstants.routeHome);
+      await context.read<AuthCubit>().completeOnboarding();
     } catch (e) {
       if (!mounted) return;
       // If the API is unavailable (cold start / timeout), still mark onboarding
       // done and proceed — the name can be updated later from the profile screen.
-      try {
-        await repo.setOnboardingDone();
-      } catch (_) {}
-      if (!mounted) return;
-      context.go(AppConstants.routeHome);
+      await context.read<AuthCubit>().completeOnboarding();
     }
   }
 

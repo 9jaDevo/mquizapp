@@ -67,7 +67,7 @@ export function Sidebar() {
   const role = (session?.user as { role?: string } | undefined)?.role ?? '';
 
   const visibleItems = navItems.filter(
-    (item) => item.roles.length === 0 || role === 'super_admin' || item.roles.includes(role),
+    (item) => item.roles.length === 0 || role === 'super_admin' || role === 'admin' || item.roles.includes(role),
   );
 
   return (

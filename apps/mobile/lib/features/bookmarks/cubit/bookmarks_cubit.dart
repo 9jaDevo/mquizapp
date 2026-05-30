@@ -102,4 +102,12 @@ class BookmarksCubit extends Cubit<BookmarksState> {
       emit(current);
     }
   }
+
+  /// Fire-and-forget — adds a bookmark during a quiz session.
+  /// No state change is emitted so the quiz flow is unaffected.
+  Future<void> addInQuiz(int questionId) async {
+    try {
+      await _repo.addBookmark(questionId);
+    } catch (_) {}
+  }
 }

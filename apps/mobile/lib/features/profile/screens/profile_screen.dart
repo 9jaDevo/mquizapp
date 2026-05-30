@@ -378,33 +378,106 @@ class _BadgesGrid extends StatelessWidget {
         crossAxisCount: 4,
         mainAxisSpacing: 10,
         crossAxisSpacing: 10,
+        childAspectRatio: 0.75,
       ),
       itemBuilder: (ctx, i) {
         final b = badges[i];
-        return Tooltip(
-          message: '${b.title}\n${b.description}',
+        return GestureDetector(
+          onTap: () => showModalBottomSheet(
+            context: ctx,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            builder: (_) => Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.divider,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    b.title,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    b.description,
+                    style: const TextStyle(color: AppColors.textSecondary),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        b.isEarned ? Icons.check_circle : Icons.lock_outline,
+                        size: 16,
+                        color: b.isEarned ? AppColors.correct : AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        b.isEarned ? 'Earned' : 'Not yet earned',
+                        style: TextStyle(
+                          color: b.isEarned ? AppColors.correct : AppColors.textSecondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
           child: Opacity(
             opacity: b.isEarned ? 1 : 0.35,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color:
-                      b.isEarned ? AppColors.coin : AppColors.border,
-                  width: b.isEarned ? 1.5 : 1,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: b.isEarned ? AppColors.coin : AppColors.border,
+                        width: b.isEarned ? 1.5 : 1,
+                      ),
+                    ),
+                    padding: const EdgeInsets.all(6),
+                    child: b.image != null && b.image!.isNotEmpty
+                        ? Image.network(
+                            b.image!,
+                            errorBuilder: (_, __, ___) => const Icon(
+                                Icons.workspace_premium,
+                                color: AppColors.coin),
+                          )
+                        : const Icon(Icons.workspace_premium,
+                            color: AppColors.coin, size: 24),
+                  ),
                 ),
-              ),
-              padding: const EdgeInsets.all(8),
-              child: b.image != null && b.image!.isNotEmpty
-                  ? Image.network(
-                      b.image!,
-                      errorBuilder: (_, __, ___) => const Icon(
-                          Icons.workspace_premium,
-                          color: AppColors.coin),
-                    )
-                  : const Icon(Icons.workspace_premium,
-                      color: AppColors.coin, size: 28),
+                const SizedBox(height: 4),
+                Text(
+                  b.title,
+                  style: const TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
         );

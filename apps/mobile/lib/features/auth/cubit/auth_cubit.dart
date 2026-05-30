@@ -217,6 +217,16 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
+  /// Called by ProfileSetupScreen after onboarding is complete.
+  /// Emits Authenticated so GoRouter stops redirecting to profile-setup.
+  Future<void> completeOnboarding() async {
+    final s = state;
+    if (s is! AuthNeedsProfileSetup) return;
+    await _repo.setOnboardingDone();
+    if (isClosed) return;
+    emit(Authenticated(s.user));
+  }
+
   void _emitAuthenticated(AuthModel user) {
     _repo.isOnboardingDone().then((done) {
       if (isClosed) return;
