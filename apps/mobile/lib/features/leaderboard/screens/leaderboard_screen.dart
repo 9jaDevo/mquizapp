@@ -51,6 +51,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
 
   void _onTabChanged() {
     if (!_tabs.indexIsChanging) return;
+    setState(() {}); // Force BlocBuilder body to re-evaluate _tabs.index
     if (_tabs.index == _categoryTabIndex) {
       // Category tab selected — if a category is already picked, reload it
       if (_selectedCategoryId != null) {

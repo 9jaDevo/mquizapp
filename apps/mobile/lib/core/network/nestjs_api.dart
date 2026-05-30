@@ -270,11 +270,11 @@ class NestJsApi {
 
   // ── Contests ───────────────────────────────────────────────────────────────
   Future<List<Map<String, dynamic>>> listContests() async {
-    final res = await _c.get<List<Map<String, dynamic>>>(
+    final res = await _c.get<Map<String, dynamic>>(
       '/contests',
-      _asMapList,
+      (d) => Map<String, dynamic>.from(d as Map),
     );
-    return res.data ?? const [];
+    return _asMapList(res.data?['contests']);
   }
 
   Future<List<Map<String, dynamic>>> getContestQuestions(int id) async {
@@ -307,11 +307,11 @@ class NestJsApi {
 
   // ── Leagues ────────────────────────────────────────────────────────────────
   Future<List<Map<String, dynamic>>> listLeagues() async {
-    final res = await _c.get<List<Map<String, dynamic>>>(
+    final res = await _c.get<Map<String, dynamic>>(
       '/leagues',
-      _asMapList,
+      (d) => Map<String, dynamic>.from(d as Map),
     );
-    return res.data ?? const [];
+    return _asMapList(res.data?['leagues']);
   }
 
   Future<Map<String, dynamic>> getMyLeague() async {
@@ -430,19 +430,19 @@ class NestJsApi {
 
   // ── Boosters ───────────────────────────────────────────────────────────────
   Future<List<Map<String, dynamic>>> getBoosterTypes() async {
-    final res = await _c.get<List<Map<String, dynamic>>>(
+    final res = await _c.get<Map<String, dynamic>>(
       '/boosters/types',
-      _asMapList,
+      (d) => Map<String, dynamic>.from(d as Map),
     );
-    return res.data ?? const [];
+    return _asMapList(res.data?['types']);
   }
 
   Future<List<Map<String, dynamic>>> getMyBoosters() async {
-    final res = await _c.get<List<Map<String, dynamic>>>(
+    final res = await _c.get<Map<String, dynamic>>(
       '/boosters/me',
-      _asMapList,
+      (d) => Map<String, dynamic>.from(d as Map),
     );
-    return res.data ?? const [];
+    return _asMapList(res.data?['items']);
   }
 
   Future<Map<String, dynamic>> purchaseBooster(int boosterTypeId) async {
@@ -577,11 +577,11 @@ class NestJsApi {
 
   // ── Progress ───────────────────────────────────────────────────────────────
   Future<List<Map<String, dynamic>>> getProgressStages() async {
-    final res = await _c.get<List<Map<String, dynamic>>>(
+    final res = await _c.get<Map<String, dynamic>>(
       '/progress/stages',
-      _asMapList,
+      (d) => Map<String, dynamic>.from(d as Map),
     );
-    return res.data ?? const [];
+    return _asMapList(res.data?['stages']);
   }
 
   Future<Map<String, dynamic>> getMyProgress() async {
