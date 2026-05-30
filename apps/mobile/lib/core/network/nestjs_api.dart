@@ -238,6 +238,19 @@ class NestJsApi {
     return res.data ?? <String, dynamic>{};
   }
 
+  Future<List<Map<String, dynamic>>> getCategoryLeaderboard(
+    int categoryId,
+    String period, {
+    int limit = 50,
+  }) async {
+    final res = await _c.get<Map<String, dynamic>>(
+      '/leaderboard/category/$categoryId',
+      (d) => Map<String, dynamic>.from(d as Map),
+      queryParameters: {'period': period, 'limit': limit},
+    );
+    return _asMapList(res.data?['entries']);
+  }
+
   // ── Streak ─────────────────────────────────────────────────────────────────
   Future<Map<String, dynamic>> getStreak() async {
     final res = await _c.get<Map<String, dynamic>>(
@@ -464,6 +477,26 @@ class NestJsApi {
     final res = await _c.post<Map<String, dynamic>>(
       '/payments/verify/$reference',
       (d) => Map<String, dynamic>.from(d as Map),
+    );
+    return res.data ?? <String, dynamic>{};
+  }
+
+  /// Apple In-App Purchase server-side verification.
+  /// Sends Apple receipt data to the NestJS endpoint which validates with Apple
+  /// and credits coins. Server enforces [transactionId] idempotency.
+  Future<Map<String, dynamic>> verifyAppleIap({
+    required String productId,
+    required String receiptData,
+    required String transactionId,
+  }) async {
+    final res = await _c.post<Map<String, dynamic>>(
+      '/payments/apple-iap/verify',
+      (d) => Map<String, dynamic>.from(d as Map),
+      body: {
+        'productId': productId,
+        'receiptData': receiptData,
+        'transactionId': transactionId,
+      },
     );
     return res.data ?? <String, dynamic>{};
   }

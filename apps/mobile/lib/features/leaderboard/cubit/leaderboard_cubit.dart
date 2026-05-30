@@ -34,6 +34,27 @@ class LeaderboardLoaded extends LeaderboardState {
   List<Object?> get props => [period, entries, myRank];
 }
 
+class CategoryLeaderboardLoading extends LeaderboardState {
+  const CategoryLeaderboardLoading(this.categoryId, this.period);
+  final int categoryId;
+  final LeaderboardPeriod period;
+  @override
+  List<Object?> get props => [categoryId, period];
+}
+
+class CategoryLeaderboardLoaded extends LeaderboardState {
+  const CategoryLeaderboardLoaded({
+    required this.categoryId,
+    required this.period,
+    required this.entries,
+  });
+  final int categoryId;
+  final LeaderboardPeriod period;
+  final List<LeaderboardEntry> entries;
+  @override
+  List<Object?> get props => [categoryId, period, entries];
+}
+
 class LeaderboardError extends LeaderboardState {
   const LeaderboardError(this.message);
   final String message;
@@ -63,6 +84,28 @@ class LeaderboardCubit extends Cubit<LeaderboardState> {
         period: period,
         entries: entries,
         myRank: myRank,
+      ));
+    } catch (e) {
+      emit(LeaderboardError(describeError(e)));
+    }
+  }
+
+  Future<void> loadCategoryTop(
+    int categoryId,
+    LeaderboardPeriod period, {
+    int? currentUserId,
+  }) async {
+    emit(CategoryLeaderboardLoading(categoryId, period));
+    try {
+      final entries = await _repo.fetchCategoryTop(
+        categoryId,
+        period,
+        currentUserId: currentUserId,
+      );
+      emit(CategoryLeaderboardLoaded(
+        categoryId: categoryId,
+        period: period,
+        entries: entries,
       ));
     } catch (e) {
       emit(LeaderboardError(describeError(e)));

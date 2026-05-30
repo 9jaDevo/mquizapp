@@ -31,4 +31,19 @@ class StoreRepository {
     final data = await _api.verifyPayment(reference);
     return PaymentResult.fromJson(data);
   }
+
+  /// Server-authoritative Apple IAP verification.
+  /// [transactionId] is idempotent — safe to call on retry or restore.
+  Future<PaymentResult> verifyAppleIAP({
+    required String productId,
+    required String receiptData,
+    required String transactionId,
+  }) async {
+    final data = await _api.verifyAppleIap(
+      productId: productId,
+      receiptData: receiptData,
+      transactionId: transactionId,
+    );
+    return PaymentResult.fromJson(data);
+  }
 }

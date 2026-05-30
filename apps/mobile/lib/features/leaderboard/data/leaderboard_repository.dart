@@ -33,4 +33,20 @@ class LeaderboardRepository {
   }
 
   Future<Map<String, dynamic>> fetchMyRank() => _api.getMyLeaderboardRank();
+
+  Future<List<LeaderboardEntry>> fetchCategoryTop(
+    int categoryId,
+    LeaderboardPeriod period, {
+    int limit = 50,
+    int? currentUserId,
+  }) async {
+    final raw = await _api.getCategoryLeaderboard(
+      categoryId,
+      period.path,
+      limit: limit,
+    );
+    return raw
+        .map((j) => LeaderboardEntry.fromJson(j, currentUserId: currentUserId))
+        .toList(growable: false);
+  }
 }

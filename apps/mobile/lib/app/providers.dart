@@ -6,6 +6,8 @@ import 'package:mquiz/features/auth/data/auth_local_data_source.dart';
 import 'package:mquiz/features/auth/data/auth_remote_data_source.dart';
 import 'package:mquiz/features/battle/cubit/battle_cubit.dart';
 import 'package:mquiz/features/battle/data/battle_repository.dart';
+import 'package:mquiz/features/bookmarks/cubit/bookmarks_cubit.dart';
+import 'package:mquiz/features/bookmarks/data/bookmarks_repository.dart';
 import 'package:mquiz/features/contests/cubit/contest_cubit.dart';
 import 'package:mquiz/features/contests/data/contest_repository.dart';
 import 'package:mquiz/features/home/cubit/home_cubit.dart';
@@ -17,6 +19,8 @@ import 'package:mquiz/features/leagues/data/league_repository.dart';
 import 'package:mquiz/features/lives/cubit/booster_store_cubit.dart';
 import 'package:mquiz/features/lives/cubit/lives_cubit.dart';
 import 'package:mquiz/features/lives/data/lives_repository.dart';
+import 'package:mquiz/features/notifications/cubit/notifications_cubit.dart';
+import 'package:mquiz/features/notifications/data/notifications_repository.dart';
 import 'package:mquiz/features/profile/cubit/profile_cubit.dart';
 import 'package:mquiz/features/profile/data/profile_repository.dart';
 import 'package:mquiz/features/progress/cubit/progress_cubit.dart';
@@ -70,6 +74,12 @@ class AppProviders extends StatelessWidget {
           create: (ctx) => BattleRepository(
             quizRepo: ctx.read<QuizRepository>(),
           ),
+        ),
+        RepositoryProvider<NotificationsRepository>(
+          create: (_) => NotificationsRepository(),
+        ),
+        RepositoryProvider<BookmarksRepository>(
+          create: (_) => BookmarksRepository(),
         ),
       ],
       child: MultiBlocProvider(
@@ -126,6 +136,13 @@ class AppProviders extends StatelessWidget {
               battleRepo: ctx.read<BattleRepository>(),
               quizRepo: ctx.read<QuizRepository>(),
             ),
+          ),
+          BlocProvider<NotificationsCubit>(
+            create: (ctx) =>
+                NotificationsCubit(ctx.read<NotificationsRepository>()),
+          ),
+          BlocProvider<BookmarksCubit>(
+            create: (ctx) => BookmarksCubit(ctx.read<BookmarksRepository>()),
           ),
         ],
         child: child,

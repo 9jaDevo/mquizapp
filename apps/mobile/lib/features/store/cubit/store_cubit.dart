@@ -188,14 +188,58 @@ class StoreCubit extends Cubit<StoreState> {
     }
   }
 
+  /// Server-authoritative Apple IAP verification.
+  /// Sends Apple receipt data to the correct endpoint (NOT the Paystack
+  /// endpoint). The server validates the receipt with Apple and credits coins.
+  /// [transactionId] idempotency is enforced server-side — safe to retry.
+  Future<StorePurchaseEvent> verifyAppleIAP({
+    required String productId,
+    required String receiptData,
+    required String transactionId,
+  }) async {
+    try {
+      final result = await _repo.verifyAppleIAP(
+        productId: productId,
+        receiptData: receiptData,
+        transactionId: transactionId,
+      );
+      final current = state;
+      if (current is StoreLoaded) {
+        emit(current.copyWith(
+          balance: result.newBalance ?? current.balance,
+          clearPurchasing: true,
+        ));
+      }
+      return StorePurchaseEvent(
+        success: result.success,
+        coinsCredited: result.coinsCredited,
+      );
+    } catch (e) {
+      final current = state;
+      if (current is StoreLoaded) {
+        emit(current.copyWith(clearPurchasing: true));
+      }
+      return StorePurchaseEvent(
+        success: false,
+        coinsCredited: 0,
+        message: describeError(e),
+      );
+    }
+  }
+
   Future<void> _onIAPPurchaseUpdates(
       List<PurchaseDetails> purchases) async {
     for (final purchase in purchases) {
       if (purchase.status == PurchaseStatus.purchased ||
           purchase.status == PurchaseStatus.restored) {
-        // Verify with our server — server is the authority on coin credits
-        final event = await verify(
-            purchase.verificationData.serverVerificationData);
+        // Use Apple-specific endpoint — NOT the Paystack verify endpoint.
+        // Server validates the Apple receipt and credits coins.
+        final event = await verifyAppleIAP(
+          productId: purchase.productID,
+          receiptData: purchase.verificationData.serverVerificationData,
+          transactionId: purchase.purchaseID ??
+              purchase.verificationData.localVerificationData,
+        );
         if (event.success) {
           await InAppPurchase.instance.completePurchase(purchase);
         }

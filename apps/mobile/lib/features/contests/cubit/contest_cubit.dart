@@ -95,4 +95,22 @@ class ContestDetailCubit extends Cubit<ContestDetailState> {
       emit(ContestDetailError(describeError(e)));
     }
   }
+
+  /// Deep-link entry point: loads a contest by ID without a pre-fetched object.
+  /// Fetches the contest list and picks the matching one, or creates a stub if
+  /// not found so the leaderboard can still be displayed.
+  Future<void> loadById(int id, {int? currentUserId}) async {
+    emit(const ContestDetailLoading());
+    try {
+      final all = await _repo.listContests();
+      final contest = all.firstWhere(
+        (c) => c.id == id,
+        orElse: () => Contest(id: id, name: 'Contest #$id'),
+      );
+      final lb = await _repo.fetchLeaderboard(id, currentUserId: currentUserId);
+      emit(ContestDetailLoaded(contest: contest, leaderboard: lb));
+    } catch (e) {
+      emit(ContestDetailError(describeError(e)));
+    }
+  }
 }

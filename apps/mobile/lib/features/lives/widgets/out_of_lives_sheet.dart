@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mquiz/core/ads/ad_service.dart';
 import 'package:mquiz/core/theme/app_colors.dart';
 import 'package:mquiz/core/widgets/common_widgets.dart';
 import 'package:mquiz/features/lives/cubit/lives_cubit.dart';
@@ -76,11 +77,24 @@ class OutOfLivesSheet extends StatelessWidget {
                 onPressed: acting
                     ? null
                     : () async {
-                        final ok = await context
-                            .read<LivesCubit>()
-                            .restoreWithAd();
+                        // Show a rewarded ad first; the life is only granted
+                        // after the user earns the reward (server-side auth).
+                        final adShown = await AdService.instance
+                            .showRewardedAd(onRewarded: () async {
+                          await context.read<LivesCubit>().restoreWithAd();
+                        });
                         if (!context.mounted) return;
-                        if (ok) Navigator.of(context).pop(true);
+                        // If no ad was available, fall back to direct call so
+                        // the server can decide (throttle will block abuse).
+                        if (!adShown) {
+                          final ok = await context
+                              .read<LivesCubit>()
+                              .restoreWithAd();
+                          if (!context.mounted) return;
+                          if (ok) Navigator.of(context).pop(true);
+                          return;
+                        }
+                        Navigator.of(context).pop(true);
                       },
                 icon: const Icon(Icons.play_circle_outline),
                 label: const Text('Watch ad for 1 life'),
@@ -106,7 +120,7 @@ class OutOfLivesSheet extends StatelessWidget {
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
     final h = d.inHours;
-    return h > 0 ? '${h}h ${m}m' : '${m}:${s}';
+    return h > 0 ? '${h}h ${m}m' : '$m:$s';
   }
 }
 
