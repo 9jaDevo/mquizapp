@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { envValidationSchema } from './config/env.validation';
@@ -38,6 +39,7 @@ import { BookmarksModule } from './modules/bookmarks/bookmarks.module';
     ThrottlerModule.forRoot([
       { name: 'default', ttl: 60_000, limit: 60 },
     ]),
+    ScheduleModule.forRoot(),
     PrismaModule,
     RedisModule,
     FirebaseModule,

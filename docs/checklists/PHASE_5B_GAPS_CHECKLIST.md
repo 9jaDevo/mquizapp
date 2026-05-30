@@ -100,7 +100,7 @@ Noted as deferred in Phase 1 checklist. Not needed for App Store launch.
 
 | Endpoint | Method | Status | Notes |
 |---|---|---|---|
-| `countryCode` query param on all leaderboard endpoints | PATCH | ⬜ | Filter leaderboard by `country_code` from `tbl_users` |
+| `countryCode` query param on all leaderboard endpoints | PATCH | ✅ | Filter leaderboard by `country_code` from `tbl_users` — conditional SQL + cache key includes `:cc:` suffix |
 
 ---
 
@@ -135,15 +135,15 @@ Roadmap includes Flutterwave alongside Paystack. Only Paystack is implemented.
 
 ---
 
-### A11. Notification Scheduling (BullMQ) 🟢 P3
+### A11. Notification Scheduling (@nestjs/schedule) 🟢 P3
 
-Admin panel deferred "Schedule for later" on notifications. Requires BullMQ job queue.
+Implemented with `@nestjs/schedule` cron instead of BullMQ. Scheduled rows stored in `tbl_scheduled_notifications`, processed every minute by `@Cron('* * * * *')`.
 
 | Endpoint | Method | Status | Notes |
 |---|---|---|---|
-| `POST /v2/admin/notifications/schedule` | POST | ⬜ | Queue a notification for delivery at a future `sendAt` timestamp. |
-| `GET /v2/admin/notifications/scheduled` | GET | ⬜ | List pending scheduled notifications. |
-| `DELETE /v2/admin/notifications/scheduled/:id` | DELETE | ⬜ | Cancel a scheduled notification. |
+| `POST /v2/admin/notifications/schedule` | POST | ✅ | `ScheduleNotificationDto` — validates `sendAt` is future; persists to `tbl_scheduled_notifications` |
+| `GET /v2/admin/notifications/scheduled` | GET | ✅ | Paginated list of pending (future) scheduled notifications |
+| `DELETE /v2/admin/notifications/scheduled/:id` | DELETE | ✅ | Cancel (hard-delete) a scheduled notification |
 
 ---
 
@@ -247,8 +247,8 @@ All Section A5 endpoints complete. Charts now wired and rendering.
 
 | Feature | Status | Notes |
 |---|---|---|
-| Delivery report column in notification history (delivered / failed counts) | ⬜ | Requires FCM delivery receipt tracking in NestJS |
-| Schedule notification for later | ⬜ | Blocked on A11 (BullMQ) |
+| Delivery report column in notification history (delivered / failed counts) | ✅ | `delivered_count` + `failed_count` columns added to `tbl_notifications`; persisted after FCM multicast result; shown in history list as "✓ N delivered / ✗ N failed" (targeted sends only — topic broadcasts show N/A) |
+| Schedule notification for later | ✅ | `POST /v2/admin/notifications/schedule` — A11 complete |
 
 ---
 
@@ -444,11 +444,11 @@ Work should proceed in this sequence to unblock the critical path to App Store s
 2. Admin: All `B6` analytics charts — ⬜ (Recharts UI deferred)
 3. DB: `D3` category `status` column migration — ✅ (already present)
 
-### Sprint 5B-6 — P3 items (post-launch) — ⬜ DEFERRED
-- Flutterwave support (`A10`)
-- Notification scheduling with BullMQ (`A11`)
-- Sponsor impression counts (`B10`)
-- Notification delivery report (`B9`)
+### Sprint 5B-6 — P3 items (post-launch) — ✅ COMPLETE
+- ~~Flutterwave support (`A10`)~~ — intentionally skipped (Paystack only)
+- ~~Notification scheduling with BullMQ (`A11`)~~ — ✅ implemented with `@nestjs/schedule` cron
+- Sponsor impression counts (`B10`) — ✅ already complete
+- Notification delivery report (`B9`) — P3 deferred
 - Mobile unit tests (`C8`)
 
 ---
@@ -497,7 +497,7 @@ Work should proceed in this sequence to unblock the critical path to App Store s
 - D1 Firebase token refresh in admin NextAuth
 
 ### ❌ P3 Skipped
-- A10 Flutterwave support
-- A11 BullMQ notification scheduling
+- A10 Flutterwave support (user decision: Paystack only)
+- ~~A11 notification scheduling~~ — ✅ complete (cron-based)
 - AI generation history log (`D2`)
-- Leaderboard country filter (`A7`)
+- ~~Leaderboard country filter (`A7`)~~ — ✅ complete

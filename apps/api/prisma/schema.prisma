@@ -980,15 +980,32 @@ model tbl_multi_match_question_reports {
 }
 
 model tbl_notifications {
-  id        Int      @id @default(autoincrement())
-  title     String   @db.VarChar(128)
-  message   String   @db.Text
-  users     String   @default("all") @db.VarChar(8)
-  user_id   String?  @db.LongText
-  type      String   @db.VarChar(250)
-  type_id   Int
-  image     String   @db.VarChar(128)
-  date_sent DateTime @db.DateTime(0)
+  id             Int      @id @default(autoincrement())
+  title          String   @db.VarChar(128)
+  message        String   @db.Text
+  users          String   @default("all") @db.VarChar(8)
+  user_id        String?  @db.LongText
+  type           String   @db.VarChar(250)
+  type_id        Int
+  image          String   @db.VarChar(128)
+  date_sent      DateTime @db.DateTime(0)
+  delivered_count Int     @default(0)
+  failed_count   Int      @default(0)
+}
+
+model ScheduledNotification {
+  id        Int       @id @default(autoincrement())
+  title     String    @db.VarChar(128)
+  message   String    @db.Text
+  userIds   String?   @map("user_ids") @db.LongText
+  type      String    @default("general") @db.VarChar(50)
+  typeId    Int       @default(0) @map("type_id")
+  image     String    @default("") @db.VarChar(128)
+  sendAt    DateTime  @map("send_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@map("tbl_scheduled_notifications")
+  @@index([sendAt], map: "idx_sched_notif_send_at")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments

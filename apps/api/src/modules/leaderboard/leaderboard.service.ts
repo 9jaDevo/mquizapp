@@ -22,13 +22,14 @@ export class LeaderboardService {
     private readonly redis: RedisService,
   ) {}
 
-  async getTop(period: Period, limit: number) {
+  async getTop(period: Period, limit: number, countryCode?: string) {
     const safeLimit = Math.min(Math.max(limit, 1), 200);
-    const cacheKey = `leaderboard:${period}:top:${safeLimit}`;
+    const cc = countryCode?.toUpperCase();
+    const cacheKey = `leaderboard:${period}:top:${safeLimit}${cc ? `:cc:${cc}` : ''}`;
     const cached = await this.redis.get<LeaderboardEntry[]>(cacheKey);
     if (cached) return { period, entries: cached, cached: true };
 
-    const rows = await this.queryAggregatedTop(period, safeLimit);
+    const rows = await this.queryAggregatedTop(period, safeLimit, cc);
     await this.redis.set(cacheKey, rows, CACHE_TTL);
     return { period, entries: rows, cached: false };
   }
@@ -48,7 +49,7 @@ export class LeaderboardService {
     return { daily, weekly, monthly };
   }
 
-  private async queryAggregatedTop(period: Period, limit: number): Promise<LeaderboardEntry[]> {
+  private async queryAggregatedTop(period: Period, limit: number, cc?: string): Promise<LeaderboardEntry[]> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -60,32 +61,32 @@ export class LeaderboardService {
         SELECT lb.user_id AS userId, SUM(lb.score) AS score, u.name, u.profile
         FROM tbl_leaderboard_daily lb
         JOIN tbl_users u ON u.id = lb.user_id
-        WHERE lb.date_created >= ?
+        WHERE lb.date_created >= ?${cc ? ' AND u.country_code = ?' : ''}
         GROUP BY lb.user_id, u.name, u.profile
         ORDER BY score DESC
         LIMIT ?`;
-      params = [today, limit];
+      params = [today, ...(cc ? [cc] : []), limit];
     } else if (period === 'weekly') {
       const { weekNumber, year } = this.isoWeek(new Date());
       sql = `
         SELECT lb.user_id AS userId, lb.score, u.name, u.profile
         FROM tbl_leaderboard_weekly lb
         JOIN tbl_users u ON u.id = lb.user_id
-        WHERE lb.week_number = ? AND lb.year = ?
+        WHERE lb.week_number = ? AND lb.year = ?${cc ? ' AND u.country_code = ?' : ''}
         ORDER BY lb.score DESC
         LIMIT ?`;
-      params = [weekNumber, year, limit];
+      params = [weekNumber, year, ...(cc ? [cc] : []), limit];
     } else {
       const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
       sql = `
         SELECT lb.user_id AS userId, SUM(lb.score) AS score, u.name, u.profile
         FROM tbl_leaderboard_monthly lb
         JOIN tbl_users u ON u.id = lb.user_id
-        WHERE lb.date_created >= ?
+        WHERE lb.date_created >= ?${cc ? ' AND u.country_code = ?' : ''}
         GROUP BY lb.user_id, u.name, u.profile
         ORDER BY score DESC
         LIMIT ?`;
-      params = [monthStart, limit];
+      params = [monthStart, ...(cc ? [cc] : []), limit];
     }
 
     const raw = await this.prisma.$queryRawUnsafe<
@@ -112,9 +113,10 @@ export class LeaderboardService {
   // Category leaderboard — heuristic since per-category scoring is not tracked in dedicated tables.
   // Approach: among users who have played `categoryId` (per tbl_quiz_categories), return their
   // aggregated daily/weekly/monthly scores from the global leaderboard tables.
-  async getCategoryTop(categoryId: number, period: CategoryPeriod, limit: number) {
+  async getCategoryTop(categoryId: number, period: CategoryPeriod, limit: number, countryCode?: string) {
     const safeLimit = Math.min(Math.max(limit, 1), 200);
-    const cacheKey = `leaderboard:category:${categoryId}:${period}:top:${safeLimit}`;
+    const cc = countryCode?.toUpperCase();
+    const cacheKey = `leaderboard:category:${categoryId}:${period}:top:${safeLimit}${cc ? `:cc:${cc}` : ''}`;
     const cached = await this.redis.get<LeaderboardEntry[]>(cacheKey);
     if (cached) return { categoryId, period, entries: cached, cached: true };
 
@@ -130,10 +132,10 @@ export class LeaderboardService {
         FROM tbl_users u
         WHERE u.id IN (
           SELECT DISTINCT qc.user_id FROM tbl_quiz_categories qc WHERE qc.category = ?
-        )
+        )${cc ? ' AND u.country_code = ?' : ''}
         ORDER BY u.score DESC
         LIMIT ?`;
-      params = [categoryId, safeLimit];
+      params = [categoryId, ...(cc ? [cc] : []), safeLimit];
     } else if (period === 'daily') {
       sql = `
         SELECT lb.user_id AS userId, SUM(lb.score) AS score, u.name, u.profile
@@ -142,11 +144,11 @@ export class LeaderboardService {
         WHERE lb.date_created >= ?
           AND lb.user_id IN (
             SELECT DISTINCT qc.user_id FROM tbl_quiz_categories qc WHERE qc.category = ?
-          )
+          )${cc ? ' AND u.country_code = ?' : ''}
         GROUP BY lb.user_id, u.name, u.profile
         ORDER BY score DESC
         LIMIT ?`;
-      params = [today, categoryId, safeLimit];
+      params = [today, categoryId, ...(cc ? [cc] : []), safeLimit];
     } else if (period === 'weekly') {
       const { weekNumber, year } = this.isoWeek(new Date());
       sql = `
@@ -156,10 +158,10 @@ export class LeaderboardService {
         WHERE lb.week_number = ? AND lb.year = ?
           AND lb.user_id IN (
             SELECT DISTINCT qc.user_id FROM tbl_quiz_categories qc WHERE qc.category = ?
-          )
+          )${cc ? ' AND u.country_code = ?' : ''}
         ORDER BY lb.score DESC
         LIMIT ?`;
-      params = [weekNumber, year, categoryId, safeLimit];
+      params = [weekNumber, year, categoryId, ...(cc ? [cc] : []), safeLimit];
     } else {
       const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
       sql = `
@@ -169,11 +171,11 @@ export class LeaderboardService {
         WHERE lb.date_created >= ?
           AND lb.user_id IN (
             SELECT DISTINCT qc.user_id FROM tbl_quiz_categories qc WHERE qc.category = ?
-          )
+          )${cc ? ' AND u.country_code = ?' : ''}
         GROUP BY lb.user_id, u.name, u.profile
         ORDER BY score DESC
         LIMIT ?`;
-      params = [monthStart, categoryId, safeLimit];
+      params = [monthStart, categoryId, ...(cc ? [cc] : []), safeLimit];
     }
 
     const raw = await this.prisma.$queryRawUnsafe<

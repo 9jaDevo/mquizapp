@@ -258,6 +258,8 @@ export interface NotificationHistoryItem {
   audience: string;
   userIds: string | null;
   dateSent: string;
+  deliveredCount: number;
+  failedCount: number;
 }
 
 // ─── Coin History ─────────────────────────────────────────────────────────────

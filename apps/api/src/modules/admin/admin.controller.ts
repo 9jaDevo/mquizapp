@@ -21,6 +21,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { ListPaginationDto } from './dto/list-pagination.dto';
 import { ResolveFraudDto } from './dto/resolve-fraud.dto';
 import { SendNotificationDto } from './dto/send-notification.dto';
+import { ScheduleNotificationDto } from './dto/schedule-notification.dto';
 import { UpdateSettingDto } from './dto/update-setting.dto';
 import { SuspendUserDto } from './dto/suspend-user.dto';
 import { AdjustCoinsDto } from './dto/adjust-coins.dto';
@@ -221,6 +222,25 @@ export class AdminController {
   @ApiOperation({ summary: 'Broadcast or targeted push notification via FCM' })
   sendNotification(@Body() body: SendNotificationDto) {
     return this.service.sendNotification(body);
+  }
+
+  @Post('notifications/schedule')
+  @ApiOperation({ summary: 'Schedule a notification for future delivery' })
+  scheduleNotification(@Body() dto: ScheduleNotificationDto) {
+    return this.service.scheduleNotification(dto);
+  }
+
+  @Get('notifications/scheduled')
+  @ApiOperation({ summary: 'List pending scheduled notifications' })
+  listScheduledNotifications(@Query() q: ListPaginationDto) {
+    return this.service.listScheduledNotifications(q);
+  }
+
+  @Delete('notifications/scheduled/:id')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Cancel a scheduled notification' })
+  cancelScheduledNotification(@Param('id', ParseIntPipe) id: number) {
+    return this.service.cancelScheduledNotification(id);
   }
 
   @Get('settings')
