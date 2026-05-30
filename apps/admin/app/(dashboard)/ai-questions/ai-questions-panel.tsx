@@ -388,7 +388,7 @@ export function AiQuestionsPanel({ categories }: AiQuestionsPanelProps) {
                             <Label>Correct Answer</Label>
                             <Select
                               value={editDraft.answer}
-                              onValueChange={(v) => setEditDraft((d) => ({ ...d, answer: v }))}
+                              onValueChange={(v) => setEditDraft((d) => ({ ...d, answer: v ?? d.answer }))}
                             >
                               <SelectTrigger><SelectValue /></SelectTrigger>
                               <SelectContent>
