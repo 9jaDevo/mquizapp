@@ -32,6 +32,7 @@ export class UsersService {
       countryCode: user.countryCode,
       countryName: user.countryName,
       appLanguage: user.appLanguage,
+      ageGroup: user.ageGroup,
       dateRegistered: user.dateRegistered,
       lives: lives && {
         current: lives.current,
@@ -67,6 +68,7 @@ export class UsersService {
         appLanguage: dto.appLanguage ?? undefined,
         countryCode: dto.countryCode ?? undefined,
         countryName: dto.countryName ?? undefined,
+        ageGroup: dto.ageGroup ?? undefined,
       },
     });
     return {
@@ -77,6 +79,7 @@ export class UsersService {
       appLanguage: updated.appLanguage,
       countryCode: updated.countryCode,
       countryName: updated.countryName,
+      ageGroup: updated.ageGroup,
     };
   }
 
