@@ -15,6 +15,8 @@ import { CreateProgressStageDto } from './dto/create-progress-stage.dto';
 import { UpdateProgressStageDto } from './dto/update-progress-stage.dto';
 import { ResolveFraudDto } from './dto/resolve-fraud.dto';
 import { SendNotificationDto } from './dto/send-notification.dto';
+import { ScheduleNotificationDto } from './dto/schedule-notification.dto';
+import { Cron } from '@nestjs/schedule';
 import { UpdateSettingDto } from './dto/update-setting.dto';
 import { SuspendUserDto, SuspendAction } from './dto/suspend-user.dto';
 import { AdjustCoinsDto } from './dto/adjust-coins.dto';
@@ -211,8 +213,8 @@ export class AdminService {
   }
 
   async sendNotification(dto: SendNotificationDto) {
-    // Persist for the in-app feed
-    await this.prisma.tbl_notifications.create({
+    // Persist for the in-app feed (delivery counts updated after FCM result)
+    const notif = await this.prisma.tbl_notifications.create({
       data: {
         title: dto.title,
         message: dto.message,
@@ -222,41 +224,108 @@ export class AdminService {
         type_id: dto.typeId ?? 0,
         image: dto.image ?? '',
         date_sent: new Date(),
+        delivered_count: 0,
+        failed_count: 0,
       },
     });
 
+    const updateCounts = (delivered: number, failed: number) =>
+      this.prisma.tbl_notifications
+        .update({ where: { id: notif.id }, data: { delivered_count: delivered, failed_count: failed } })
+        .catch(() => {/* best-effort */});
+
     // Send via FCM
-    let tokens: string[] = [];
     if (dto.userIds?.length) {
       const users = await this.prisma.user.findMany({
         where: { id: { in: dto.userIds } },
         select: { fcmId: true, webFcmId: true },
       });
-      tokens = users.flatMap((u) => [u.fcmId, u.webFcmId].filter((t): t is string => Boolean(t)));
-    } else {
-      // Targeted "all" broadcasts use a topic to avoid pulling millions of rows
+      const tokens = users.flatMap((u) => [u.fcmId, u.webFcmId].filter((t): t is string => Boolean(t)));
+      if (!tokens.length) return { delivered: 0 };
+
       try {
-        await this.firebase.messaging().send({
-          topic: 'all_users',
+        const res = await this.firebase.messaging().sendEachForMulticast({
+          tokens,
           notification: { title: dto.title, body: dto.message },
         });
+        await updateCounts(res.successCount, res.failureCount);
+        return { delivered: res.successCount, failures: res.failureCount };
       } catch (e) {
-        this.logger.error('FCM topic send failed', e);
+        this.logger.error('FCM multicast failed', e);
+        return { delivered: 0, error: 'fcm_failed' };
       }
-      return { delivered: 'topic', topic: 'all_users' };
     }
 
-    if (!tokens.length) return { delivered: 0 };
-
+    // Broadcast via topic — no per-device counts available
     try {
-      const res = await this.firebase.messaging().sendEachForMulticast({
-        tokens,
+      await this.firebase.messaging().send({
+        topic: 'all_users',
         notification: { title: dto.title, body: dto.message },
       });
-      return { delivered: res.successCount, failures: res.failureCount };
     } catch (e) {
-      this.logger.error('FCM multicast failed', e);
-      return { delivered: 0, error: 'fcm_failed' };
+      this.logger.error('FCM topic send failed', e);
+    }
+    return { delivered: 'topic', topic: 'all_users' };
+  }
+
+  async scheduleNotification(dto: ScheduleNotificationDto) {
+    const sendAt = new Date(dto.sendAt);
+    if (sendAt <= new Date()) {
+      throw new BadRequestException({ error: 'PAST_SEND_TIME', message: 'sendAt must be in the future' });
+    }
+    const job = await this.prisma.scheduledNotification.create({
+      data: {
+        title: dto.title,
+        message: dto.message,
+        userIds: dto.userIds?.length ? dto.userIds.join(',') : null,
+        type: dto.type ?? 'general',
+        typeId: dto.typeId ?? 0,
+        image: dto.image ?? '',
+        sendAt,
+      },
+    });
+    return { scheduled: true, id: job.id, sendAt: job.sendAt };
+  }
+
+  async listScheduledNotifications(q: ListPaginationDto) {
+    const take = Math.min(q.limit ?? 20, 100);
+    const skip = ((q.page ?? 1) - 1) * take;
+    const [items, total] = await Promise.all([
+      this.prisma.scheduledNotification.findMany({
+        where: { sendAt: { gte: new Date() } },
+        orderBy: { sendAt: 'asc' },
+        skip,
+        take,
+      }),
+      this.prisma.scheduledNotification.count({ where: { sendAt: { gte: new Date() } } }),
+    ]);
+    return { items, total, pages: Math.ceil(total / take) };
+  }
+
+  async cancelScheduledNotification(id: number) {
+    const job = await this.prisma.scheduledNotification.findUnique({ where: { id } });
+    if (!job) throw new NotFoundException({ error: 'SCHEDULED_NOTIF_NOT_FOUND', message: 'Scheduled notification not found' });
+    await this.prisma.scheduledNotification.delete({ where: { id } });
+    return { cancelled: true };
+  }
+
+  @Cron('* * * * *')
+  async processScheduledNotifications() {
+    const due = await this.prisma.scheduledNotification.findMany({
+      where: { sendAt: { lte: new Date() } },
+      take: 50,
+    });
+    for (const job of due) {
+      await this.prisma.scheduledNotification.delete({ where: { id: job.id } });
+      const userIds = job.userIds ? job.userIds.split(',').map(Number) : undefined;
+      await this.sendNotification({
+        title: job.title,
+        message: job.message,
+        userIds: userIds?.length ? userIds : undefined,
+        type: job.type,
+        typeId: job.typeId,
+        image: job.image || undefined,
+      }).catch((e) => this.logger.error('Scheduled notification delivery failed', e));
     }
   }
 
@@ -1684,6 +1753,8 @@ export class AdminService {
       audience: n.users,
       userIds: n.user_id,
       dateSent: n.date_sent.toISOString(),
+      deliveredCount: n.delivered_count,
+      failedCount: n.failed_count,
     }));
     return this.paginate(items, total, page, take);
   }

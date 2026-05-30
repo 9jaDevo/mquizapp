@@ -17,19 +17,19 @@ export class LeaderboardController {
   @Get('daily')
   @ApiOperation({ summary: 'Top players today' })
   daily(@Query() q: LeaderboardQueryDto) {
-    return this.service.getTop('daily', q.limit ?? 50);
+    return this.service.getTop('daily', q.limit ?? 50, q.countryCode);
   }
 
   @Get('weekly')
   @ApiOperation({ summary: 'Top players this week' })
   weekly(@Query() q: LeaderboardQueryDto) {
-    return this.service.getTop('weekly', q.limit ?? 50);
+    return this.service.getTop('weekly', q.limit ?? 50, q.countryCode);
   }
 
   @Get('monthly')
   @ApiOperation({ summary: 'Top players this month' })
   monthly(@Query() q: LeaderboardQueryDto) {
-    return this.service.getTop('monthly', q.limit ?? 50);
+    return this.service.getTop('monthly', q.limit ?? 50, q.countryCode);
   }
 
   @Get('me')
@@ -44,6 +44,6 @@ export class LeaderboardController {
     @Param('id', ParseIntPipe) id: number,
     @Query() q: CategoryLeaderboardQueryDto,
   ) {
-    return this.service.getCategoryTop(id, q.period ?? 'weekly', q.limit ?? 50);
+    return this.service.getCategoryTop(id, q.period ?? 'weekly', q.limit ?? 50, q.countryCode);
   }
 }

@@ -180,11 +180,25 @@ export function NotificationsPanel() {
                   <p className="text-xs text-muted-foreground line-clamp-2">
                     {n.message}
                   </p>
-                  {n.dateSent && (
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(n.dateSent).toLocaleString()}
-                    </p>
-                  )}
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {n.dateSent && (
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(n.dateSent).toLocaleString()}
+                      </p>
+                    )}
+                    {n.audience === 'specific' && (
+                      <>
+                        <span className="text-xs text-green-600 dark:text-green-400">
+                          ✓ {n.deliveredCount} delivered
+                        </span>
+                        {n.failedCount > 0 && (
+                          <span className="text-xs text-destructive">
+                            ✗ {n.failedCount} failed
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
