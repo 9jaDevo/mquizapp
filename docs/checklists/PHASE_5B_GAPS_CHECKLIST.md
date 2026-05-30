@@ -191,7 +191,7 @@ The dashboard KPI cards exist but DAU/MAU are not wired and mini-charts are abse
 
 ---
 
-### B4. Questions — Missing Filters 🟠 P1
+### B4. Questions — Missing Filters ✅ Complete
 
 | Feature | Status | Notes |
 |---|---|---|
@@ -211,7 +211,7 @@ The dashboard KPI cards exist but DAU/MAU are not wired and mini-charts are abse
 
 ---
 
-### B6. Analytics Charts 🟡 P2
+### B6. Analytics Charts ✅ Complete
 
 All Section A5 endpoints complete. Charts now wired and rendering.
 
@@ -243,7 +243,7 @@ All Section A5 endpoints complete. Charts now wired and rendering.
 
 ---
 
-### B9. Notifications — Delivery Report 🟢 P3
+### B9. Notifications — Delivery Report ✅ Complete
 
 | Feature | Status | Notes |
 |---|---|---|
@@ -292,13 +292,13 @@ Coin Store and Progress Stages pages won't be reachable without nav links.
 
 ---
 
-### C3. Profile — Onboarding Completion 🟠 P1
+### C3. Profile — Onboarding Completion ✅ Complete
 
 | Feature | Status | Notes |
 |---|---|---|
-| Age group selection in `profile_setup_screen.dart` | ⬜ | Currently only name is collected. Age group needed for content personalisation and App Store age rating. |
-| Language selection in `profile_setup_screen.dart` | ⬜ | App language + quiz language preference. Sends `PUT /v2/users/me { language }` |
-| Unearned badges displayed as greyed-out in `profile_screen.dart` | ⬜ | API now returns all badges with `isEarned: bool`. `_BadgesGrid` should render locked badges at reduced opacity with a lock icon overlay. |
+| Age group selection in `profile_setup_screen.dart` | ✅ | `ChoiceChip` group (child/teen/adult/senior). Validates non-null before saving. Sends `ageGroup` in `PUT /v2/users/me`. |
+| Language selection in `profile_setup_screen.dart` | ✅ | `ChoiceChip` group for app language. Sends `appLanguage` in `PUT /v2/users/me`. Also wired in `edit_profile_screen.dart` as a `DropdownButtonFormField`. |
+| Unearned badges displayed as greyed-out in `profile_screen.dart` | ✅ | `_BadgesGrid` renders `Opacity(opacity: b.isEarned ? 1 : 0.35)`. Lock icon overlay on uneartned badges. `Badge.isEarned` field parsed from API response. |
 
 ---
 
@@ -366,14 +366,14 @@ Unit tests written for all 5 key cubits. `flutter analyze test/` returns **No is
 
 ## Section D — Cross-Cutting Gaps
 
-### D1. Firebase Token Refresh in Admin Panel 🟠 P1
+### D1. Firebase Token Refresh in Admin Panel ✅ Complete
 
-Firebase ID tokens expire after 1 hour. The NextAuth session stores the token at sign-in but has no refresh logic. After 1 hour, all `useApiClient()` calls in client components return 401.
+Firebase ID tokens expire after 1 hour. Both fixes implemented: the JWT callback silently refreshes using the Firebase Secure Token API, and the API client forces re-login on unrecoverable 401.
 
 | Fix | Status | Notes |
 |---|---|---|
-| Detect expired `firebaseTokenExpiry` in `lib/auth.ts` JWT callback | ⬜ | If `token.firebaseTokenExpiry < Date.now()`, attempt to call Firebase REST API to exchange refresh token for a new ID token using `GOOGLE_REFRESH_TOKEN_URL`. |
-| Surface "session expired — please re-login" toast in `apiClient.ts` on 401 | ⬜ | Interceptor currently converts 401 to generic error. Should detect unrecoverable 401 and call `signOut()` with a message. |
+| Detect expired `firebaseTokenExpiry` in `lib/auth.ts` JWT callback | ✅ | If `token.firebaseTokenExpiry < Date.now() + 5 min`, calls `https://securetoken.googleapis.com/v1/token` with `refresh_token` grant. On success updates `firebaseToken`, `firebaseRefreshToken`, and `firebaseTokenExpiry`. On failure clears token to force re-login. `refreshToken` captured from `signInWithCustomToken` exchange response. |
+| Surface “session expired — please re-login” toast in `apiClient.ts` on 401 | ✅ | Response error interceptor: `status === 401` → `toast.error(...)` + `signOut({ callbackUrl: '/login' })`. `signOut` imported from `next-auth/react`. |
 
 ---
 
@@ -388,16 +388,16 @@ Firebase ID tokens expire after 1 hour. The NextAuth session stores the token at
 
 ---
 
-### D3. Prisma Schema — Missing `status` on `tbl_category` 🟠 P1
+### D3. Prisma Schema — Missing `status` on `tbl_category` ✅ Complete
 
-The `Category` Prisma model **already has** a `status Int @default(1)` column (schema.prisma line ~58). Filter on `status=1` is already applied by `GET /v2/categories`. The admin toggle UI is the remaining piece.
+All fixes implemented. Column exists, Prisma maps it, public API filters it, and admin UI toggles it.
 
 | Fix | Status | Notes |
 |---|---|---|
 | Migration: `ALTER TABLE tbl_category ADD COLUMN status TINYINT(1) NOT NULL DEFAULT 1` | ✅ | Column exists in current schema |
 | Prisma schema: add `status Int @default(1) @map("status")` to `Category` model | ✅ | Already present |
 | `GET /v2/categories` filter: `where: { status: 1 }` | ✅ | Filter active |
-| Admin categories page: "Active" toggle button per row | ⬜ | UI toggle not yet wired |
+| Admin categories page: “Active” toggle button per row | ✅ | `Eye`/`EyeOff` icon button in `categories-manager.tsx`. Calls `PATCH /v2/admin/categories/:id { status }`. Local state updated optimistically. Toast on success/error. |
 
 ---
 
@@ -405,11 +405,13 @@ The `Category` Prisma model **already has** a `status Int @default(1)` column (s
 
 | Layer | P0 Blockers | P1 High | P2 Medium | P3 Low | Total | Status |
 |---|---|---|---|---|---|---|
-| NestJS API | ✅ 0 | ⬜ 1 | ⬜ 2 | ⬜ 3 | **6** | 50% complete |
-| Admin Panel | ✅ 2 | ⬜ 2 | ⬜ 3 | ⬜ 2 | **9** | 22% complete |
-| Mobile App | ⬜ 1 | ✅ 4 | ⬜ 2 | ⬜ 0 | **7** | 57% complete |
-| Cross-cutting | ⬜ 0 | ⬜ 1 | ⬜ 1 | ⬜ 0 | **2** | 0% complete |
-| **Total** | **1** | **8** | **8** | **5** | **22** | **36% complete**
+| NestJS API | ✅ 0 | ✅ 0 | ✅ 2 | ✅ 3 | **5** | ✅ 100% complete |
+| Admin Panel | ✅ 2 | ✅ 3 | ✅ 4 | ✅ 2 | **11** | ✅ 100% complete |
+| Mobile App | ✅ 1 | ✅ 4 | ✅ 2 | ✅ 0 | **7** | ✅ 100% complete |
+| Cross-cutting | ✅ 0 | ✅ 2 | ✅ 1 | ✅ 0 | **3** | ✅ 100% complete |
+| **Total** | **3** | **9** | **9** | **5** | **26** | ✅ **100% complete**
+
+> Only remaining items require manual human action: `C7` App Store tasks (screenshots, Privacy Policy, TestFlight) — these cannot be automated.
 
 ---
 
@@ -421,35 +423,35 @@ Work should proceed in this sequence to unblock the critical path to App Store s
 1. API: `A1` coin store CRUD + `A2` progress stages CRUD
 2. Admin: `B1` Coin Store page + `B2` Progress Stages page + `B11` sidebar nav links
 
-### Sprint 5B-2 — Unblock iOS store submission (P0) — 🟠 PARTIALLY COMPLETE
+### Sprint 5B-2 — Unblock iOS store submission (P0) — ✅ COMPLETE
 1. API: `A3` Apple IAP verify endpoint — ✅
-2. Mobile: `C4` wire `StoreCubit` to call Apple IAP verify — ⬜ (backend ready, cubit not yet wired to endpoint)
-3. Mobile: `C7` run `flutter_launcher_icons` + `flutter_native_splash`, Privacy Policy — ⬜ (non-code, requires manual run)
+2. Mobile: `C4` wire `StoreCubit` to call Apple IAP verify — ✅
+3. Mobile: `C7` run `flutter_launcher_icons` + `flutter_native_splash` — ✅ (Privacy Policy, screenshots, TestFlight = manual human action)
 
-### Sprint 5B-3 — Complete core mobile UX (P1) — ✅ MOSTLY COMPLETE
+### Sprint 5B-3 — Complete core mobile UX (P1) — ✅ COMPLETE
 1. Mobile: `C1` Notifications screen + Settings screen + Bookmarks screen — ✅
 2. Mobile: `C2` Category leaderboard tab (API ready) — ✅ + `C6` AdMob rewarded ad → restore life — ✅
-3. Mobile: `C3` Age/language onboarding + unearned badge display — ⬜ (profile setup/edit pending)
+3. Mobile: `C3` Age/language onboarding + unearned badge display — ✅
 4. Mobile: `C5` Deep links — ✅
-5. Cross: `D1` Firebase token refresh in admin panel — ⬜
+5. Cross: `D1` Firebase token refresh in admin panel — ✅
 
-### Sprint 5B-4 — Fill admin operational gaps (P1–P2) — 🟠 PARTIAL
-1. Admin: `B3` Dashboard DAU/MAU wire-up + fraud feed — partial (DAU/MAU already render)
-2. Admin: `B4` Question AI filters — ❌ blocked on schema
+### Sprint 5B-4 — Fill admin operational gaps (P1–P2) — ✅ COMPLETE
+1. Admin: `B3` Dashboard DAU/MAU wire-up + fraud feed — ✅ (DAU/MAU render, fraud feed live)
+2. Admin: `B4` Question AI filters — ✅ (`isAi` filter + AI badge in questions table)
 3. API + Admin: `A8` + `B7` user coin history in admin panel — ✅ API ready, UI tab works
 4. API + Admin: `A9` + `B8` league prize distribution — ✅ API + admin button complete
 
-### Sprint 5B-5 — Analytics (P2) — 🟠 API COMPLETE
+### Sprint 5B-5 — Analytics (P2) — ✅ COMPLETE
 1. API: All `A5` analytics time-series endpoints — ✅ (incl. new retention + revenue-breakdown)
-2. Admin: All `B6` analytics charts — ⬜ (Recharts UI deferred)
+2. Admin: All `B6` analytics charts — ✅ (Recharts UI: user growth, revenue, completions, top categories, country distribution, retention cards, revenue-by-provider bar chart)
 3. DB: `D3` category `status` column migration — ✅ (already present)
 
 ### Sprint 5B-6 — P3 items (post-launch) — ✅ COMPLETE
 - ~~Flutterwave support (`A10`)~~ — intentionally skipped (Paystack only)
 - ~~Notification scheduling with BullMQ (`A11`)~~ — ✅ implemented with `@nestjs/schedule` cron
 - Sponsor impression counts (`B10`) — ✅ already complete
-- Notification delivery report (`B9`) — P3 deferred
-- Mobile unit tests (`C8`)
+- Notification delivery report (`B9`) — ✅ `delivered_count` + `failed_count` persisted after FCM multicast
+- Mobile unit tests (`C8`) — ✅ 5 suites, `flutter analyze` clean
 
 ---
 
@@ -478,32 +480,23 @@ Work should proceed in this sequence to unblock the critical path to App Store s
 **NestJS/Admin verification:** `nest build` ✅ clean, `tsc --noEmit` on admin ✅ clean.  
 **Mobile verification:** `flutter analyze` ✅ **0 errors, 0 warnings** (4 cosmetic info hints only).
 
-### ⬜ Outstanding (deferred)
+### ✅ All Automated Items Complete (May 29, 2026)
 
-**Mobile (apps/mobile):** ✅ Sprint 5B-3 delivery complete (May 29, 2026)  
-Features delivered this session:
-- C1 Notifications screen — `lib/features/notifications/` (model, repo, cubit, screen) ✅
-- C1 Settings screen — `lib/features/settings/` (language, FCM, sign out, delete) ✅
-- C1 Bookmarks screen — `lib/features/bookmarks/` (dismissible list with A-D highlight) ✅
-- C2 Category leaderboard tab — 4th tab with category filter + period select ✅
-- C5 Deep links — `mquiz://` intent-filter (Android) + CFBundleURLTypes (iOS) ✅
-- C6 AdMob rewarded ad — `AdService.showRewardedAd()` wired to out-of-lives sheet ✅
-- C6 Interstitial ad — `recordQuizCompletion()` called from quiz result screen ✅
-- Router/providers — 3 new GoRoutes + notification/bookmarks cubits registered ✅
-- UI integrations — bell icon (home), bookmarks/settings tiles (profile) ✅
+> Everything that can be implemented in code is done. Only manual App Store actions remain for `C7`.
 
-Still pending:
-- C3 Age/language onboarding — profile setup/edit screen updates ✅
-- C4 Apple IAP endpoint call — wire `StoreCubit` to `POST /v2/payments/apple-iap/verify` ✅
-- C7 Build prep — manual tasks (launcher icons, splash generated ✅; screenshots/Privacy Policy/TestFlight = manual) ⬜
-- C8 Unit tests — 5 test suites, `flutter analyze` clean ✅
+**Mobile (apps/mobile):** Sprint 5B-3 ✅ complete
+- C1 Notifications, Settings, Bookmarks screens ✅
+- C2 Category leaderboard tab ✅ + C6 AdMob rewarded ad ✅
+- C3 Age/language onboarding + unearned badge display ✅
+- C4 Apple IAP ✅ + C5 Deep links ✅ + C8 Unit tests ✅
+- C7 Build prep: icons ✅, splash ✅ | Manual remaining: screenshots, Privacy Policy, TestFlight ⚠️
 
-**Admin (B6 analytics charts):** All chart APIs ready; Recharts UI work deferred.
+**Admin (Next.js):** All sprints ✅ complete
+- B1–B11 all done incl. B4 AI filter, B6 analytics charts, B9 delivery report, D3 category toggle, D1 token refresh
 
-**Cross-cutting:**
-- B4 Question AI filters — blocked on schema ⬜
-- B9 Notification delivery report — P3 deferred ⬜
-- D1 Firebase token refresh — admin NextAuth ⬜
+**NestJS API:** All A-series endpoints ✅ complete
+
+**Cross-cutting:** D1 ✅, D2 ✅, D3 ✅
 
 ### ❌ P3 Skipped / ✅ Completed
 - A10 Flutterwave support — intentionally skipped (Paystack only)
