@@ -612,6 +612,76 @@ class NestJsApi {
     return res.data ?? <String, dynamic>{};
   }
 
+  // ── Partner Contests (v2) ──────────────────────────────────────────────────
+  /// GET /v2/contests/partner — list public partner contests
+  Future<List<Map<String, dynamic>>> listPartnerContests() async {
+    final res = await _c.get<Map<String, dynamic>>(
+      '/v2/contests/partner',
+      (d) => Map<String, dynamic>.from(d as Map),
+    );
+    return _asMapList(res.data?['items'] ?? res.data?['contests'] ?? res.data);
+  }
+
+  /// GET /v2/contests/partner/:id
+  Future<Map<String, dynamic>> getPartnerContest(int id) async {
+    final res = await _c.get<Map<String, dynamic>>(
+      '/v2/contests/partner/$id',
+      (d) => Map<String, dynamic>.from(d as Map),
+    );
+    return res.data ?? <String, dynamic>{};
+  }
+
+  /// POST /v2/contests/partner/join-code  { code }
+  Future<Map<String, dynamic>> lookupPartnerContestByCode(String code) async {
+    final res = await _c.post<Map<String, dynamic>>(
+      '/v2/contests/partner/join-code',
+      (d) => Map<String, dynamic>.from(d as Map),
+      body: {'code': code},
+    );
+    return res.data ?? <String, dynamic>{};
+  }
+
+  /// POST /v2/contests/partner/:id/join
+  Future<Map<String, dynamic>> joinPartnerContest(int id) async {
+    final res = await _c.post<Map<String, dynamic>>(
+      '/v2/contests/partner/$id/join',
+      (d) => Map<String, dynamic>.from(d as Map),
+    );
+    return res.data ?? <String, dynamic>{};
+  }
+
+  /// GET /v2/contests/partner/:id/questions
+  Future<List<Map<String, dynamic>>> getPartnerContestQuestions(int id) async {
+    final res = await _c.get<Map<String, dynamic>>(
+      '/v2/contests/partner/$id/questions',
+      (d) => Map<String, dynamic>.from(d as Map),
+    );
+    return _asMapList(res.data?['questions'] ?? res.data);
+  }
+
+  /// POST /v2/contests/partner/:id/submit  { answers, durationMs }
+  Future<Map<String, dynamic>> submitPartnerContest(
+    int id,
+    Map<String, dynamic> payload,
+  ) async {
+    final res = await _c.post<Map<String, dynamic>>(
+      '/v2/contests/partner/$id/submit',
+      (d) => Map<String, dynamic>.from(d as Map),
+      body: payload,
+    );
+    return res.data ?? <String, dynamic>{};
+  }
+
+  /// GET /v2/contests/partner/:id/leaderboard
+  Future<List<Map<String, dynamic>>> getPartnerContestLeaderboard(
+      int id) async {
+    final res = await _c.get<Map<String, dynamic>>(
+      '/v2/contests/partner/$id/leaderboard',
+      (d) => Map<String, dynamic>.from(d as Map),
+    );
+    return _asMapList(res.data?['entries'] ?? res.data);
+  }
+
   // ── Helpers ────────────────────────────────────────────────────────────────
   static List<Map<String, dynamic>> _asMapList(dynamic data) {
     if (data is List) {

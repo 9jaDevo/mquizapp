@@ -56,6 +56,7 @@ describe('AdminService', () => {
       prisma as unknown as PrismaService,
       firebase as unknown as FirebaseService,
       redis as unknown as RedisService,
+      {} as unknown as import('../partner/partner.service').PartnerService,
     );
   });
 

@@ -42,6 +42,7 @@ import { GenerateQuestionsDto } from './dto/generate-questions.dto';
 import { AdminLoginDto } from './dto/admin-login.dto';
 import * as bcrypt from 'bcryptjs';
 import OpenAI from 'openai';
+import { PartnerService } from '../partner/partner.service';
 
 @Injectable()
 export class AdminService {
@@ -51,6 +52,7 @@ export class AdminService {
     private readonly prisma: PrismaService,
     private readonly firebase: FirebaseService,
     private readonly redis: RedisService,
+    private readonly partnerService: PartnerService,
   ) {}
 
   async listUsers(q: ListUsersQueryDto) {
@@ -2139,5 +2141,31 @@ export class AdminService {
     }
     await this.prisma.progressStage.delete({ where: { id } });
     return { deleted: true, id };
+  }
+
+  // ─── Partner oversight (delegated to PartnerService) ─────────────────────
+
+  adminListPartners(status?: string, plan?: string, page = 1, limit = 50) {
+    return this.partnerService.adminListPartners(status, plan, page, limit);
+  }
+
+  adminGetPartner(id: number) {
+    return this.partnerService.adminGetPartner(id);
+  }
+
+  adminApprovePartner(id: number) {
+    return this.partnerService.adminApprovePartner(id);
+  }
+
+  adminSuspendPartner(id: number) {
+    return this.partnerService.adminSuspendPartner(id);
+  }
+
+  adminOverridePlan(id: number, plan: string, expiresAt?: string) {
+    return this.partnerService.adminOverridePlan(id, plan, expiresAt);
+  }
+
+  adminGetPartnerContests(id: number, page = 1, limit = 20) {
+    return this.partnerService.adminGetPartnerContests(id, page, limit);
   }
 }
