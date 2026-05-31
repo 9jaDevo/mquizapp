@@ -1524,3 +1524,147 @@ model UserProgress {
   @@map("tbl_user_progress")
 }
 
+
+// ─── Phase 5C: Partner System ─────────────────────────────────────────────────
+
+model Partner {
+  id                 Int       @id @default(autoincrement()) @db.UnsignedInt
+  firebaseUid        String    @unique @map("firebase_uid") @db.VarChar(128)
+  orgName            String    @map("org_name") @db.VarChar(255)
+  orgType            String    @default("individual") @map("org_type") @db.VarChar(32)
+  email              String    @unique @db.VarChar(191)
+  phone              String?   @db.VarChar(32)
+  logoUrl            String?   @map("logo_url") @db.VarChar(512)
+  website            String?   @db.VarChar(512)
+  description        String?   @db.Text
+  country            String?   @db.VarChar(3)
+  plan               String    @default("free") @db.VarChar(32)
+  planExpiresAt      DateTime? @map("plan_expires_at")
+  status             String    @default("pending") @db.VarChar(32)
+  approvedAt         DateTime? @map("approved_at")
+  approvedByAdminId  Int?      @map("approved_by_admin_id")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  users    PartnerUser[]
+  contests PartnerContest[]
+
+  @@index([status], map: "idx_partners_status")
+  @@index([plan], map: "idx_partners_plan")
+  @@map("tbl_partners")
+}
+
+model PartnerUser {
+  id          Int       @id @default(autoincrement()) @db.UnsignedInt
+  partnerId   Int       @map("partner_id") @db.UnsignedInt
+  firebaseUid String    @unique @map("firebase_uid") @db.VarChar(128)
+  email       String    @db.VarChar(191)
+  displayName String    @default("") @map("display_name") @db.VarChar(255)
+  role        String    @default("viewer") @db.VarChar(32)
+  status      String    @default("active") @db.VarChar(32)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  lastLoginAt DateTime? @map("last_login_at")
+
+  partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@index([partnerId], map: "idx_partner_users_partner_id")
+  @@map("tbl_partner_users")
+}
+
+model PartnerContest {
+  id                    Int       @id @default(autoincrement()) @db.UnsignedInt
+  partnerId             Int       @map("partner_id") @db.UnsignedInt
+  title                 String    @db.VarChar(255)
+  description           String?   @db.Text
+  bannerUrl             String?   @map("banner_url") @db.VarChar(512)
+  startDate             DateTime? @map("start_date")
+  endDate               DateTime? @map("end_date")
+  status                String    @default("draft") @db.VarChar(32)
+  visibility            String    @default("public") @db.VarChar(32)
+  inviteCode            String?   @unique @map("invite_code") @db.VarChar(16)
+  entryType             String    @default("free") @map("entry_type") @db.VarChar(16)
+  entryFeeKobo          Int       @default(0) @map("entry_fee_kobo")
+  maxParticipants       Int       @default(50) @map("max_participants")
+  timeLimitSeconds      Int       @default(20) @map("time_limit_seconds")
+  questionCount         Int       @default(0) @map("question_count")
+  prizeDescription      String?   @map("prize_description") @db.Text
+  coinPrizePool         Int       @default(0) @map("coin_prize_pool")
+  allowRetakes          Boolean   @default(false) @map("allow_retakes")
+  customJoinMessage     String?   @map("custom_join_message") @db.Text
+  customCompleteMessage String?   @map("custom_complete_message") @db.Text
+  prizeDistributed      Boolean   @default(false) @map("prize_distributed")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  partner      Partner                        @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  questions    PartnerContestQuestion[]
+  participants PartnerContestParticipant[]
+  leaderboard  PartnerContestLeaderboard[]
+
+  @@index([partnerId], map: "idx_partner_contests_partner_id")
+  @@index([status], map: "idx_partner_contests_status")
+  @@map("tbl_partner_contests")
+}
+
+model PartnerContestQuestion {
+  id             Int       @id @default(autoincrement()) @db.UnsignedInt
+  contestId      Int       @map("contest_id") @db.UnsignedInt
+  questionOrder  Int       @default(0) @map("question_order")
+  questionText   String    @map("question_text") @db.Text
+  imageUrl       String?   @map("image_url") @db.VarChar(512)
+  optionA        String    @map("option_a") @db.Text
+  optionB        String    @map("option_b") @db.Text
+  optionC        String    @map("option_c") @db.Text
+  optionD        String    @map("option_d") @db.Text
+  optionE        String?   @map("option_e") @db.Text
+  answer         String    @db.VarChar(1)
+  explanation    String?   @db.Text
+  questionType   String    @default("mcq") @map("question_type") @db.VarChar(16)
+  source         String    @default("custom") @db.VarChar(16)
+  bankQuestionId Int?      @map("bank_question_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  contest PartnerContest @relation(fields: [contestId], references: [id], onDelete: Cascade)
+
+  @@index([contestId], map: "idx_pcq_contest_id")
+  @@map("tbl_partner_contest_questions")
+}
+
+model PartnerContestParticipant {
+  id           Int       @id @default(autoincrement()) @db.UnsignedInt
+  contestId    Int       @map("contest_id") @db.UnsignedInt
+  userId       Int       @map("user_id") @db.UnsignedInt
+  joinedAt     DateTime  @default(now()) @map("joined_at")
+  hasSubmitted Boolean   @default(false) @map("has_submitted")
+  submittedAt  DateTime? @map("submitted_at")
+  score        Float     @default(0)
+  correctCount Int       @default(0) @map("correct_count")
+  timeTakenMs  Int       @default(0) @map("time_taken_ms")
+  rank         Int       @default(0)
+
+  contest PartnerContest @relation(fields: [contestId], references: [id], onDelete: Cascade)
+
+  @@unique([contestId, userId], map: "uq_pcp_contest_user")
+  @@index([contestId], map: "idx_pcp_contest_id")
+  @@index([userId], map: "idx_pcp_user_id")
+  @@map("tbl_partner_contest_participants")
+}
+
+model PartnerContestLeaderboard {
+  id             Int      @id @default(autoincrement()) @db.UnsignedInt
+  contestId      Int      @map("contest_id") @db.UnsignedInt
+  userId         Int      @map("user_id") @db.UnsignedInt
+  displayName    String   @default("") @map("display_name") @db.VarChar(255)
+  avatarUrl      String?  @map("avatar_url") @db.VarChar(512)
+  score          Float    @default(0)
+  correctAnswers Int      @default(0) @map("correct_answers")
+  timeTakenMs    Int      @default(0) @map("time_taken_ms")
+  rank           Int      @default(0)
+  lastUpdated    DateTime @default(now()) @updatedAt @map("last_updated")
+
+  contest PartnerContest @relation(fields: [contestId], references: [id], onDelete: Cascade)
+
+  @@unique([contestId, userId], map: "uq_pcl_contest_user")
+  @@index([contestId], map: "idx_pcl_contest_id")
+  @@map("tbl_partner_contest_leaderboard")
+}

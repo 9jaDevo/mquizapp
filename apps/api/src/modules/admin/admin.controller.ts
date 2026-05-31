@@ -649,4 +649,56 @@ export class AdminController {
   deleteProgressStage(@Param('id', ParseIntPipe) id: number) {
     return this.service.deleteProgressStage(id);
   }
+
+  // ─── Partner oversight ────────────────────────────────────────────────────
+
+  @Get('partners')
+  @ApiOperation({ summary: 'List all partner organisations (paginated)' })
+  listPartners(
+    @Query('status') status?: string,
+    @Query('plan') plan?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.service.adminListPartners(status, plan, parseInt(page ?? '1'), parseInt(limit ?? '50'));
+  }
+
+  @Get('partners/:id')
+  @ApiOperation({ summary: 'Get partner detail (org info + team + recent contests)' })
+  getPartner(@Param('id', ParseIntPipe) id: number) {
+    return this.service.adminGetPartner(id);
+  }
+
+  @Post('partners/:id/approve')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Approve a pending partner' })
+  approvePartner(@Param('id', ParseIntPipe) id: number) {
+    return this.service.adminApprovePartner(id);
+  }
+
+  @Post('partners/:id/suspend')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Suspend an active partner (revokes all tokens)' })
+  suspendPartner(@Param('id', ParseIntPipe) id: number) {
+    return this.service.adminSuspendPartner(id);
+  }
+
+  @Put('partners/:id/plan')
+  @ApiOperation({ summary: 'Override partner plan (admin manual upgrade/downgrade)' })
+  overridePartnerPlan(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { plan: string; expiresAt?: string },
+  ) {
+    return this.service.adminOverridePlan(id, body.plan, body.expiresAt);
+  }
+
+  @Get('partners/:id/contests')
+  @ApiOperation({ summary: "List all contests belonging to a partner" })
+  getPartnerContests(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.service.adminGetPartnerContests(id, parseInt(page ?? '1'), parseInt(limit ?? '20'));
+  }
 }

@@ -32,6 +32,14 @@ import 'package:mquiz/features/leagues/screens/league_quiz_screen.dart';
 import 'package:mquiz/features/quiz/screens/session_result_screen.dart';
 import 'package:mquiz/features/settings/screens/settings_screen.dart';
 import 'package:mquiz/features/store/screens/coin_store_screen.dart';
+import 'package:mquiz/features/partner_contests/cubit/partner_contest_list_cubit.dart';
+import 'package:mquiz/features/partner_contests/data/partner_contest_repository.dart';
+import 'package:mquiz/features/partner_contests/models/partner_contest.dart';
+import 'package:mquiz/features/partner_contests/screens/partner_contest_detail_screen.dart';
+import 'package:mquiz/features/partner_contests/screens/partner_contest_leaderboard_screen.dart';
+import 'package:mquiz/features/partner_contests/screens/partner_contest_list_screen.dart';
+import 'package:mquiz/features/partner_contests/screens/partner_contest_quiz_screen.dart';
+import 'package:mquiz/features/partner_contests/screens/partner_join_code_screen.dart';
 
 class AppRouter {
   AppRouter._();
@@ -131,6 +139,62 @@ class AppRouter {
                 ? (state.extra as Contest).name
                 : null;
             return ContestQuizScreen(contestId: id, contestName: name);
+          },
+        ),
+        // ── Partner Contests ────────────────────────────────────────────────
+        GoRoute(
+          path: AppConstants.routePartnerContests,
+          builder: (ctx, _) => MultiBlocProvider(
+            providers: [
+              BlocProvider(
+                  create: (_) => PartnerContestListCubit(PartnerContestRepository())),
+            ],
+            child: const PartnerContestListScreen(),
+          ),
+        ),
+        GoRoute(
+          path: AppConstants.routePartnerContestJoinCode,
+          builder: (ctx, _) => BlocProvider(
+            create: (_) => PartnerJoinCodeCubit(PartnerContestRepository()),
+            child: const PartnerJoinCodeScreen(),
+          ),
+        ),
+        GoRoute(
+          path: AppConstants.routePartnerContestDetail,
+          builder: (ctx, state) {
+            final id =
+                int.tryParse(state.pathParameters[AppConstants.paramPartnerContestId] ?? '0') ?? 0;
+            final contest = state.extra as PartnerContest?;
+            return MultiBlocProvider(
+              providers: [
+                BlocProvider(
+                    create: (_) => PartnerContestDetailCubit(PartnerContestRepository())),
+              ],
+              child: PartnerContestDetailScreen(contestId: id, contest: contest),
+            );
+          },
+        ),
+        GoRoute(
+          path: AppConstants.routePartnerContestPlay,
+          builder: (ctx, state) {
+            final id =
+                int.tryParse(state.pathParameters[AppConstants.paramPartnerContestId] ?? '0') ?? 0;
+            final contest = state.extra as PartnerContest?;
+            return RepositoryProvider(
+              create: (_) => PartnerContestRepository(),
+              child: PartnerContestQuizScreen(contestId: id, contest: contest),
+            );
+          },
+        ),
+        GoRoute(
+          path: AppConstants.routePartnerContestLeaderboard,
+          builder: (ctx, state) {
+            final id =
+                int.tryParse(state.pathParameters[AppConstants.paramPartnerContestId] ?? '0') ?? 0;
+            return BlocProvider(
+              create: (_) => PartnerContestDetailCubit(PartnerContestRepository()),
+              child: PartnerContestLeaderboardScreen(contestId: id),
+            );
           },
         ),
         GoRoute(

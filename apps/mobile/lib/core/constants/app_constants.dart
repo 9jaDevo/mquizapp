@@ -78,6 +78,15 @@ abstract final class AppConstants {
   static const String routeBattleLive = '/battle/live';
   static const String routeBattleResult = '/battle/result';
 
+  // ── Partner Contests ───────────────────────────────────────────────────────
+  static const String routePartnerContests = '/partner-contests';
+  static const String routePartnerContestJoinCode = '/partner-contests/join-code';
+  static const String routePartnerContestDetail = '/partner-contests/:partnerContestId';
+  static const String routePartnerContestPlay = '/partner-contests/:partnerContestId/play';
+  static const String routePartnerContestResult = '/partner-contests/:partnerContestId/result';
+  static const String routePartnerContestLeaderboard = '/partner-contests/:partnerContestId/leaderboard';
+  static const String paramPartnerContestId = 'partnerContestId';
+
   // ── Extra route params ─────────────────────────────────────────────────────
   static const String paramCategoryId = 'categoryId';
   static const String paramContestId = 'contestId';
