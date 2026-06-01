@@ -8,7 +8,7 @@ import 'package:mquiz/features/lives/cubit/lives_cubit.dart';
 
 /// Shows when the user runs out of lives. Server-authoritative: the result of
 /// `restoreWithCoins` / `restoreWithAd` must come from the API.
-class OutOfLivesSheet extends StatelessWidget {
+class OutOfLivesSheet extends StatefulWidget {
   const OutOfLivesSheet({super.key});
 
   static Future<bool?> show(BuildContext context) {
@@ -21,6 +21,25 @@ class OutOfLivesSheet extends StatelessWidget {
         child: const OutOfLivesSheet(),
       ),
     );
+  }
+
+  @override
+  State<OutOfLivesSheet> createState() => _OutOfLivesSheetState();
+}
+
+class _OutOfLivesSheetState extends State<OutOfLivesSheet> {
+  /// `null` = still checking, `true` = ad available, `false` = cap reached.
+  bool? _adAvailable;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAdAvailability();
+  }
+
+  Future<void> _checkAdAvailability() async {
+    final available = await AdService.instance.isRewardedAdAvailable();
+    if (mounted) setState(() => _adAvailable = available);
   }
 
   @override
@@ -65,43 +84,44 @@ class OutOfLivesSheet extends StatelessWidget {
                 onPressed: acting
                     ? null
                     : () async {
-                        final ok = await context
-                            .read<LivesCubit>()
-                            .restoreWithCoins();
+                        final ok =
+                            await context.read<LivesCubit>().restoreWithCoins();
                         if (!context.mounted) return;
                         if (ok) Navigator.of(context).pop(true);
                       },
               ),
               const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: acting
-                    ? null
-                    : () async {
-                        // Show a rewarded ad first; the life is only granted
-                        // after the user earns the reward (server-side auth).
-                        final adShown = await AdService.instance
-                            .showRewardedAd(onRewarded: () async {
-                          await context.read<LivesCubit>().restoreWithAd();
-                        });
-                        if (!context.mounted) return;
-                        // If no ad was available, fall back to direct call so
-                        // the server can decide (throttle will block abuse).
-                        if (!adShown) {
-                          final ok = await context
-                              .read<LivesCubit>()
-                              .restoreWithAd();
+              // Show "Watch ad" button only when ad is available (not cap-blocked).
+              // While checking (_adAvailable == null), show an optimistic button.
+              if (_adAvailable != false)
+                OutlinedButton.icon(
+                  onPressed: (acting || _adAvailable == null)
+                      ? null
+                      : () async {
+                          // Show a rewarded ad first; the life is only granted
+                          // after the user earns the reward (server-side auth).
+                          final adShown = await AdService.instance
+                              .showRewardedAd(onRewarded: () async {
+                            await context.read<LivesCubit>().restoreWithAd();
+                          });
                           if (!context.mounted) return;
-                          if (ok) Navigator.of(context).pop(true);
-                          return;
-                        }
-                        Navigator.of(context).pop(true);
-                      },
-                icon: const Icon(Icons.play_circle_outline),
-                label: const Text('Watch ad for 1 life'),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
+                          // If ad shown but reward not yet granted (dismissed early),
+                          // the server will reject restoreWithAd — no further action.
+                          if (!adShown) {
+                            // Ad unavailable mid-session: refresh availability.
+                            _checkAdAvailability();
+                            return;
+                          }
+                          Navigator.of(context).pop(true);
+                        },
+                  icon: const Icon(Icons.play_circle_outline),
+                  label: Text(_adAvailable == null
+                      ? 'Watch ad for 1 life'
+                      : 'Watch ad for 1 life'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                  ),
                 ),
-              ),
               const SizedBox(height: 6),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
