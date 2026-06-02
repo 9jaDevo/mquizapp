@@ -46,6 +46,7 @@ abstract final class AppColors {
   // ── Semantic ───────────────────────────────────────────────────────────────
   static const Color correct = Color(0xFF22C55E);
   static const Color wrong = Color(0xFFEF4444);
+  static const Color error = wrong;
   static const Color pending = Color(0xFFF59E0B);
   static const Color info = Color(0xFF3B82F6);
 

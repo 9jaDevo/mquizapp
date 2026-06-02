@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mquiz/core/constants/app_constants.dart';
 import 'package:mquiz/core/theme/app_colors.dart';
@@ -135,9 +136,8 @@ class AppRouter {
           builder: (ctx, state) {
             final id =
                 int.tryParse(state.pathParameters['contestId'] ?? '0') ?? 0;
-            final name = state.extra is Contest
-                ? (state.extra as Contest).name
-                : null;
+            final name =
+                state.extra is Contest ? (state.extra as Contest).name : null;
             return ContestQuizScreen(contestId: id, contestName: name);
           },
         ),
@@ -147,7 +147,8 @@ class AppRouter {
           builder: (ctx, _) => MultiBlocProvider(
             providers: [
               BlocProvider(
-                  create: (_) => PartnerContestListCubit(PartnerContestRepository())),
+                  create: (_) =>
+                      PartnerContestListCubit(PartnerContestRepository())),
             ],
             child: const PartnerContestListScreen(),
           ),
@@ -162,23 +163,29 @@ class AppRouter {
         GoRoute(
           path: AppConstants.routePartnerContestDetail,
           builder: (ctx, state) {
-            final id =
-                int.tryParse(state.pathParameters[AppConstants.paramPartnerContestId] ?? '0') ?? 0;
+            final id = int.tryParse(
+                    state.pathParameters[AppConstants.paramPartnerContestId] ??
+                        '0') ??
+                0;
             final contest = state.extra as PartnerContest?;
             return MultiBlocProvider(
               providers: [
                 BlocProvider(
-                    create: (_) => PartnerContestDetailCubit(PartnerContestRepository())),
+                    create: (_) =>
+                        PartnerContestDetailCubit(PartnerContestRepository())),
               ],
-              child: PartnerContestDetailScreen(contestId: id, contest: contest),
+              child:
+                  PartnerContestDetailScreen(contestId: id, contest: contest),
             );
           },
         ),
         GoRoute(
           path: AppConstants.routePartnerContestPlay,
           builder: (ctx, state) {
-            final id =
-                int.tryParse(state.pathParameters[AppConstants.paramPartnerContestId] ?? '0') ?? 0;
+            final id = int.tryParse(
+                    state.pathParameters[AppConstants.paramPartnerContestId] ??
+                        '0') ??
+                0;
             final contest = state.extra as PartnerContest?;
             return RepositoryProvider(
               create: (_) => PartnerContestRepository(),
@@ -189,10 +196,13 @@ class AppRouter {
         GoRoute(
           path: AppConstants.routePartnerContestLeaderboard,
           builder: (ctx, state) {
-            final id =
-                int.tryParse(state.pathParameters[AppConstants.paramPartnerContestId] ?? '0') ?? 0;
+            final id = int.tryParse(
+                    state.pathParameters[AppConstants.paramPartnerContestId] ??
+                        '0') ??
+                0;
             return BlocProvider(
-              create: (_) => PartnerContestDetailCubit(PartnerContestRepository()),
+              create: (_) =>
+                  PartnerContestDetailCubit(PartnerContestRepository()),
               child: PartnerContestLeaderboardScreen(contestId: id),
             );
           },
