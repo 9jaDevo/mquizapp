@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:mquiz/core/constants/app_constants.dart';
 import 'package:mquiz/core/theme/app_colors.dart';
 import 'package:mquiz/features/partner_contests/cubit/partner_contest_list_cubit.dart';
 
@@ -54,7 +53,8 @@ class _PartnerJoinCodeScreenState extends State<PartnerJoinCodeScreen> {
               textCapitalization: TextCapitalization.characters,
               decoration: InputDecoration(
                 hintText: 'e.g. A1B2C3D4',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.search),
                   onPressed: _lookup,
@@ -66,12 +66,15 @@ class _PartnerJoinCodeScreenState extends State<PartnerJoinCodeScreen> {
             BlocConsumer<PartnerJoinCodeCubit, PartnerJoinCodeState>(
               listener: (context, state) {
                 if (state is PartnerJoinCodeFound) {
-                  context.pushReplacement('/partner-contests/${state.contest.id}', extra: state.contest);
+                  context.pushReplacement(
+                      '/partner-contests/${state.contest.id}',
+                      extra: state.contest);
                 }
               },
               builder: (context, state) {
                 return switch (state) {
-                  PartnerJoinCodeLoading() => const Center(child: CircularProgressIndicator()),
+                  PartnerJoinCodeLoading() =>
+                    const Center(child: CircularProgressIndicator()),
                   PartnerJoinCodeError(message: final m) => Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -80,9 +83,12 @@ class _PartnerJoinCodeScreenState extends State<PartnerJoinCodeScreen> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.error_outline, color: AppColors.error, size: 18),
+                          Icon(Icons.error_outline,
+                              color: AppColors.error, size: 18),
                           const SizedBox(width: 8),
-                          Expanded(child: Text(m, style: TextStyle(color: AppColors.error))),
+                          Expanded(
+                              child: Text(m,
+                                  style: TextStyle(color: AppColors.error))),
                         ],
                       ),
                     ),

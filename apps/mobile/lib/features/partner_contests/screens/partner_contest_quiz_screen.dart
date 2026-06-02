@@ -27,7 +27,8 @@ class PartnerContestQuizScreen extends StatelessWidget {
         contestId,
         timeLimitSeconds: contest?.timeLimitSeconds,
       )..start(),
-      child: _PartnerQuizView(contestId: contestId, contestName: contest?.title),
+      child:
+          _PartnerQuizView(contestId: contestId, contestName: contest?.title),
     );
   }
 }
@@ -150,14 +151,16 @@ class _PartnerQuizPlayView extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: timeColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   '${state.secondsLeft}s',
-                  style: TextStyle(color: timeColor, fontWeight: FontWeight.bold),
+                  style:
+                      TextStyle(color: timeColor, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -181,7 +184,7 @@ class _PartnerQuizPlayView extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: AppColors.border),
                   ),
-                  child: Text(q.question,
+                  child: Text(q.text,
                       style: const TextStyle(
                           fontSize: 18, fontWeight: FontWeight.w600)),
                 ),
@@ -238,7 +241,9 @@ class _OptionTile extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: selected ? AppColors.primary.withValues(alpha: 0.1) : Colors.white,
+          color: selected
+              ? AppColors.primary.withValues(alpha: 0.1)
+              : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected ? AppColors.primary : AppColors.border,
@@ -252,7 +257,9 @@ class _OptionTile extends StatelessWidget {
               height: 32,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: selected ? AppColors.primary : AppColors.border.withValues(alpha: 0.4),
+                color: selected
+                    ? AppColors.primary
+                    : AppColors.border.withValues(alpha: 0.4),
                 shape: BoxShape.circle,
               ),
               child: Text(
