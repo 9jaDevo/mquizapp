@@ -93,7 +93,7 @@ export default function AdminPartnerDetailPage({ params }: Params) {
 
         <div className="rounded-lg border p-4 space-y-3">
           <h2 className="font-semibold text-sm">Override Plan</h2>
-          <Select value={partner.plan} onValueChange={(v) => action(() => overridePlan(v))}>
+          <Select value={partner.plan} onValueChange={(v) => action(() => overridePlan(v ?? partner.plan))}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               {['free', 'starter', 'pro', 'enterprise'].map((p) => (

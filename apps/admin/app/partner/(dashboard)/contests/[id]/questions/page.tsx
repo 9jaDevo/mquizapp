@@ -116,7 +116,7 @@ export default function QuestionsPage({ params }: Params) {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label>Correct Answer *</Label>
-              <Select value={form.answer} onValueChange={(v) => set('answer', v)}>
+              <Select value={form.answer} onValueChange={(v) => set('answer', v ?? form.answer)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {['a', 'b', 'c', 'd', 'e'].map((l) => <SelectItem key={l} value={l}>Option {l.toUpperCase()}</SelectItem>)}

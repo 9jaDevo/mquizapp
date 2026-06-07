@@ -61,7 +61,7 @@ export default function NewContestPage() {
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="visibility">Visibility</Label>
-            <Select value={form.visibility} onValueChange={(v) => set('visibility', v)}>
+            <Select value={form.visibility} onValueChange={(v) => set('visibility', v ?? form.visibility)}>
               <SelectTrigger id="visibility"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="public">Public (anyone can join)</SelectItem>

@@ -238,7 +238,7 @@ export default function ContestQuestionsPage() {
             ))}
             <div>
               <Label>Correct Answer *</Label>
-              <Select value={form.answer} onValueChange={(v) => setForm((f) => ({ ...f, answer: v }))}>
+              <Select value={form.answer} onValueChange={(v) => setForm((f) => ({ ...f, answer: v ?? f.answer }))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

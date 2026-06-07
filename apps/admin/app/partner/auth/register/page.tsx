@@ -75,7 +75,7 @@ export default function PartnerRegisterPage() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="orgType">Organisation Type</Label>
-          <Select value={form.orgType} onValueChange={(v) => setField('orgType', v)}>
+          <Select value={form.orgType} onValueChange={(v) => setField('orgType', v ?? form.orgType)}>
             <SelectTrigger id="orgType">
               <SelectValue placeholder="Select type" />
             </SelectTrigger>

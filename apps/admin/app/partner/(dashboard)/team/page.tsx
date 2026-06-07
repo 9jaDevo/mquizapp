@@ -103,7 +103,7 @@ export default function PartnerTeamPage() {
           </div>
           <div className="w-36 space-y-1">
             <Label>Role</Label>
-            <Select value={inviteRole} onValueChange={setInviteRole}>
+            <Select value={inviteRole} onValueChange={(v) => v && setInviteRole(v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="admin">Admin</SelectItem>
