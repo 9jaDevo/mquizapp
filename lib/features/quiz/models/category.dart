@@ -1,3 +1,45 @@
+enum TargetAudience {
+  student,
+  professional,
+  both,
+  general;
+
+  static TargetAudience fromString(String value) {
+    switch (value.toLowerCase()) {
+      case 'student':
+        return TargetAudience.student;
+      case 'professional':
+        return TargetAudience.professional;
+      case 'both':
+        return TargetAudience.both;
+      case 'general':
+      default:
+        return TargetAudience.general;
+    }
+  }
+}
+
+enum ContentType {
+  academic,
+  workplace,
+  skill,
+  general;
+
+  static ContentType fromString(String value) {
+    switch (value.toLowerCase()) {
+      case 'academic':
+        return ContentType.academic;
+      case 'workplace':
+        return ContentType.workplace;
+      case 'skill':
+        return ContentType.skill;
+      case 'general':
+      default:
+        return ContentType.general;
+    }
+  }
+}
+
 final class Category {
   const Category({
     required this.isPlayed,
@@ -11,6 +53,8 @@ final class Category {
     this.isPremium = false,
     this.hasUnlocked = false,
     this.id,
+    this.targetAudience = TargetAudience.general,
+    this.contentType = ContentType.general,
   });
 
   Category.fromJson(Map<String, dynamic> json)
@@ -24,7 +68,13 @@ final class Category {
       maxLevel = json['maxlevel'] as String?,
       isPremium = (json['is_premium'] ?? '0') == '1',
       hasUnlocked = (json['has_unlocked'] ?? '0') == '1',
-      requiredCoins = int.parse(json['coins'] as String? ?? '0');
+      requiredCoins = int.parse(json['coins'] as String? ?? '0'),
+      targetAudience = TargetAudience.fromString(
+        json['target_audience'] as String? ?? 'general',
+      ),
+      contentType = ContentType.fromString(
+        json['content_type'] as String? ?? 'general',
+      );
 
   final String? id;
   final String? languageId;
@@ -37,11 +87,23 @@ final class Category {
   final bool isPremium;
   final bool hasUnlocked;
   final int requiredCoins;
+  final TargetAudience targetAudience;
+  final ContentType contentType;
 
   bool get hasSubcategories => subcategoriesCount > 0;
 
   bool get hasQuestions => questionsCount > 0;
   bool get hasLevels => maxLevel != '0';
+
+  bool get isForStudents =>
+      targetAudience == TargetAudience.student ||
+      targetAudience == TargetAudience.both ||
+      targetAudience == TargetAudience.general;
+
+  bool get isForProfessionals =>
+      targetAudience == TargetAudience.professional ||
+      targetAudience == TargetAudience.both ||
+      targetAudience == TargetAudience.general;
 
   Category copyWith({bool? hasUnlocked}) {
     return Category(
@@ -56,6 +118,8 @@ final class Category {
       isPremium: isPremium,
       hasUnlocked: hasUnlocked ?? this.hasUnlocked,
       requiredCoins: requiredCoins,
+      targetAudience: targetAudience,
+      contentType: contentType,
     );
   }
 }

@@ -9499,4 +9499,402 @@ class Api extends REST_Controller
 
         return $result;
     }
+
+    // ============================================
+    // USER PATH SYSTEM APIs
+    // ============================================
+
+    /**
+     * Set user's learning path (student/professional/competition)
+     * POST /api/user/set_path
+     * 
+     * Required params:
+     * - selected_path: student|professional|competition
+     * Optional params:
+     * - topics_preference: JSON array of preferred topics
+     * - daily_goal_minutes: 5|10|20
+     */
+    public function set_user_path_post()
+    {
+        try {
+            $is_user = $this->verify_token();
+            if (!$is_user['error']) {
+                $user_id = $is_user['user_id'];
+            } else {
+                $this->response($is_user, REST_Controller::HTTP_OK);
+                return false;
+            }
+
+            $selected_path = $this->post('selected_path');
+            $topics_preference = $this->post('topics_preference') ? $this->post('topics_preference') : '[]';
+            $daily_goal_minutes = $this->post('daily_goal_minutes') ? $this->post('daily_goal_minutes') : 10;
+            $demo_quiz_completed = $this->post('demo_quiz_completed') ? 1 : 0;
+
+            // Validate path
+            if (!in_array($selected_path, ['student', 'professional', 'competition'])) {
+                $response['error'] = true;
+                $response['message'] = 'Invalid path selection';
+                $this->response($response, REST_Controller::HTTP_BAD_REQUEST);
+                return;
+            }
+
+            // Check if user already has a path
+            $existing = $this->db->where('user_id', $user_id)->get('tbl_user_paths')->row_array();
+
+            if ($existing) {
+                // Update existing path
+                $data = [
+                    'selected_path' => $selected_path,
+                    'topics_preference' => $topics_preference,
+                    'daily_goal_minutes' => $daily_goal_minutes,
+                    'demo_quiz_completed' => $demo_quiz_completed,
+                    'onboarding_completed' => 1,
+                    'updated_at' => date('Y-m-d H:i:s')
+                ];
+                $this->db->where('user_id', $user_id)->update('tbl_user_paths', $data);
+            } else {
+                // Insert new path
+                $data = [
+                    'user_id' => $user_id,
+                    'selected_path' => $selected_path,
+                    'topics_preference' => $topics_preference,
+                    'daily_goal_minutes' => $daily_goal_minutes,
+                    'demo_quiz_completed' => $demo_quiz_completed,
+                    'onboarding_completed' => 1,
+                    'selected_at' => date('Y-m-d H:i:s')
+                ];
+                $this->db->insert('tbl_user_paths', $data);
+            }
+
+            $response['error'] = false;
+            $response['message'] = 'Path saved successfully';
+            $response['data'] = [
+                'selected_path' => $selected_path,
+                'daily_goal_minutes' => $daily_goal_minutes
+            ];
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = 'Error saving path';
+            $response['error_msg'] = $e->getMessage();
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    /**
+     * Get user's current learning path
+     * POST /api/user/get_path
+     */
+    public function get_user_path_post()
+    {
+        try {
+            $is_user = $this->verify_token();
+            if (!$is_user['error']) {
+                $user_id = $is_user['user_id'];
+            } else {
+                $this->response($is_user, REST_Controller::HTTP_OK);
+                return false;
+            }
+
+            $user_path = $this->db->where('user_id', $user_id)->get('tbl_user_paths')->row_array();
+
+            if ($user_path) {
+                $response['error'] = false;
+                $response['message'] = 'Path retrieved successfully';
+                $response['data'] = [
+                    'selected_path' => $user_path['selected_path'],
+                    'topics_preference' => $user_path['topics_preference'],
+                    'daily_goal_minutes' => $user_path['daily_goal_minutes'],
+                    'onboarding_completed' => $user_path['onboarding_completed'],
+                    'demo_quiz_completed' => $user_path['demo_quiz_completed'],
+                    'can_switch' => $user_path['can_switch'],
+                    'selected_at' => $user_path['selected_at']
+                ];
+            } else {
+                $response['error'] = false;
+                $response['message'] = 'No path selected yet';
+                $response['data'] = [
+                    'selected_path' => null,
+                    'onboarding_completed' => 0,
+                    'demo_quiz_completed' => 0
+                ];
+            }
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = 'Error retrieving path';
+            $response['error_msg'] = $e->getMessage();
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    /**
+     * Switch user's learning path
+     * POST /api/user/switch_path
+     * 
+     * Required params:
+     * - new_path: student|professional|competition
+     */
+    public function switch_user_path_post()
+    {
+        try {
+            $is_user = $this->verify_token();
+            if (!$is_user['error']) {
+                $user_id = $is_user['user_id'];
+            } else {
+                $this->response($is_user, REST_Controller::HTTP_OK);
+                return false;
+            }
+
+            $new_path = $this->post('new_path');
+
+            // Validate path
+            if (!in_array($new_path, ['student', 'professional', 'competition'])) {
+                $response['error'] = true;
+                $response['message'] = 'Invalid path selection';
+                $this->response($response, REST_Controller::HTTP_BAD_REQUEST);
+                return;
+            }
+
+            // Check if user can switch
+            $user_path = $this->db->where('user_id', $user_id)->get('tbl_user_paths')->row_array();
+
+            if (!$user_path) {
+                $response['error'] = true;
+                $response['message'] = 'No path set yet';
+                $this->response($response, REST_Controller::HTTP_BAD_REQUEST);
+                return;
+            }
+
+            if (!$user_path['can_switch']) {
+                $response['error'] = true;
+                $response['message'] = 'Path switching is disabled for your account';
+                $this->response($response, REST_Controller::HTTP_FORBIDDEN);
+                return;
+            }
+
+            // Update path
+            $data = [
+                'selected_path' => $new_path,
+                'selected_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+            $this->db->where('user_id', $user_id)->update('tbl_user_paths', $data);
+
+            $response['error'] = false;
+            $response['message'] = 'Path switched successfully';
+            $response['data'] = [
+                'selected_path' => $new_path
+            ];
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = 'Error switching path';
+            $response['error_msg'] = $e->getMessage();
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    /**
+     * Get personalized content based on user's path
+     * POST /api/user/get_personalized_content
+     * 
+     * Optional params:
+     * - limit: number of items (default 10)
+     */
+    public function get_personalized_content_post()
+    {
+        try {
+            $is_user = $this->verify_token();
+            if (!$is_user['error']) {
+                $user_id = $is_user['user_id'];
+            } else {
+                $this->response($is_user, REST_Controller::HTTP_OK);
+                return false;
+            }
+
+            $limit = $this->post('limit') ? $this->post('limit') : 10;
+
+            // Get user's path
+            $user_path = $this->db->where('user_id', $user_id)->get('tbl_user_paths')->row_array();
+            $selected_path = $user_path ? $user_path['selected_path'] : 'student';
+
+            // Get categories based on path
+            $this->db->select('id, category_name, image, no_of, maxlevel, is_premium, target_audience, content_type');
+            $this->db->from('tbl_category');
+            $this->db->where('status', 1);
+            
+            // Filter by target audience
+            if ($selected_path == 'student') {
+                $this->db->where_in('target_audience', ['student', 'both', 'general']);
+            } elseif ($selected_path == 'professional') {
+                $this->db->where_in('target_audience', ['professional', 'both', 'general']);
+            } else {
+                // Competition - show all
+                $this->db->where('status', 1);
+            }
+
+            $this->db->limit($limit);
+            $this->db->order_by($this->Order_By);
+            $categories = $this->db->get()->result_array();
+
+            // Add image URLs
+            foreach ($categories as &$category) {
+                if (!empty($category['image']) && filter_var($category['image'], FILTER_VALIDATE_URL) === false) {
+                    $category['image'] = base_url() . CATEGORY_IMG_PATH . $category['image'];
+                } else if (empty($category['image'])) {
+                    $category['image'] = $this->NO_IMAGE;
+                }
+            }
+
+            $response['error'] = false;
+            $response['message'] = 'Content retrieved successfully';
+            $response['data'] = [
+                'selected_path' => $selected_path,
+                'categories' => $categories
+            ];
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = 'Error retrieving content';
+            $response['error_msg'] = $e->getMessage();
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    /**
+     * Get categories filtered by audience
+     * POST /api/categories/by_audience
+     * 
+     * Optional params:
+     * - audience: student|professional|both|general
+     */
+    public function get_categories_by_audience_post()
+    {
+        try {
+            $audience = $this->post('audience') ? $this->post('audience') : 'general';
+            $language_id = $this->post('language_id') ? $this->post('language_id') : 14;
+
+            $this->db->select('id, category_name, image, no_of, maxlevel, is_premium, target_audience, content_type');
+            $this->db->from('tbl_category');
+            $this->db->where('status', 1);
+            $this->db->where('language_id', $language_id);
+
+            if ($audience != 'all') {
+                $this->db->where('target_audience', $audience);
+            }
+
+            $this->db->order_by($this->Order_By);
+            $categories = $this->db->get()->result_array();
+
+            // Add image URLs
+            foreach ($categories as &$category) {
+                if (!empty($category['image']) && filter_var($category['image'], FILTER_VALIDATE_URL) === false) {
+                    $category['image'] = base_url() . CATEGORY_IMG_PATH . $category['image'];
+                } else if (empty($category['image'])) {
+                    $category['image'] = $this->NO_IMAGE;
+                }
+            }
+
+            $response['error'] = false;
+            $response['message'] = 'Categories retrieved successfully';
+            $response['data'] = $categories;
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = 'Error retrieving categories';
+            $response['error_msg'] = $e->getMessage();
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
+
+    /**
+     * Get scenario-based questions
+     * POST /api/questions/get_scenario_questions
+     * 
+     * Required params:
+     * - category: category ID
+     * Optional params:
+     * - difficulty: beginner|intermediate|advanced
+     * - limit: number of questions
+     */
+    public function get_scenario_questions_post()
+    {
+        try {
+            $category = $this->post('category');
+            $difficulty = $this->post('difficulty') ? $this->post('difficulty') : null;
+            $limit = $this->post('limit') ? $this->post('limit') : 10;
+            $language_id = $this->post('language_id') ? $this->post('language_id') : 14;
+
+            if (!$category) {
+                $response['error'] = true;
+                $response['message'] = 'Category is required';
+                $this->response($response, REST_Controller::HTTP_BAD_REQUEST);
+                return;
+            }
+
+            $this->db->select('*');
+            $this->db->from('tbl_question');
+            $this->db->where('category', $category);
+            $this->db->where('language_id', $language_id);
+            $this->db->where_in('question_type', [3, 4]); // 3=scenario, 4=case_study
+
+            if ($difficulty) {
+                $this->db->where('difficulty_level', $difficulty);
+            }
+
+            $this->db->limit($limit);
+            $this->db->order_by($this->Order_By);
+            $questions = $this->db->get()->result_array();
+
+            // Process questions
+            foreach ($questions as &$question) {
+                if (!empty($question['image']) && filter_var($question['image'], FILTER_VALIDATE_URL) === false) {
+                    $question['image'] = base_url() . QUESTION_IMG_PATH . $question['image'];
+                }
+                
+                // Shuffle options if enabled
+                if ($this->OPTION_SHUFFLE_MODE == '1') {
+                    $options = [
+                        'a' => $question['optiona'],
+                        'b' => $question['optionb'],
+                        'c' => $question['optionc'],
+                        'd' => $question['optiond'],
+                    ];
+                    if (!empty($question['optione'])) {
+                        $options['e'] = $question['optione'];
+                    }
+                    
+                    $correct_answer = $question['answer'];
+                    $correct_answer_text = $options[$correct_answer];
+                    
+                    // Shuffle the values while preserving keys
+                    $option_values = array_values($options);
+                    shuffle($option_values);
+                    
+                    // Find new position of correct answer
+                    $new_answer = array_search($correct_answer_text, $option_values);
+                    $answer_keys = ['a', 'b', 'c', 'd', 'e'];
+                    $question['answer'] = $answer_keys[$new_answer] ?? 'a';
+                    
+                    // Assign shuffled values back to options
+                    $question['optiona'] = $option_values[0] ?? '';
+                    $question['optionb'] = $option_values[1] ?? '';
+                    $question['optionc'] = $option_values[2] ?? '';
+                    $question['optiond'] = $option_values[3] ?? '';
+                    $question['optione'] = $option_values[4] ?? '';
+                }
+            }
+
+            $response['error'] = false;
+            $response['message'] = 'Scenario questions retrieved successfully';
+            $response['data'] = $questions;
+        } catch (Exception $e) {
+            $response['error'] = true;
+            $response['message'] = 'Error retrieving scenario questions';
+            $response['error_msg'] = $e->getMessage();
+        }
+
+        $this->response($response, REST_Controller::HTTP_OK);
+    }
 }

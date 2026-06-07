@@ -1,5 +1,20 @@
-import 'package:flutterquiz/features/quiz/models/answer_option.dart';
-import 'package:flutterquiz/features/quiz/models/correct_answer.dart';
+enum DifficultyLevel {
+  beginner,
+  intermediate,
+  advanced;
+
+  static DifficultyLevel fromString(String value) {
+    switch (value.toLowerCase()) {
+      case 'intermediate':
+        return DifficultyLevel.intermediate;
+      case 'advanced':
+        return DifficultyLevel.advanced;
+      case 'beginner':
+      default:
+        return DifficultyLevel.beginner;
+    }
+  }
+}
 
 final class Question {
   const Question({
@@ -19,6 +34,9 @@ final class Question {
     this.attempted = false,
     this.submittedAnswerId = '',
     this.marks,
+    this.context,
+    this.difficultyLevel = DifficultyLevel.beginner,
+    this.skillTags = const [],
   });
 
   factory Question.fromJson(Map<String, dynamic> questionJson) {
@@ -48,6 +66,31 @@ final class Question {
       }
     }
 
+    // Parse skill tags
+    List<String> skillTags = [];
+    if (questionJson['skill_tags'] != null) {
+      try {
+        if (questionJson['skill_tags'] is String) {
+          final decoded = questionJson['skill_tags'] as String;
+          if (decoded.isNotEmpty && decoded != '[]') {
+            skillTags = decoded
+                .replaceAll('[', '')
+                .replaceAll(']', '')
+                .replaceAll('"', '')
+                .split(',')
+                .map((e) => e.trim())
+                .where((e) => e.isNotEmpty)
+                .toList();
+          }
+        } else if (questionJson['skill_tags'] is List) {
+          skillTags =
+              (questionJson['skill_tags'] as List).map((e) => e.toString()).toList();
+        }
+      } catch (e) {
+        skillTags = [];
+      }
+    }
+
     return Question(
       id: questionJson['id'] as String?,
       categoryId: questionJson['category'] as String? ?? '',
@@ -65,6 +108,11 @@ final class Question {
       audioType: questionJson['audio_type'] as String? ?? '',
       marks: questionJson['marks'] as String? ?? '',
       answerOptions: options,
+      context: questionJson['context'] as String?,
+      difficultyLevel: DifficultyLevel.fromString(
+        questionJson['difficulty_level'] as String? ?? 'beginner',
+      ),
+      skillTags: skillTags,
     );
   }
 
@@ -99,6 +147,10 @@ final class Question {
       audioType: questionJson['audio_type'] as String? ?? '',
       marks: questionJson['marks'] as String? ?? '',
       answerOptions: options,
+      context: questionJson['context'] as String?,
+      difficultyLevel: DifficultyLevel.fromString(
+        questionJson['difficulty_level'] as String? ?? 'beginner',
+      ),
     );
   }
 
@@ -118,6 +170,12 @@ final class Question {
   final String? audio;
   final String? audioType;
   final String? marks;
+  final String? context;
+  final DifficultyLevel difficultyLevel;
+  final List<String> skillTags;
+
+  bool get isScenarioQuestion =>
+      questionType == '3' || questionType == '4'; // 3=scenario, 4=case_study
 
   Question updateQuestionWithAnswer({required String submittedAnswerId}) {
     return Question(
@@ -137,6 +195,9 @@ final class Question {
       question: question,
       questionType: questionType,
       subcategoryId: subcategoryId,
+      context: context,
+      difficultyLevel: difficultyLevel,
+      skillTags: skillTags,
     );
   }
 
@@ -158,6 +219,9 @@ final class Question {
       question: question,
       questionType: questionType,
       subcategoryId: subcategoryId,
+      context: context,
+      difficultyLevel: difficultyLevel,
+      skillTags: skillTags,
     );
   }
 }
